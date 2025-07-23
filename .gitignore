@@ -1,0 +1,17 @@
+# Dependencies
+/node_modules
+/client/node_modules
+/server/node_modules
+/server/dist
+
+# Docker
+/postgres_data
+
+# Environment variables
+.env
+.env.*
+!/.env.example
+
+# IDE / OS files
+.DS_Store
+.vscode/
