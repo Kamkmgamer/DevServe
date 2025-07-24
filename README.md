@@ -1,7 +1,7 @@
 # DevServe: Modern Web Services E-commerce Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)](https://github.com/your-username/your-repo-name/actions) <!-- Replace with your actual build status link -->
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)](https://github.com/Kamkmgamer/DevServe.git)
 
 A comprehensive and responsive e-commerce platform built to showcase and sell web design and development services. This monorepo architecture provides a clean separation between the React frontend and Node.js backend, offering a scalable and maintainable solution for your business.
 
@@ -77,7 +77,7 @@ Follow these steps to get your development environment up and running.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
+git clone https://github.com/Kamkmgamer/DevServe.git
 cd web-services-ecommerce
 ```
 **Note:** Replace `your-username/your-repo-name` with your actual GitHub repository URL.
