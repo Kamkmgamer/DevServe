@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -18,20 +15,22 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   cart      Cart?
+  orders    Order[] 
 }
+
 model PortfolioItem {
   id           String   @id @default(cuid())
   title        String
   description  String
   thumbnailUrl String?
-  imageUrls    String[]      // carousel images
+  imageUrls    String[] 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
 
 model BlogPost {
   id           String   @id @default(cuid())
-  title        String
+  title        String   @unique
   summary      String
   content      String
   thumbnailUrl String?
@@ -40,18 +39,18 @@ model BlogPost {
 }
 
 model Service {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String
-  price       Float
-  features    String[]
-  category    String
-  thumbnailUrl String? 
-  imageUrls   String[] 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orders      Order[]
-  cartItems   CartItem[]
+  id             String          @id @default(cuid())
+  name           String          @unique
+  description    String
+  price          Float
+  features       String[]
+  category       String
+  thumbnailUrl   String?
+  imageUrls      String[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  cartItems      CartItem[]
+  orderLineItems OrderLineItem[] 
 }
 
 model Cart {
@@ -72,24 +71,54 @@ model CartItem {
   serviceId String
   createdAt DateTime @default(now())
 
-  @@unique([cartId, serviceId]) 
+  @@unique([cartId, serviceId])
 }
 
 model Order {
-  id        String      @id @default(cuid())
-  clientName  String
-  clientEmail String
-  status      OrderStatus @default(PENDING)
-  totalAmount Float
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  service     Service     @relation(fields: [serviceId], references: [id])
-  serviceId   String
+  id           String          @id @default(cuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id])
+  couponId     String?
+  coupon       Coupon?         @relation(fields: [couponId], references: [id])
+  status       OrderStatus     @default(PENDING)
+  currency     String          @default("USD")
+  totalAmount  Int // in cents
+  requirements String
+  suggestions  String?
+  preferences  String?
+  questions    String?
+  metadata     Json?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  lineItems    OrderLineItem[]
+}
+
+model OrderLineItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id])
+  serviceId  String
+  service    Service @relation(fields: [serviceId], references: [id])
+  unitPrice  Int // in cents
+  quantity   Int     @default(1)
+  totalPrice Int
+}
+
+model Coupon {
+  id              String    @id @default(cuid()) @db.Uuid
+  code            String    @unique
+  discountPercent Int
+  active          Boolean   @default(true)
+  expiresAt       DateTime?
+  orders          Order[] 
 }
 
 enum OrderStatus {
   PENDING
-  PROCESSING
-  COMPLETED
-  CANCELLED
+  PAID
+  IN_TECHNICAL_REVIEW
+  APPROVED
+  FAILED
+  REFUNDED
+  CANCELED
 }

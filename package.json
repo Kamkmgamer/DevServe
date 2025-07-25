@@ -27,5 +27,8 @@
     "husky": "^9.0.11",
     "lint-staged": "^15.2.7",
     "prettier": "^3.3.2"
+  },
+  "dependencies": {
+    "@paypal/checkout-server-sdk": "^1.0.3"
   }
 }

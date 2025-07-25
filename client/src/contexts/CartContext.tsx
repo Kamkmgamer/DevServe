@@ -8,22 +8,37 @@ import {
 } from "react";
 import api from "../api/axios";
 import { useAuth } from "./AuthContext";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 
-// Define our types (as before)
-type CartItem = { id: string; quantity: number; service: {
-  id: any;
-  thumbnailUrl: any; name: string; price: number 
-} };
-type Cart = { id: string; items: CartItem[] };
+// Define types
+export type CartItem = {
+  id: string;
+  quantity: number;
+  service: {
+    id: string;
+    thumbnailUrl: string;
+    name: string;
+    price: number;
+  };
+};
 
-interface CartContextType {
+type Cart = {
+  id: string;
+  items: CartItem[];
+};
+
+export interface CartContextType {
   cart: Cart | null;
   loading: boolean;
   error: string | null;
   itemCount: number;
+  total: number;
   addToCart: (serviceId: string, quantity: number) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
+  createOrder: (
+    requirements: Record<string, any>,
+    discount?: number
+  ) => Promise<{ id: string }>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -40,6 +55,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
+
     try {
       setLoading(true);
       setError(null);
@@ -63,10 +79,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       toast.error("Please log in to add items to your cart.");
       return;
     }
+
     try {
       await api.post("/cart/items", { serviceId, quantity });
       await fetchCart();
-    } catch (err: any) { // 👈 Change: explicitly type 'err' as 'any'
+    } catch (err: any) {
       console.error("Failed to add to cart", err);
       setError(err.response?.data?.error || "Could not add item to cart.");
     }
@@ -76,7 +93,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     try {
       await api.delete(`/cart/items/${itemId}`);
       await fetchCart();
-    } catch (err: any) { // 👈 Change: explicitly type 'err' as 'any'
+    } catch (err: any) {
       console.error("Failed to remove from cart", err);
       setError(err.response?.data?.error || "Could not remove item from cart.");
     }
@@ -84,9 +101,54 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const itemCount = cart?.items?.length || 0;
 
-  const value = { cart, loading, error, itemCount, addToCart, removeFromCart };
+  const total =
+    cart?.items?.reduce(
+      (sum, item) => sum + item.service.price * item.quantity,
+      0
+    ) || 0;
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  const createOrder = async (
+    requirements: Record<string, any>,
+    discount: number = 0
+  ) => {
+    if (!isAuthenticated || !cart || cart.items.length === 0) {
+      toast.error("Cart is empty or user not authenticated.");
+      throw new Error("Cart is empty or user not authenticated.");
+    }
+
+    try {
+      const res = await api.post("/orders", {
+        items: cart.items.map((item) => ({
+          serviceId: item.service.id,
+          quantity: item.quantity,
+        })),
+        requirements,
+        discount,
+      });
+
+      toast.success("Order created successfully");
+      return res.data;
+    } catch (err: any) {
+      console.error("Failed to create order", err);
+      toast.error(err.response?.data?.message || "Failed to create order.");
+      throw err;
+    }
+  };
+
+  const value: CartContextType = {
+    cart,
+    loading,
+    error,
+    itemCount,
+    total,
+    addToCart,
+    removeFromCart,
+    createOrder,
+  };
+
+  return (
+    <CartContext.Provider value={value}>{children}</CartContext.Provider>
+  );
 };
 
 export const useCart = () => {

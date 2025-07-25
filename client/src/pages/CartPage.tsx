@@ -1,19 +1,20 @@
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, Trash2 } from "lucide-react";
 import Container from "../components/layout/Container";
 import Button from "../components/ui/Button";
 import { useCart } from "../contexts/CartContext";
-import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Trash2 } from "lucide-react";
 
 const CartPage = () => {
   const { cart, loading, error, removeFromCart } = useCart();
+  const navigate = useNavigate(); // Add the navigate hook
 
   const items = cart?.items || [];
-  const total = items.reduce(
-    (sum, item) => sum + (item.service?.price || 0) * item.quantity,
-    0
-  );
+  const total =
+    items.reduce(
+      (sum, item) => sum + (item.service?.price || 0) * item.quantity,
+      0
+    ) || 0;
 
   if (loading) {
     return (
@@ -55,7 +56,10 @@ const CartPage = () => {
             animate={{ opacity: 1 }}
             className="text-center text-gray-500 text-lg"
           >
-            Your cart is empty. <Link to="/services" className="underline text-blue-600">Browse services</Link>
+            Your cart is empty.{" "}
+            <Link to="/services" className="underline text-blue-600">
+              Browse services
+            </Link>
           </motion.p>
         ) : (
           <>
@@ -106,12 +110,14 @@ const CartPage = () => {
             </ul>
 
             <div className="flex justify-between items-center mb-8 text-lg">
-              <span className="font-semibold text-gray-700">Total:</span>
-              <span className="text-2xl font-bold text-blue-600">${total.toFixed(2)}</span>
+              <span className="text-sm text-pink-900 dark:text-pink-100">Total:</span>
+              <span className="text-2xl font-bold text-blue-600">
+                ${total.toFixed(2)}
+              </span>
             </div>
 
             <Button
-              onClick={() => toast.success("Proceeding to checkout...")}
+              onClick={() => navigate("/checkout")} // Changed to navigate
               className="w-full py-3 text-lg bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-xl shadow transition-all"
             >
               Proceed to Checkout

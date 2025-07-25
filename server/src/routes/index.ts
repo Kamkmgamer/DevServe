@@ -1,3 +1,4 @@
+// src/routes/index.ts (UPDATED)
 import { Router } from "express";
 import authRoutes from "./auth";
 import adminRoutes from "./admin";
@@ -6,7 +7,8 @@ import cartRoutes from "./cart";
 import contactRoutes from "./contact";
 import portfolioRoutes from "./portfolio";
 import blogRoutes from "./blog";
-
+import ordersRoutes from "./orders";
+import couponsRoutes from "./coupons";
 
 const router = Router();
 
@@ -17,5 +19,7 @@ router.use("/portfolio", portfolioRoutes);
 router.use("/blog", blogRoutes);
 router.use("/cart", cartRoutes);
 router.use("/contact", contactRoutes);
+router.use("/orders", ordersRoutes);
+router.use("/coupons", couponsRoutes); 
 
 export default router;

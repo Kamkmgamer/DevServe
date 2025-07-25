@@ -1,5 +1,5 @@
-import React from 'react'; // 👈 Import React
-import { motion } from 'framer-motion'; // 👈 Import motion
+import React from 'react'; 
+import { motion } from 'framer-motion';
 
 interface TagButtonProps {
   label: string;
@@ -13,7 +13,6 @@ const TagButton: React.FC<TagButtonProps> = ({ label, isActive, onClick }) => {
   const inactiveStyles = "bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600";
 
   return (
-    // Correct way to use motion component
     <motion.button
       onClick={onClick}
       className={`${baseStyles} ${isActive ? activeStyles : inactiveStyles}`}
