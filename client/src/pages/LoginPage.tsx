@@ -20,8 +20,8 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(email, password); // calls /api/auth/login
-      navigate("/admin");
+      await login(email, password);
+      navigate("/");
     } catch (err: any) {
       setError(err.response?.data?.error || "Login failed");
     } finally {
