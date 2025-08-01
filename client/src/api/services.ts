@@ -8,11 +8,11 @@ interface Service {
 }
 
 export const getServices = async (): Promise<Service[]> => {
-  const response = await api.get("//services");
+  const response = await api.get("/services");
   return response.data;
 };
 
 export const getServiceById = async (id: string): Promise<Service> => {
-  const response = await api.get(`//services/${id}`);
+  const response = await api.get(`/services/${id}`);
   return response.data;
 };
