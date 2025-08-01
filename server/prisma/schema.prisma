@@ -105,12 +105,18 @@ model OrderLineItem {
 }
 
 model Coupon {
-  id              String    @id @default(cuid()) @db.Uuid
+  id              String    @id @default(cuid())
   code            String    @unique
-  discountPercent Int
+  type            String // "percentage" | "fixed"
+  value           Int // store as integer: percent OR cents
+  minOrderAmount  Int? // cents
+  maxUses         Int?
+  currentUses     Int       @default(0)
   active          Boolean   @default(true)
   expiresAt       DateTime?
-  orders          Order[] 
+  orders          Order[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 enum OrderStatus {

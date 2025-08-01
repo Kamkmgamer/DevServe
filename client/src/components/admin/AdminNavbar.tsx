@@ -1,10 +1,11 @@
 import { NavLink } from "react-router-dom";
 
 const links = [
-  { to: "/admin", label: "Admin Dashbord"},
+  { to: "/admin", label: "Dashboard" },
   { to: "/admin/services", label: "Services" },
   { to: "/admin/coupons", label: "Coupons" },
   { to: "/admin/blog", label: "Blog" },
+  { to: "/admin/orders", label: "Orders" },
 ];
 
 export const AdminNavbar = () => (
@@ -16,8 +17,7 @@ export const AdminNavbar = () => (
             key={link.to}
             to={link.to}
             className={({ isActive }) =>
-              `relative px-2 py-1 text-sm font-medium transition-colors duration-300
-              ${
+              `relative px-2 py-1 text-sm font-medium transition-colors duration-300 ${
                 isActive
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"

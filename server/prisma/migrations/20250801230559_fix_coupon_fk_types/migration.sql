@@ -13,20 +13,20 @@
 */
 -- AlterEnum
 BEGIN;
-CREATE TYPE "OrderStatus_new" AS ENUM ('PENDING', 'PAID', 'IN_TECHNICAL_REVIEW', 'APPROVED', 'FAILED', 'REFUNDED', 'CANCELED');
-ALTER TABLE "Order" ALTER COLUMN "status" DROP DEFAULT;
-ALTER TABLE "Order" ALTER COLUMN "status" TYPE "OrderStatus_new" USING ("status"::text::"OrderStatus_new");
-ALTER TYPE "OrderStatus" RENAME TO "OrderStatus_old";
-ALTER TYPE "OrderStatus_new" RENAME TO "OrderStatus";
-DROP TYPE "OrderStatus_old";
-ALTER TABLE "Order" ALTER COLUMN "status" SET DEFAULT 'PENDING';
+CREATE TYPE "public"."OrderStatus_new" AS ENUM ('PENDING', 'PAID', 'IN_TECHNICAL_REVIEW', 'APPROVED', 'FAILED', 'REFUNDED', 'CANCELED');
+ALTER TABLE "public"."Order" ALTER COLUMN "status" DROP DEFAULT;
+ALTER TABLE "public"."Order" ALTER COLUMN "status" TYPE "public"."OrderStatus_new" USING ("status"::text::"public"."OrderStatus_new");
+ALTER TYPE "public"."OrderStatus" RENAME TO "OrderStatus_old";
+ALTER TYPE "public"."OrderStatus_new" RENAME TO "OrderStatus";
+DROP TYPE "public"."OrderStatus_old";
+ALTER TABLE "public"."Order" ALTER COLUMN "status" SET DEFAULT 'PENDING';
 COMMIT;
 
 -- DropForeignKey
-ALTER TABLE "Order" DROP CONSTRAINT "Order_serviceId_fkey";
+ALTER TABLE "public"."Order" DROP CONSTRAINT "Order_serviceId_fkey";
 
 -- AlterTable
-ALTER TABLE "Order" DROP COLUMN "clientEmail",
+ALTER TABLE "public"."Order" DROP COLUMN "clientEmail",
 DROP COLUMN "clientName",
 DROP COLUMN "serviceId",
 ADD COLUMN     "couponId" TEXT,
@@ -40,7 +40,7 @@ ADD COLUMN     "userId" TEXT NOT NULL,
 ALTER COLUMN "totalAmount" SET DATA TYPE INTEGER;
 
 -- CreateTable
-CREATE TABLE "OrderLineItem" (
+CREATE TABLE "public"."OrderLineItem" (
     "id" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
     "serviceId" TEXT NOT NULL,
@@ -52,30 +52,36 @@ CREATE TABLE "OrderLineItem" (
 );
 
 -- CreateTable
-CREATE TABLE "Coupon" (
-    "id" UUID NOT NULL,
+CREATE TABLE "public"."Coupon" (
+    "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
-    "discountPercent" INTEGER NOT NULL,
+    "type" TEXT NOT NULL,
+    "value" INTEGER NOT NULL,
+    "minOrderAmount" INTEGER,
+    "maxUses" INTEGER,
+    "currentUses" INTEGER NOT NULL DEFAULT 0,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "expiresAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Coupon_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Coupon_code_key" ON "Coupon"("code");
+CREATE UNIQUE INDEX "Coupon_code_key" ON "public"."Coupon"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "BlogPost_title_key" ON "BlogPost"("title");
+CREATE UNIQUE INDEX "BlogPost_title_key" ON "public"."BlogPost"("title");
 
 -- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_couponId_fkey" FOREIGN KEY ("couponId") REFERENCES "Coupon"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."Order" ADD CONSTRAINT "Order_couponId_fkey" FOREIGN KEY ("couponId") REFERENCES "public"."Coupon"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OrderLineItem" ADD CONSTRAINT "OrderLineItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."OrderLineItem" ADD CONSTRAINT "OrderLineItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "public"."Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OrderLineItem" ADD CONSTRAINT "OrderLineItem_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."OrderLineItem" ADD CONSTRAINT "OrderLineItem_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "public"."Service"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
