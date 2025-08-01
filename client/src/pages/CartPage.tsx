@@ -110,7 +110,7 @@ const CartPage = () => {
             </ul>
 
             <div className="flex justify-between items-center mb-8 text-lg">
-              <span className="text-sm text-pink-900 dark:text-pink-100">Total:</span>
+              <span className="text-sm text-blue-900 dark:text-blue-100">Total:</span>
               <span className="text-2xl font-bold text-blue-600">
                 ${total.toFixed(2)}
               </span>
