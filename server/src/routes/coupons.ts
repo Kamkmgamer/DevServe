@@ -10,16 +10,27 @@ const prisma = new PrismaClient();
 /* ------------------------------------------------------------
    Validation schemas
 ------------------------------------------------------------ */
+// server/src/routes/coupons.ts
+
 const couponSchema = z.object({
-  code:     z.string().min(1).trim().toUpperCase(),
-  type:     z.enum(["percentage", "fixed"]),
-  value:    z.number().int().positive(),
-  minOrderAmount: z.number().int().nonnegative().optional().nullable(),
-  maxUses:        z.number().int().positive().optional().nullable(),
-  expiresAt:      z.string().datetime().optional().nullable(),
-  active:    z.boolean().default(true),
+  code: z.string().min(1, "Code is required").trim().toUpperCase(),
+  type: z.enum(["percentage", "fixed"], { message: "Invalid coupon type" }),
+  value: z.string().transform((val) => parseInt(val, 10)).positive("Value must be positive"),
+  minOrderAmount: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => val ? parseInt(val, 10) : null)
+    .refine((val) => val === null || val > 0, { message: "Minimum order amount must be positive." }),
+  maxUses: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => val ? parseInt(val, 10) : null)
+    .refine((val) => val === null || (Number.isInteger(val) && val > 0), { message: "Maximum uses must be a positive whole number." }),
+  expiresAt: z.string().optional().nullable().datetime({ message: "Invalid date format." }),
+  isActive: z.boolean().default(true),
 });
-const couponUpdateSchema = couponSchema.partial();
 
 /* ------------------------------------------------------------
    Routes

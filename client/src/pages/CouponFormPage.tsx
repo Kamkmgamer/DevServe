@@ -65,9 +65,9 @@ const CouponFormPage: React.FC = () => {
     const payload = {
       code: data.code,
       type: data.type,
-      value: data.value, // Comes as number from valueAsNumber
-      minOrderAmount: data.minOrderAmount ?? null, // Nullish coalescing handles undefined
-      maxUses: data.maxUses ?? null, // Nullish coalescing handles undefined
+      value: data.value.toString(), // Convert to string
+      minOrderAmount: data.minOrderAmount ? data.minOrderAmount.toString() : null, // Convert to string or null
+      maxUses: data.maxUses ? data.maxUses.toString() : null, // Convert to string or null
       // Convert `expiresAt` to ISO string or null
       expiresAt: data.expiresAt
         ? new Date(data.expiresAt).toISOString() // Converts "YYYY-MM-DDTHH:mm" to ISO string
