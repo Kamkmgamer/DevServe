@@ -1,14 +1,16 @@
 // client/src/pages/CouponFormPage.tsx
 import { useState, useEffect } from "react";
-import { useForm, SubmitHandler, FieldValues } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useParams, useNavigate } from "react-router-dom";
 import Button from "../components/ui/Button";
+import Container from "../components/layout/Container";
+import { Loader2 } from "lucide-react";
 import api from "../api/axios";
 import { toast } from "react-hot-toast";
 
-// Define the schema for coupon form - simplified to avoid type conflicts
+// Fixed schema - make all fields match exactly
 const couponFormSchema = z.object({
   code: z.string().trim().toUpperCase().min(1, "Code is required"),
   type: z.enum(["percentage", "fixed"]),
@@ -16,19 +18,11 @@ const couponFormSchema = z.object({
   minOrderAmount: z.number().positive().optional(),
   maxUses: z.number().positive().int().optional(),
   expiresAt: z.string().optional(),
-  isActive: z.boolean().default(true),
+  active: z.boolean(),
 });
 
-// Use the schema as-is without the inferred type issues
-type FormValues = {
-  code: string;
-  type: "percentage" | "fixed";
-  value: number;
-  minOrderAmount?: number;
-  maxUses?: number;
-  expiresAt?: string;
-  isActive: boolean;
-};
+// Use the exact schema type
+type FormValues = z.infer<typeof couponFormSchema>;
 
 const CouponFormPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
@@ -44,7 +38,7 @@ const CouponFormPage: React.FC = () => {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
-    resolver: zodResolver(couponFormSchema) as any, // Cast to any to avoid resolver type issues
+    resolver: zodResolver(couponFormSchema),
     defaultValues: {
       code: "",
       type: "percentage",
@@ -52,7 +46,7 @@ const CouponFormPage: React.FC = () => {
       minOrderAmount: undefined,
       maxUses: undefined,
       expiresAt: undefined,
-      isActive: true,
+      active: true,
     },
   });
 
@@ -72,13 +66,19 @@ const CouponFormPage: React.FC = () => {
       
       setValue("code", data.code);
       setValue("type", data.type);
-      setValue("value", data.value);
-      setValue("minOrderAmount", data.minOrderAmount || undefined);
+      setValue("value", data.value / 100);
+      setValue("minOrderAmount", data.minOrderAmount ? data.minOrderAmount / 100 : undefined);
       setValue("maxUses", data.maxUses || undefined);
-      setValue("expiresAt", data.expiresAt ? new Date(data.expiresAt).toISOString().slice(0, 16) : undefined);
-      setValue("isActive", data.active);
+      
+      if (data.expiresAt) {
+        const date = new Date(data.expiresAt);
+        const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        setValue("expiresAt", localDate.toISOString().slice(0, 16));
+      }
+      
+      setValue("active", data.active);
     } catch (err: any) {
-      console.error(err);
+      console.error("Error fetching coupon:", err);
       toast.error(err.response?.data?.message || "Failed to load coupon data");
       navigate("/admin/coupons");
     } finally {
@@ -89,24 +89,31 @@ const CouponFormPage: React.FC = () => {
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setError(null);
     
-    const payload = {
-      ...data,
-      minOrderAmount: data.minOrderAmount || null,
-      maxUses: data.maxUses || null,
-      expiresAt: data.expiresAt ? new Date(data.expiresAt).toISOString() : null,
-    };
-
     try {
+      const payload = {
+        code: data.code.toUpperCase(),
+        type: data.type,
+        value: Math.round(data.value * 100),
+        minOrderAmount: data.minOrderAmount ? Math.round(data.minOrderAmount * 100) : null,
+        maxUses: data.maxUses || null,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt).toISOString() : null,
+        active: data.active,
+      };
+
+      console.log('Submitting coupon:', payload);
+
       if (isEdit) {
         await api.patch(`/coupons/${id}`, payload);
-        toast.success("Coupon updated!");
+        toast.success("Coupon updated successfully!");
       } else {
         await api.post("/coupons", payload);
         toast.success("Coupon created successfully!");
       }
+      
       navigate("/admin/coupons");
     } catch (err: any) {
-      const message = err.response?.data?.message || "Failed to save coupon";
+      console.error("Error submitting coupon:", err);
+      const message = err.response?.data?.error || err.response?.data?.message || "Failed to save coupon";
       setError(message);
       toast.error(message);
     }
@@ -114,27 +121,35 @@ const CouponFormPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
+      <Container className="py-20 text-center">
+        <Loader2 className="animate-spin h-8 w-8 mx-auto text-blue-600" />
+        <p className="mt-2 text-gray-500">Loading coupon...</p>
+      </Container>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">
+    <Container className="py-12 max-w-2xl">
+      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">
         {isEdit ? "Edit Coupon" : "Create Coupon"}
-      </h2>
+      </h1>
       
-      <form onSubmit={handleSubmit(onSubmit as SubmitHandler<FieldValues>)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Coupon Code *
           </label>
           <input
             {...register("code")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
             placeholder="SUMMER2024"
+            maxLength={50}
           />
           {errors.code && (
             <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
@@ -147,7 +162,7 @@ const CouponFormPage: React.FC = () => {
           </label>
           <select
             {...register("type")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
           >
             <option value="percentage">Percentage (%)</option>
             <option value="fixed">Fixed Amount ($)</option>
@@ -162,10 +177,11 @@ const CouponFormPage: React.FC = () => {
             <input
               {...register("value", { valueAsNumber: true })}
               type="number"
-              min="0"
-              step="any"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
-              placeholder={couponType === "percentage" ? "20" : "1000"}
+              min="0.01"
+              max={couponType === "percentage" ? 100 : 999999}
+              step="0.01"
+              className="w-full px-4 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
+              placeholder={couponType === "percentage" ? "20" : "10.00"}
             />
             <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
               {couponType === "percentage" ? "%" : "$"}
@@ -179,21 +195,16 @@ const CouponFormPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Minimum Order Amount (Optional)
+              Minimum Order Amount ($)
             </label>
-            <div className="relative">
-              <input
-                {...register("minOrderAmount", { valueAsNumber: true })}
-                type="number"
-                min="0"
-                step="any"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                placeholder="0"
-              />
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                $
-              </span>
-            </div>
+            <input
+              {...register("minOrderAmount", { valueAsNumber: true })}
+              type="number"
+              min="0"
+              step="0.01"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
+              placeholder="0.00"
+            />
             {errors.minOrderAmount && (
               <p className="mt-1 text-sm text-red-600">{errors.minOrderAmount.message}</p>
             )}
@@ -201,14 +212,14 @@ const CouponFormPage: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Maximum Uses (Optional)
+              Maximum Uses
             </label>
             <input
               {...register("maxUses", { valueAsNumber: true })}
               type="number"
               min="1"
               step="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
               placeholder="Unlimited"
             />
             {errors.maxUses && (
@@ -219,12 +230,12 @@ const CouponFormPage: React.FC = () => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Expires At (Optional)
+            Expires At
           </label>
           <input
             {...register("expiresAt")}
             type="datetime-local"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
           />
           {errors.expiresAt && (
             <p className="mt-1 text-sm text-red-600">{errors.expiresAt.message}</p>
@@ -233,11 +244,11 @@ const CouponFormPage: React.FC = () => {
 
         <div className="flex items-center">
           <input
-            {...register("isActive")}
+            {...register("active")}
             type="checkbox"
             className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
-          <label className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+          <label className="ml-2 text-sm text-gray-900 dark:text-gray-300">
             Active
           </label>
         </div>
@@ -255,12 +266,8 @@ const CouponFormPage: React.FC = () => {
             Cancel
           </Button>
         </div>
-
-        {error && (
-          <p className="text-red-500 text-sm mt-2">{error}</p>
-        )}
       </form>
-    </div>
+    </Container>
   );
 };
 

@@ -1,9 +1,10 @@
-// client/src/pages/CheckoutPage.tsx
+// client/src/pages/CheckoutPage.tsx - fix applyCoupon function
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { PayPalButtons } from "@paypal/react-paypal-js";
+import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import api from "../api/axios";
@@ -24,7 +25,6 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<"percentage" | "fixed" | null>(null);
-  const [couponId, setCouponId] = useState<string | null>(null);
   const { cart, total, createOrder } = useCart();
   const { register, handleSubmit, formState } = useForm<RequirementsData>({
     resolver: zodResolver(requirementsSchema),
@@ -41,7 +41,6 @@ export default function CheckoutPage() {
     if (cart?.items.length === 0) {
       setDiscount(0);
       setCouponCode("");
-      setCouponId(null);
       setStep(1);
     }
   }, [cart]);
@@ -53,7 +52,8 @@ export default function CheckoutPage() {
     }
 
     try {
-      const { data } = await api.get(`/coupons/${couponCode.trim().toUpperCase()}`);
+      // Fixed: Use query parameter instead of path
+      const { data } = await api.get(`/coupons/code/${couponCode.trim().toUpperCase()}`);
       
       const { 
         value, 
@@ -62,8 +62,7 @@ export default function CheckoutPage() {
         maxUses, 
         currentUses, 
         expiresAt, 
-        active, 
-        id 
+        active 
       } = data;
 
       if (!active) {
@@ -86,18 +85,21 @@ export default function CheckoutPage() {
         return;
       }
 
-      const discountAmount = type === "percentage"
-        ? (total * (value / 100))
+      const discountAmount = type === "percentage" 
+        ? (total * (value / 100)) 
         : (value / 100);
 
       setDiscount(discountAmount);
       setDiscountType(type);
-      setCouponId(id);
       toast.success("Coupon applied successfully!");
+      
     } catch (err: any) {
       setDiscount(0);
-      setCouponId(null);
-      toast.error(err.response?.data?.message || "Invalid or expired coupon");
+      if (err.response?.status === 404) {
+        toast.error("Invalid coupon code");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to apply coupon");
+      }
     }
   }
 
@@ -105,16 +107,11 @@ export default function CheckoutPage() {
     setDiscount(0);
     setDiscountType(null);
     setCouponCode("");
-    setCouponId(null);
     toast.success("Coupon removed");
   }
 
   async function onSubmit(data: RequirementsData) {
     try {
-      // Calculate the discount amount to pass
-      const discountAmount = discount;
-
-      
       const order = await createOrder(
         { 
           name: data.name,
@@ -122,7 +119,7 @@ export default function CheckoutPage() {
           notes: data.notes,
           requirements: data.notes || "No additional requirements"
         },
-        discount // Pass discount amount directly
+        discount
       );
       
       setOrderId(order.id);
