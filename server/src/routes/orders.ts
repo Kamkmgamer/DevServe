@@ -9,135 +9,146 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
-// ------------------------------------------------------------------
-// Helper type so every handler knows req.userId is available
-// ------------------------------------------------------------------
 type Req = AuthRequest;
 
-// ------------------------------------------------------------------
 // GET /api/orders
-// Returns the currently logged-in user’s orders
-// ------------------------------------------------------------------
 router.get("/", async (req: Req, res) => {
-  const orders = await prisma.order.findMany({
-    where: { userId: req.userId },
-    include: {
-      lineItems: { include: { service: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  res.json(orders);
+  try {
+    const orders = await prisma.order.findMany({
+      where: { userId: req.userId },
+      include: {
+        lineItems: { 
+          include: { 
+            service: true 
+          } 
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(orders);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    res.status(500).json({ message: "Failed to fetch orders" });
+  }
 });
 
-// ------------------------------------------------------------------
 // POST /api/orders
-// Creates an order from the user’s cart
-// ------------------------------------------------------------------
 router.post("/", async (req: Req, res) => {
-  const { items, requirements, discount } = req.body;
-  if (!items?.length)
-    return res.status(400).json({ message: "No items provided" });
-
-  let totalCents = 0;
-  const lineData: any[] = [];
-
-  for (const it of items) {
-    const service = await prisma.service.findUnique({
-      where: { id: it.serviceId },
-    });
-    if (!service)
-      return res.status(400).json({ message: "Invalid service ID" });
-
-    const unitPrice = Math.round(service.price * 100);
-    totalCents += unitPrice * it.quantity;
-
-    lineData.push({
-      serviceId: it.serviceId,
-      unitPrice,
-      quantity: it.quantity,
-      totalPrice: unitPrice * it.quantity,
-    });
-  }
-
-  // Apply coupon if provided
-  let couponId: string | undefined;
-  if (discount?.code) {
-    const coupon = await prisma.coupon.findUnique({
-      where: { code: discount.code.toUpperCase() },
-    });
-    if (coupon && coupon.active) {
-      if (coupon.type === "percentage") {
-        totalCents -= (totalCents * coupon.value) / 100;
-      } else if (coupon.type === "fixed") {
-        totalCents -= coupon.value;
-      }
-      couponId = coupon.id;
+  try {
+    const { items, requirements, discount } = req.body;
+    
+    if (!items?.length) {
+      return res.status(400).json({ message: "No items provided" });
     }
+
+    if (!requirements) {
+      return res.status(400).json({ message: "Requirements are required" });
+    }
+
+    let totalCents = 0;
+    const lineData: any[] = [];
+
+    // Validate all items and calculate total
+    for (const item of items) {
+      if (!item.serviceId || !item.quantity || item.quantity < 1) {
+        return res.status(400).json({ message: "Invalid item data" });
+      }
+
+      const service = await prisma.service.findUnique({
+        where: { id: item.serviceId },
+      });
+      
+      if (!service) {
+        return res.status(400).json({ message: `Service not found: ${item.serviceId}` });
+      }
+
+      const unitPrice = Math.round(service.price * 100);
+      const itemTotal = unitPrice * item.quantity;
+      totalCents += itemTotal;
+
+      lineData.push({
+        serviceId: item.serviceId,
+        unitPrice,
+        quantity: item.quantity,
+        totalPrice: itemTotal,
+      });
+    }
+
+    let couponId: string | null = null;
+    
+    // Apply coupon if provided
+    if (discount?.code) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { code: discount.code.toUpperCase() },
+      });
+
+      if (coupon && coupon.active) {
+        const now = new Date();
+        
+        // Check if coupon is expired
+        if (coupon.expiresAt && new Date(coupon.expiresAt) < now) {
+          return res.status(400).json({ message: "Coupon has expired" });
+        }
+
+        // Check max uses
+        if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) {
+          return res.status(400).json({ message: "Coupon usage limit reached" });
+        }
+
+        // Check minimum order amount
+        if (coupon.minOrderAmount && totalCents < coupon.minOrderAmount) {
+          return res.status(400).json({ 
+            message: `Minimum order amount is ${formatCurrency(coupon.minOrderAmount)}` 
+          });
+        }
+
+        // Apply discount
+        if (coupon.type === "percentage") {
+          totalCents -= Math.round((totalCents * coupon.value) / 100);
+        } else if (coupon.type === "fixed") {
+          totalCents -= coupon.value;
+        }
+
+        // Ensure total doesn't go negative
+        totalCents = Math.max(0, totalCents);
+        couponId = coupon.id;
+
+        // Increment coupon usage
+        await prisma.coupon.update({
+          where: { id: coupon.id },
+          data: { currentUses: { increment: 1 } },
+        });
+      } else {
+        return res.status(400).json({ message: "Invalid coupon code" });
+      }
+    }
+
+    // Create the order
+    const order = await prisma.order.create({
+      data: {
+        userId: req.userId!,
+        totalAmount: totalCents,
+        requirements: typeof requirements === 'string' ? requirements : JSON.stringify(requirements),
+        couponId,
+        lineItems: { create: lineData },
+      },
+    });
+
+    // Clear user's cart
+    await prisma.cartItem.deleteMany({
+      where: { cart: { userId: req.userId } },
+    });
+
+    res.status(201).json(order);
+  } catch (error) {
+    console.error("Error creating order:", error);
+    res.status(500).json({ message: "Failed to create order" });
   }
-  if (totalCents < 0) totalCents = 0;
-
-  const order = await prisma.order.create({
-    data: {
-      userId: req.userId!,
-      totalAmount: totalCents,
-      requirements,
-      couponId,
-      lineItems: { create: lineData },
-    },
-  });
-
-  // Clear user’s cart
-  await prisma.cartItem.deleteMany({
-    where: { cart: { userId: req.userId } },
-  });
-
-  res.status(201).json(order);
 });
 
-// ------------------------------------------------------------------
-// GET /api/orders/admin
-// Admin-only: returns every order in the system
-// ------------------------------------------------------------------
-router.get("/admin", async (_req: Req, res) => {
-  const orders = await prisma.order.findMany({
-    include: {
-      user: { select: { email: true } },
-      lineItems: { include: { service: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  res.json(
-    orders.map((o) => ({
-      ...o,
-      email: o.user.email,
-    }))
-  );
-});
-
-// ------------------------------------------------------------------
-// PATCH /api/orders/:id/status
-// Admin-only: update order status
-// ------------------------------------------------------------------
-router.patch("/:id/status", async (req: Req, res) => {
-  const { status } = req.body;
-  await prisma.order.update({
-    where: { id: req.params.id },
-    data: { status },
-  });
-  res.json({ message: "Status updated" });
-});
-
-// ------------------------------------------------------------------
-// POST /api/orders/:id/authorize
-// PayPal authorization callback
-// ------------------------------------------------------------------
-router.post("/:id/authorize", async (req: Req, res) => {
-  await prisma.order.update({
-    where: { id: req.params.id },
-    data: { status: "PAID" },
-  });
-  res.json({ message: "Payment authorized" });
-});
+// Helper function to format currency
+function formatCurrency(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
 
 export default router;
