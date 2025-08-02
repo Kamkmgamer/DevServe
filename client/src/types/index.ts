@@ -1,4 +1,4 @@
-// src/types/index.ts (CORRECTED)
+// src/types/index.ts 
 import { z } from "zod";
 
 export const couponFormSchema = z.object({
