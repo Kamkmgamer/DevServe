@@ -1,3 +1,4 @@
+// client/src/pages/AdminCouponsPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Container from "../components/layout/Container";
@@ -5,7 +6,7 @@ import Button from "../components/ui/Button";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Trash2, Pencil } from "lucide-react";
+import { Loader2, Trash2, Pencil, Copy } from "lucide-react";
 
 type Coupon = {
   id: string;
@@ -16,13 +17,14 @@ type Coupon = {
   maxUses: number | null;
   currentUses: number;
   expiresAt: string | null;
-  isActive: boolean;
+  active: boolean;
   createdAt: string;
 };
 
 const AdminCouponsPage: React.FC = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchCoupons = async () => {
@@ -49,6 +51,45 @@ const AdminCouponsPage: React.FC = () => {
       fetchCoupons();
     } catch {
       toast.error("Delete failed");
+    }
+  };
+
+  const copyToClipboard = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopySuccess(code);
+      toast.success("Coupon code copied!");
+      setTimeout(() => setCopySuccess(null), 2000);
+    } catch {
+      toast.error("Failed to copy code");
+    }
+  };
+
+  const formatCurrency = (amount: number | null) => {
+    if (amount === null) return "-";
+    return `$${(amount / 100).toFixed(2)}`;
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Never";
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getStatusBadge = (active: boolean, expiresAt: string | null) => {
+    const now = new Date();
+    const expired = expiresAt && new Date(expiresAt) < now;
+    
+    if (!active) return "Inactive";
+    if (expired) return "Expired";
+    return "Active";
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Active": return "text-green-600 bg-green-100";
+      case "Inactive": return "text-gray-600 bg-gray-100";
+      case "Expired": return "text-red-600 bg-red-100";
+      default: return "text-gray-600 bg-gray-100";
     }
   };
 
@@ -85,7 +126,9 @@ const AdminCouponsPage: React.FC = () => {
                   <th className="px-6 py-3 text-sm font-medium">Code</th>
                   <th className="px-6 py-3 text-sm font-medium">Type</th>
                   <th className="px-6 py-3 text-sm font-medium">Value</th>
+                  <th className="px-6 py-3 text-sm font-medium">Min Order</th>
                   <th className="px-6 py-3 text-sm font-medium">Uses</th>
+                  <th className="px-6 py-3 text-sm font-medium">Status</th>
                   <th className="px-6 py-3 text-sm font-medium">Expires</th>
                   <th className="px-6 py-3 text-sm font-medium">Actions</th>
                 </tr>
@@ -101,19 +144,34 @@ const AdminCouponsPage: React.FC = () => {
                       transition={{ delay: idx * 0.05 }}
                       className="border-b hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                      <td className="px-6 py-4">{c.code}</td>
-                      <td className="px-6 py-4 capitalize">{c.type}</td>
-                      <td className="px-6 py-4">
-                        {c.type === "percentage" ? `${c.value}%` : `$${c.value}`}
+                      <td className="px-6 py-4 font-mono">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{c.code}</span>
+                          <button
+                            onClick={() => copyToClipboard(c.code)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Copy code"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
                       </td>
+                      <td className="px-6 py-4 capitalize">{c.type}</td>
+                      <td className="px-6 py-4 font-medium">
+                        {c.type === "percentage" 
+                          ? `${c.value}%` 
+                          : formatCurrency(c.value)}
+                      </td>
+                      <td className="px-6 py-4">{formatCurrency(c.minOrderAmount)}</td>
                       <td className="px-6 py-4">
                         {c.currentUses} / {c.maxUses ?? "∞"}
                       </td>
                       <td className="px-6 py-4">
-                        {c.expiresAt
-                          ? new Date(c.expiresAt).toLocaleDateString()
-                          : "Never"}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(getStatusBadge(c.active, c.expiresAt))}`}>
+                          {getStatusBadge(c.active, c.expiresAt)}
+                        </span>
                       </td>
+                      <td className="px-6 py-4 text-sm">{formatDate(c.expiresAt)}</td>
                       <td className="px-6 py-4 space-x-2">
                         <Button
                           variant="secondary"
