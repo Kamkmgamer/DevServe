@@ -1,3 +1,4 @@
+// client/src/contexts/CartContext.tsx
 import {
   createContext,
   useState,
@@ -27,6 +28,7 @@ type Cart = {
   items: CartItem[];
 };
 
+// Update the discount parameter type
 export interface CartContextType {
   cart: Cart | null;
   loading: boolean;
@@ -99,14 +101,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const itemCount = cart?.items?.length || 0;
-
-  const total =
-    cart?.items?.reduce(
-      (sum, item) => sum + item.service.price * item.quantity,
-      0
-    ) || 0;
-
   const createOrder = async (
     requirements: Record<string, any>,
     discount: number = 0
@@ -117,15 +111,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const res = await api.post("/orders", {
+      const payload = {
         items: cart.items.map((item) => ({
           serviceId: item.service.id,
           quantity: item.quantity,
         })),
         requirements,
         discount,
-      });
+      };
 
+      console.log('Creating order with payload:', payload);
+
+      const res = await api.post("/orders", payload);
       toast.success("Order created successfully");
       return res.data;
     } catch (err: any) {
@@ -134,6 +131,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       throw err;
     }
   };
+
+  const itemCount = cart?.items?.length || 0;
+
+  const total =
+    cart?.items?.reduce(
+      (sum, item) => sum + item.service.price * item.quantity,
+      0
+    ) || 0;
 
   const value: CartContextType = {
     cart,
