@@ -1,14 +1,17 @@
+// client/src/pages/LoginPage.tsx
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Container from "../components/layout/Container";
 import Button from "../components/ui/Button";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -20,10 +23,14 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(email.trim(), password);
+      // optional: persist email if remember is checked
+      if (remember) localStorage.setItem("lastEmail", email.trim());
+      else localStorage.removeItem("lastEmail");
+
       navigate("/");
     } catch (err: any) {
-      setError(err.response?.data?.error || "Login failed");
+      setError(err?.response?.data?.error || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -31,96 +38,139 @@ const LoginPage = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-      className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-100"
+      exit={{ opacity: 0, y: -14 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 dark:from-slate-900 dark:to-slate-950"
     >
-      <Container className="p-8 max-w-md w-full bg-white rounded-2xl shadow-2xl">
-        <motion.h1
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-4xl font-extrabold text-center text-purple-600 mb-6"
-        >
-          Admin Login
-        </motion.h1>
-
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-5"
-        >
-          {/* Email Field */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="relative"
-          >
-            <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
-              placeholder="you@example.com"
-            />
-          </motion.div>
-
-          {/* Password Field */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="relative"
-          >
-            <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
-              placeholder="••••••••"
-            />
-          </motion.div>
-
-          {/* Error Message */}
-          {error && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-red-500 text-sm text-center mt-2"
+      <Container className="flex min-h-screen items-center justify-center py-10">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
+          <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-center dark:border-slate-800">
+            <motion.h1
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15, duration: 0.45 }}
+              className="text-3xl font-extrabold text-white"
             >
-              {error}
-            </motion.p>
-          )}
+              Admin Login
+            </motion.h1>
+            <p className="mt-1 text-sm text-indigo-100">
+              Access your dashboard to manage content and services.
+            </p>
+          </div>
 
-          {/* Submit Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-          >
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 text-lg rounded-lg bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:ring-purple-300 transition-all duration-300"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin h-5 w-5 mx-auto text-white" />
-              ) : (
-                "Login"
-              )}
-            </Button>
-          </motion.div>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-5 p-6" noValidate>
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-100"
+              >
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="username"
+                  required
+                  className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-9 pr-3 outline-none ring-blue-200 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-slate-800 dark:text-slate-100"
+                >
+                  Password
+                </label>
+                {/* Optional forgot link route if you add it later */}
+                {/* <Link to="/forgot" className="text-xs text-indigo-600 hover:underline">
+                  Forgot password?
+                </Link> */}
+              </div>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="password"
+                  type={showPwd ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-9 pr-10 outline-none ring-blue-200 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((s) => !s)}
+                  aria-label={showPwd ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                >
+                  {showPwd ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember me */}
+            <div className="flex items-center justify-between">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600"
+                />
+                Remember me
+              </label>
+              <Link
+                to="/"
+                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                Back to home
+              </Link>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                role="alert"
+                className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/30 dark:text-red-300"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            {/* Submit */}
+            <div>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 text-lg"
+              >
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Signing in…
+                  </span>
+                ) : (
+                  "Login"
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
       </Container>
     </motion.div>
   );
