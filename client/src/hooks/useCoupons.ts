@@ -1,4 +1,4 @@
-// src/hooks/useCoupons.ts
+// client/src/hooks/useCoupons.ts
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import api from "../api/axios";
@@ -14,10 +14,12 @@ export const useCoupons = () => {
     setError(null);
     try {
       const res = await api.get("/coupons");
-      setCoupons(res.data);
+      // New paginated shape { data, total, page, pageSize }
+      setCoupons(res.data.data ?? res.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch coupons.");
-      toast.error("Failed to fetch coupons.");
+      const msg = err.response?.data?.message ?? "Failed to fetch coupons";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -26,15 +28,15 @@ export const useCoupons = () => {
   const deleteCoupon = async (id: string) => {
     try {
       await api.delete(`/coupons/${id}`);
-      toast.success("Coupon deleted successfully!");
-      fetchCoupons(); // Refresh the list
+      toast.success("Coupon deleted successfully");
+      fetchCoupons();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to delete coupon.");
+      toast.error(err.response?.data?.message ?? "Failed to delete coupon");
     }
   };
 
   useEffect(() => {
-    fetchCoupons();
+    void fetchCoupons();
   }, []);
 
   return { coupons, loading, error, fetchCoupons, deleteCoupon };

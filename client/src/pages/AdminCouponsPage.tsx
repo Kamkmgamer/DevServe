@@ -12,7 +12,7 @@ type Coupon = {
   id: string;
   code: string;
   type: "percentage" | "fixed";
-  value: number;
+  value: number; // percentage OR cents
   minOrderAmount: number | null;
   maxUses: number | null;
   currentUses: number;
@@ -27,21 +27,53 @@ const AdminCouponsPage: React.FC = () => {
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  /* ------------------------------------------------------------- */
+  /* Helpers                                                       */
+  /* ------------------------------------------------------------- */
+  const formatCurrency = (cents: number | null) =>
+    cents == null ? "-" : `$${(cents / 100).toFixed(2)}`;
+
+  const formatDate = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleDateString() : "Never";
+
+  const getStatus = (active: boolean, expiresAt: string | null) => {
+    const expired = expiresAt ? new Date(expiresAt) < new Date() : false;
+    if (!active) return "Inactive";
+    if (expired) return "Expired";
+    return "Active";
+  };
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "Active":
+        return "text-green-600 bg-green-100";
+      case "Inactive":
+        return "text-gray-600 bg-gray-100";
+      case "Expired":
+        return "text-red-600 bg-red-100";
+      default:
+        return "text-gray-600 bg-gray-100";
+    }
+  };
+
+  /* ------------------------------------------------------------- */
+  /* CRUD                                                          */
+  /* ------------------------------------------------------------- */
   const fetchCoupons = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get<Coupon[]>("/coupons");
-      setCoupons(data);
+      const res = await api.get<{ data: Coupon[] } | Coupon[]>("/coupons");
+
+      // The server can return either the paginated shape or the plain array.
+      const list = Array.isArray(res.data) ? res.data : res.data.data;
+
+      setCoupons(list);
     } catch {
       toast.error("Could not load coupons");
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchCoupons();
-  }, []);
 
   const doDelete = async (id: string) => {
     if (!confirm("Delete this coupon?")) return;
@@ -65,34 +97,13 @@ const AdminCouponsPage: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: number | null) => {
-    if (amount === null) return "-";
-    return `$${(amount / 100).toFixed(2)}`;
-  };
+  useEffect(() => {
+    void fetchCoupons();
+  }, []);
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Never";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const getStatusBadge = (active: boolean, expiresAt: string | null) => {
-    const now = new Date();
-    const expired = expiresAt && new Date(expiresAt) < now;
-    
-    if (!active) return "Inactive";
-    if (expired) return "Expired";
-    return "Active";
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active": return "text-green-600 bg-green-100";
-      case "Inactive": return "text-gray-600 bg-gray-100";
-      case "Expired": return "text-red-600 bg-red-100";
-      default: return "text-gray-600 bg-gray-100";
-    }
-  };
-
+  /* ------------------------------------------------------------- */
+  /* Render                                                        */
+  /* ------------------------------------------------------------- */
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -102,25 +113,24 @@ const AdminCouponsPage: React.FC = () => {
       className="min-h-screen bg-gray-50 dark:bg-gray-900"
     >
       <Container className="py-8">
-        <div className="flex justify-between items-center mb-6">
+        {/* Header ------------------------------------------------ */}
+        <div className="mb-6 flex items-center justify-between">
           <h1 className="text-3xl font-extrabold text-gray-800 dark:text-gray-100">
             Coupons
           </h1>
-          <Button
-            variant="primary"
-            onClick={() => navigate("/admin/coupons/new")}
-          >
+          <Button onClick={() => navigate("/admin/coupons/new")} variant="primary">
             Add Coupon
           </Button>
         </div>
 
+        {/* Table ------------------------------------------------- */}
         {loading ? (
-          <div className="flex justify-center items-center py-10">
-            <Loader2 className="animate-spin h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl shadow bg-white dark:bg-gray-800">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto rounded-xl bg-white shadow dark:bg-gray-800">
+            <table className="w-full border-collapse text-left">
               <thead className="bg-gray-100 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-sm font-medium">Code</th>
@@ -133,6 +143,7 @@ const AdminCouponsPage: React.FC = () => {
                   <th className="px-6 py-3 text-sm font-medium">Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 <AnimatePresence>
                   {coupons.map((c, idx) => (
@@ -144,50 +155,70 @@ const AdminCouponsPage: React.FC = () => {
                       transition={{ delay: idx * 0.05 }}
                       className="border-b hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
+                      {/* Code ---------------------------------- */}
                       <td className="px-6 py-4 font-mono">
                         <div className="flex items-center gap-2">
                           <span className="text-sm">{c.code}</span>
                           <button
-                            onClick={() => copyToClipboard(c.code)}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
                             title="Copy code"
+                            onClick={() => copyToClipboard(c.code)}
+                            className="text-gray-400 transition-colors hover:text-gray-600"
                           >
                             <Copy size={14} />
                           </button>
                         </div>
                       </td>
+
+                      {/* Type / Value --------------------------- */}
                       <td className="px-6 py-4 capitalize">{c.type}</td>
                       <td className="px-6 py-4 font-medium">
-                        {c.type === "percentage" 
-                          ? `${c.value}%` 
+                        {c.type === "percentage"
+                          ? `${c.value}%`
                           : formatCurrency(c.value)}
                       </td>
-                      <td className="px-6 py-4">{formatCurrency(c.minOrderAmount)}</td>
+
+                      {/* Other fields --------------------------- */}
+                      <td className="px-6 py-4">
+                        {formatCurrency(c.minOrderAmount)}
+                      </td>
                       <td className="px-6 py-4">
                         {c.currentUses} / {c.maxUses ?? "∞"}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(getStatusBadge(c.active, c.expiresAt))}`}>
-                          {getStatusBadge(c.active, c.expiresAt)}
-                        </span>
+                        {(() => {
+                          const s = getStatus(c.active, c.expiresAt);
+                          return (
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-medium ${statusColor(
+                                s
+                              )}`}
+                            >
+                              {s}
+                            </span>
+                          );
+                        })()}
                       </td>
-                      <td className="px-6 py-4 text-sm">{formatDate(c.expiresAt)}</td>
-                      <td className="px-6 py-4 space-x-2">
+                      <td className="px-6 py-4 text-sm">
+                        {formatDate(c.expiresAt)}
+                      </td>
+
+                      {/* Buttons -------------------------------- */}
+                      <td className="space-x-2 px-6 py-4">
                         <Button
-                          variant="secondary"
-                          onClick={() =>
-                            navigate(`/admin/coupons/${c.id}/edit`)
-                          }
                           className="flex items-center gap-1 text-sm"
+                          variant="secondary"
+                          onClick={() => navigate(`/admin/coupons/${c.id}/edit`)}
                         >
-                          <Pencil size={16} /> Edit
+                          <Pencil size={16} />
+                          Edit
                         </Button>
                         <Button
+                          className="flex items-center gap-1 text-sm"
                           variant="ghost"
                           onClick={() => doDelete(c.id)}
-                          className="flex items-center gap-1 text-sm"
                         >
-                          <Trash2 size={16} /> Delete
+                          <Trash2 size={16} />
+                          Delete
                         </Button>
                       </td>
                     </motion.tr>
