@@ -3,29 +3,32 @@ import { ContactForm } from "../components/form/ContactForm";
 import { motion } from "framer-motion";
 
 const ContactPage = () => (
-  <Container className="py-16 flex justify-center">
-    <motion.div
-      className="w-full max-w-xl bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-8 border border-gray-200 dark:border-gray-700"
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-    >
-      <motion.h1
-        className="text-4xl font-bold text-center mb-4"
-        initial={{ opacity: 0, y: -20 }}
+  <div className="bg-slate-50 dark:bg-slate-950">
+    <Container className="py-16 flex justify-center">
+      <motion.div
+        className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-800 dark:bg-slate-900"
+        initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.6 }}
       >
-        Contact Us
-      </motion.h1>
+        <motion.h1
+          className="mb-2 text-center text-4xl font-bold text-slate-900 dark:text-white"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          Contact Us
+        </motion.h1>
 
-      <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
-        We'd love to hear from you. Please fill out the form below and we’ll get in touch.
-      </p>
+        <p className="mb-8 text-center text-slate-600 dark:text-slate-400">
+          We'd love to hear from you. Please fill out the form below and we’ll
+          get in touch.
+        </p>
 
-      <ContactForm />
-    </motion.div>
-  </Container>
+        <ContactForm />
+      </motion.div>
+    </Container>
+  </div>
 );
 
 export default ContactPage;

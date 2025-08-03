@@ -1,11 +1,10 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import api from "../../api/axios";
 import Button from "../ui/Button";
-import { useState } from "react";
 
-// 1. Define the validation schema with Zod
 const contactSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -14,23 +13,22 @@ const contactSchema = z.object({
     .min(10, { message: "Message must be at least 10 characters" }),
 });
 
-// 2. Infer the type from the schema
 type ContactFormInputs = z.infer<typeof contactSchema>;
 
-// 3. Create the component
 export const ContactForm = () => {
-  const [formStatus, setFormStatus] = useState({
-    submitted: false,
-    message: "",
-  });
+  const [formStatus, setFormStatus] = useState<{
+    submitted: boolean;
+    message: string;
+  }>({ submitted: false, message: "" });
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isSubmitSuccessful },
     reset,
   } = useForm<ContactFormInputs>({
     resolver: zodResolver(contactSchema),
+    mode: "onBlur",
   });
 
   const onSubmit = async (data: ContactFormInputs) => {
@@ -49,65 +47,106 @@ export const ContactForm = () => {
     }
   };
 
-  if (formStatus.submitted) {
-    return (
-      <div className="text-center p-8 bg-green-100 dark:bg-green-900/50 rounded-lg">
-        <p className="text-lg font-semibold text-green-800 dark:text-green-200">
-          {formStatus.message}
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+      {/* Success/Error banners */}
+      {formStatus.message && (
+        <div
+          role="status"
+          className={[
+            "rounded-lg border p-3 text-sm",
+            formStatus.submitted
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200"
+              : "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-900/30 dark:text-red-300",
+          ].join(" ")}
+        >
+          {formStatus.message}
+        </div>
+      )}
+
+      {/* Name */}
       <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-1">
+        <label
+          htmlFor="name"
+          className="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-100"
+        >
           Name
         </label>
         <input
           id="name"
           type="text"
           {...register("name")}
-          className="w-full px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          aria-invalid={!!errors.name}
+          aria-describedby={errors.name ? "name-error" : undefined}
+          className="w-full rounded-md border border-slate-300 bg-slate-100 px-4 py-2 outline-none ring-blue-200 focus:border-blue-500 focus:ring-2 dark:border-slate-600 dark:bg-slate-800"
+          placeholder="Your name"
         />
         {errors.name && (
-          <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+          <p id="name-error" className="mt-1 text-sm text-red-500">
+            {errors.name.message}
+          </p>
         )}
       </div>
+
+      {/* Email */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium mb-1">
+        <label
+          htmlFor="email"
+          className="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-100"
+        >
           Email
         </label>
         <input
           id="email"
           type="email"
           {...register("email")}
-          className="w-full px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "email-error" : undefined}
+          className="w-full rounded-md border border-slate-300 bg-slate-100 px-4 py-2 outline-none ring-blue-200 focus:border-blue-500 focus:ring-2 dark:border-slate-600 dark:bg-slate-800"
+          placeholder="you@example.com"
+          autoComplete="email"
         />
         {errors.email && (
-          <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+          <p id="email-error" className="mt-1 text-sm text-red-500">
+            {errors.email.message}
+          </p>
         )}
       </div>
+
+      {/* Message */}
       <div>
-        <label htmlFor="message" className="block text-sm font-medium mb-1">
+        <label
+          htmlFor="message"
+          className="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-100"
+        >
           Message
         </label>
         <textarea
           id="message"
           rows={5}
           {...register("message")}
-          className="w-full px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          aria-invalid={!!errors.message}
+          aria-describedby={errors.message ? "message-error" : undefined}
+          className="w-full rounded-md border border-slate-300 bg-slate-100 px-4 py-2 outline-none ring-blue-200 focus:border-blue-500 focus:ring-2 dark:border-slate-600 dark:bg-slate-800"
+          placeholder="How can we help?"
         />
         {errors.message && (
-          <p className="text-red-500 text-sm mt-1">{errors.message.message}</p>
+          <p id="message-error" className="mt-1 text-sm text-red-500">
+            {errors.message.message}
+          </p>
         )}
       </div>
-      <Button type="submit" disabled={isSubmitting}>
+
+      {/* Submit */}
+      <Button type="submit" disabled={isSubmitting} className="w-full">
         {isSubmitting ? "Sending..." : "Send Message"}
       </Button>
-      {formStatus.message && !formStatus.submitted && (
-        <p className="text-red-500 text-sm mt-2">{formStatus.message}</p>
+
+      {/* Hint to discourage double-submit */}
+      {!isSubmitSuccessful && !isSubmitting && (
+        <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+          We usually respond within 1–2 business days.
+        </p>
       )}
     </form>
   );

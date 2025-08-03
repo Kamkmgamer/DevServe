@@ -1,48 +1,59 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Code, Menu, X, ShoppingCart, UserCircle, Sun, Moon, LogOut } from "lucide-react";
+import {
+  Code,
+  Menu,
+  X,
+  ShoppingCart,
+  UserCircle,
+  Sun,
+  Moon,
+  LogOut,
+} from "lucide-react";
 import Container from "./Container";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext";
 import { useTheme } from "../../contexts/ThemeContext";
-import toast from "react-hot-toast"; // For logout confirmation toast
-import { AnimatePresence, motion } from "framer-motion"; // For mobile menu animation
+import toast from "react-hot-toast";
+import { AnimatePresence, motion } from "framer-motion";
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false); // State for mobile menu
+  const [isOpen, setIsOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
-  const { itemCount } = useCart(); // Get item count from CartContext
-  const { theme, toggleTheme } = useTheme(); // Get theme and toggle function from ThemeContext
+  const { itemCount } = useCart();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     toast.success("Logged out successfully!");
-    setIsOpen(false); // Close mobile menu on logout
-    navigate('/'); // Redirect to home or login page after logout
+    setIsOpen(false);
+    navigate("/");
   };
 
-  // Define navigation links
-  // isNavLink: true indicates it should use NavLink for active styling
-  // isExternal: true indicates it's an external link and should use <a> tag
   const navLinks = [
     { href: "/", label: "Home", isNavLink: true },
     { href: "/services", label: "Services", isNavLink: true },
-    { href: "https://portfolio-delta-ruby-48.vercel.app/", label: "Portfolio", isExternal: true }, // External portfolio link
+    {
+      href: "https://portfolio-delta-ruby-48.vercel.app/",
+      label: "Portfolio",
+      isExternal: true,
+    },
     { href: "/pricing", label: "Pricing", isNavLink: true },
     { href: "/blog", label: "Blog", isNavLink: true },
     { href: "/contact", label: "Contact", isNavLink: true },
   ];
 
-  // Helper function to render links (handles NavLink vs. <a>)
   const renderLink = (link: typeof navLinks[0], isMobile = false) => {
     const linkClasses = `py-2 px-3 rounded-lg font-medium transition-colors ${
-      isMobile ? "text-xl" : "text-lg" // Larger text for mobile menu
+      isMobile ? "text-xl" : "text-lg"
     }`;
-    const activeClasses = "text-blue-600 dark:text-blue-400 font-semibold bg-blue-100 dark:bg-gray-700";
-    const inactiveClasses = "text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400";
+    const activeClasses =
+      "text-blue-600 dark:text-blue-400 font-semibold bg-blue-100 dark:bg-slate-800/60";
+    const inactiveClasses =
+      "text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400";
 
-    if (link.isExternal) {
+    if ((link as any).isExternal) {
       return (
         <a
           key={link.href}
@@ -50,134 +61,144 @@ const Navbar = () => {
           target="_blank"
           rel="noopener noreferrer"
           className={`${linkClasses} ${inactiveClasses}`}
-          onClick={() => setIsOpen(false)} // Close mobile menu on click
+          onClick={() => setIsOpen(false)}
         >
           {link.label}
         </a>
       );
-    } else {
-      return (
-        <NavLink
-          key={link.href}
-          to={link.href}
-          className={({ isActive }) =>
-            `${linkClasses} ${isActive ? activeClasses : inactiveClasses}`
-          }
-          onClick={() => setIsOpen(false)} // Close mobile menu on click
-        >
-          {link.label}
-        </NavLink>
-      );
     }
+    return (
+      <NavLink
+        key={link.href}
+        to={link.href}
+        className={({ isActive }) =>
+          `${linkClasses} ${isActive ? activeClasses : inactiveClasses}`
+        }
+        onClick={() => setIsOpen(false)}
+      >
+        {link.label}
+      </NavLink>
+    );
   };
 
   return (
-    <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-50 shadow-sm border-b border-gray-200 dark:border-gray-700">
-      <Container className="flex items-center justify-between h-20">
-        {/* Logo/Brand */}
-        <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <Code className="w-8 h-8 text-blue-600" />
-          <span className="text-2xl font-bold text-gray-900 dark:text-white">DevServe</span>
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <Container className="flex h-16 items-center justify-between">
+        {/* Brand */}
+        <Link to="/" className="flex flex-shrink-0 items-center gap-2">
+          <Code className="h-7 w-7 text-blue-600" />
+          <span className="text-2xl font-bold text-slate-900 dark:text-white">
+            DevServe
+          </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex flex-grow justify-center gap-2 lg:gap-4 ml-8">
+        {/* Desktop nav */}
+        <nav className="ml-8 hidden flex-grow justify-center gap-2 lg:gap-4 md:flex">
           {navLinks.map((link) => renderLink(link))}
         </nav>
 
-        {/* Right Section: Cart, Auth, Theme Toggle */}
-        <div className="flex items-center gap-4 flex-shrink-0 ml-auto md:ml-0">
-          {/* Cart Icon */}
-          <Link to="/cart" className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <ShoppingCart className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+        {/* Right actions */}
+        <div className="ml-auto flex flex-shrink-0 items-center gap-2 md:ml-0">
+          <Link
+            to="/cart"
+            className="relative rounded-full p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            aria-label="Open cart"
+          >
+            <ShoppingCart className="h-6 w-6 text-slate-700 dark:text-slate-300" />
             {itemCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-bounce">
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 animate-bounce items-center justify-center rounded-full bg-red-500 text-xs text-white">
                 {itemCount}
               </span>
             )}
           </Link>
 
-          {/* Auth Button (Login/Logout) */}
           {isAuthenticated ? (
             <motion.button
               onClick={handleLogout}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-gray-700 dark:text-gray-300"
+              className="flex items-center gap-2 rounded-full p-2 text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              <LogOut className="w-6 h-6" />
-              <span className="hidden lg:inline">Logout</span> {/* Show text on larger screens */}
+              <LogOut className="h-6 w-6" />
+              <span className="hidden lg:inline">Logout</span>
             </motion.button>
           ) : (
-            <Link to="/login" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-gray-700 dark:text-gray-300">
-              <UserCircle className="w-6 h-6" />
-              <span className="hidden lg:inline">Login</span> {/* Show text on larger screens */}
+            <Link
+              to="/login"
+              className="flex items-center gap-2 rounded-full p-2 text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <UserCircle className="h-6 w-6" />
+              <span className="hidden lg:inline">Login</span>
             </Link>
           )}
 
-          {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="rounded-full p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
             aria-label="Toggle theme"
           >
             {theme === "dark" ? (
-              <Sun className="w-6 h-6 text-yellow-500" />
+              <Sun className="h-6 w-6 text-yellow-500" />
             ) : (
-              <Moon className="w-6 h-6 text-gray-700" />
+              <Moon className="h-6 w-6 text-slate-700" />
             )}
           </button>
 
-          {/* Mobile Menu Button (Hamburger) */}
+          {/* Mobile menu button */}
           <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            onClick={() => setIsOpen((v) => !v)}
+            className="rounded-full p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden"
             aria-label="Toggle mobile menu"
           >
             {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
 
-        {/* Mobile Menu Overlay with Framer Motion */}
+        {/* Mobile menu */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -50 }}
+              initial={{ opacity: 0, y: -24 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
+              exit={{ opacity: 0, y: -24 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden absolute top-0 left-0 w-full h-screen bg-white dark:bg-gray-900 flex flex-col items-center justify-center gap-8 z-40 p-4"
+              className="absolute left-0 top-16 z-40 w-full bg-white p-6 shadow-md dark:bg-slate-900 md:hidden"
             >
-              {navLinks.map((link) => renderLink(link, true))}
-              <div className="flex flex-col items-center gap-4 mt-8">
-                 {isAuthenticated ? (
+              <div className="flex flex-col items-center gap-6">
+                {navLinks.map((link) => renderLink(link, true))}
+                <div className="mt-4 flex flex-col items-center gap-4">
+                  {isAuthenticated ? (
                     <motion.button
                       onClick={handleLogout}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="text-2xl font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"
+                      className="flex items-center gap-2 text-2xl font-medium text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
                     >
-                      <LogOut className="w-8 h-8" />
+                      <LogOut className="h-8 w-8" />
                       Logout
                     </motion.button>
                   ) : (
-                    <Link to="/login" onClick={() => setIsOpen(false)} className="text-2xl font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2">
-                      <UserCircle className="w-8 h-8" />
+                    <Link
+                      to="/login"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-2 text-2xl font-medium text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                    >
+                      <UserCircle className="h-8 w-8" />
                       Login
                     </Link>
                   )}
-                 <button
+                  <button
                     onClick={toggleTheme}
-                    className="text-2xl font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"
-                    aria-label="Toggle theme"
-                 >
+                    className="flex items-center gap-2 text-2xl font-medium text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                  >
                     {theme === "dark" ? (
-                      <Sun className="w-8 h-8 text-yellow-500" />
+                      <Sun className="h-8 w-8 text-yellow-500" />
                     ) : (
-                      <Moon className="w-8 h-8 text-gray-700" />
+                      <Moon className="h-8 w-8 text-slate-700" />
                     )}
                     Toggle Theme
-                 </button>
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}

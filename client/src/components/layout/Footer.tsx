@@ -9,18 +9,20 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-gray-100 dark:bg-gray-800 mt-12">
+    <footer className="mt-12 border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
       <Container className="py-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             © {new Date().getFullYear()} DevServe. All rights reserved.
           </p>
           <div className="flex gap-4">
-            {socialLinks.map((link, index) => (
+            {socialLinks.map((link, i) => (
               <a
-                key={index}
+                key={i}
                 href={link.href}
-                className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-500 transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
               >
                 {link.icon}
               </a>
