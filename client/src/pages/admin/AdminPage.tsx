@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import Container from "../components/layout/Container";
-import api from "../api/axios";
+import Container from "../../components/layout/Container";
+import api from "../../api/axios";
 import { motion } from "framer-motion";
 import {
   Loader2,

@@ -22,14 +22,14 @@ import CheckoutPage from "./pages/CheckoutPage";
 // admin
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./components/admin/AdminLayout";
-import AdminPage from "./pages/AdminPage";
-import AdminServicesPage from "./pages/AdminServicesPage";
+import AdminPage from "./pages/admin/AdminPage";
+import AdminServicesPage from "./pages/admin/AdminServicesPage";
 import ServiceFormPage from "./pages/ServiceFormPage";
-import AdminBlogPage from "./pages/AdminBlogPage";
+import AdminBlogPage from "./pages/admin/AdminBlogPage";
 import BlogFormPage from "./pages/BlogFormPage";
-import AdminCouponsPage from "./pages/AdminCouponsPage";
+import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import CouponFormPage from "./pages/CouponFormPage";
-import AdminPortfolioPage from "./pages/AdminPortfolioPage";
+import AdminPortfolioPage from "./pages/admin/AdminPortfolioPage";
 import PortfolioFormPage from "./pages/PortfolioFormPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 

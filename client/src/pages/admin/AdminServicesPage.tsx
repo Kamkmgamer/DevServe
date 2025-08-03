@@ -1,11 +1,11 @@
-// client/src/pages/AdminServicesPage.tsx
+// client/src/pages/admin/AdminServicesPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import Container from "../components/layout/Container";
-import Button from "../components/ui/Button";
-import TagButton from "../components/ui/TagButton";
-import api from "../api/axios";
+import Container from "../../components/layout/Container";
+import Button from "../../components/ui/Button";
+import TagButton from "../../components/ui/TagButton";
+import api from "../../api/axios";
 import toast from "react-hot-toast";
 import {
   Grid,

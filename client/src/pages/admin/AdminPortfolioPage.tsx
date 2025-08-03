@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Container from "../components/layout/Container";
-import Button from "../components/ui/Button";
-import api from "../api/axios";
+import Container from "../../components/layout/Container";
+import Button from "../../components/ui/Button";
+import api from "../../api/axios";
 
 type PortfolioItem = {
   id: string;

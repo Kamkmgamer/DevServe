@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Container from "../components/layout/Container";
-import Button from "../components/ui/Button";
-import api from "../api/axios";
+import Container from "../../components/layout/Container";
+import Button from "../../components/ui/Button";
+import api from "../../api/axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Trash2, Pencil, Search, SortAsc, SortDesc } from "lucide-react";
 import toast from "react-hot-toast";
