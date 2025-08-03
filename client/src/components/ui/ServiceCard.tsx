@@ -12,34 +12,49 @@ type ServiceCardProps = {
 };
 
 export const ServiceCard = ({ service }: ServiceCardProps) => {
+  const imgSrc =
+    service.thumbnailUrl || "https://via.placeholder.com/640x360?text=Service";
+  const price =
+    typeof service.price === "number"
+      ? `$${service.price.toFixed(2)}`
+      : "—";
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col">
-      {/* Make the entire image area clickable */}
-      <Link to={`/services/${service.id}`} className="block"> {/* 👈 Wrap image in Link */}
+    <div className="group flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-gray-800">
+      <Link
+        to={`/services/${service.id}`}
+        className="block"
+        aria-label={`Open ${service.name}`}
+      >
         <img
-          src={service.thumbnailUrl || "https://via.placeholder.com/400x250"}
+          src={imgSrc}
           alt={service.name}
-          className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" // Add hover effect
+          className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
         />
-      </Link> {/* 👈 End Link */}
-      <div className="p-6 flex flex-col flex-grow">
-        {/* Make the title clickable too */}
-        <Link to={`/services/${service.id}`}> {/* 👈 Wrap title in Link */}
-          <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-200">
+      </Link>
+
+      <div className="flex grow flex-col p-6">
+        <Link to={`/services/${service.id}`} aria-label={`Open ${service.name}`}>
+          <h3 className="mb-2 text-xl font-bold text-gray-900 transition-colors duration-200 group-hover:text-blue-600 dark:text-white">
             {service.name}
           </h3>
-        </Link> {/* 👈 End Link */}
-        <p className="text-gray-600 dark:text-gray-300 mb-4 flex-grow">
+        </Link>
+
+        <p className="mb-4 line-clamp-3 text-gray-600 dark:text-gray-300">
           {service.description}
         </p>
-        <div className="mt-auto flex justify-between items-center">
+
+        <div className="mt-auto flex items-center justify-between">
           <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">
-            ${service.price}
+            {price}
           </span>
-          {/* Keep the "View Details" button/link */}
+
           <Link
             to={`/services/${service.id}`}
-            className="inline-flex items-center font-semibold text-blue-600 dark:text-blue-400 group-hover:underline"
+            className="inline-flex items-center font-semibold text-blue-600 hover:underline dark:text-blue-400"
+            aria-label={`View details for ${service.name}`}
           >
             View Details <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
