@@ -1,4 +1,4 @@
-// client/src/pages/CheckoutPage.tsx - fix applyCoupon function
+// client/src/pages/CheckoutPage.tsx
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,7 @@ import api from "../api/axios";
 import Container from "../components/layout/Container";
 import Button from "../components/ui/Button";
 import { useCart, CartItem } from "../contexts/CartContext";
+import { Link } from "react-router-dom";
 
 const requirementsSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -52,54 +53,25 @@ export default function CheckoutPage() {
     }
 
     try {
-      // Fixed: Use query parameter instead of path
       const { data } = await api.get(`/coupons/code/${couponCode.trim().toUpperCase()}`);
-      
-      const { 
-        value, 
-        type, 
-        minOrderAmount, 
-        maxUses, 
-        currentUses, 
-        expiresAt, 
-        active 
-      } = data;
+      const { value, type, minOrderAmount } = data;
 
-      if (!active) {
-        toast.error("This coupon is inactive");
-        return;
-      }
-
-      if (expiresAt && new Date(expiresAt) < new Date()) {
-        toast.error("This coupon has expired");
-        return;
-      }
-
-      if (maxUses && currentUses >= maxUses) {
-        toast.error("This coupon has reached its usage limit");
-        return;
-      }
-
+      // Frontend check for min order amount for immediate feedback
       if (minOrderAmount && total * 100 < minOrderAmount) {
         toast.error(`Minimum order amount is $${(minOrderAmount / 100).toFixed(2)}`);
         return;
       }
 
-      const discountAmount = type === "percentage" 
-        ? (total * (value / 100)) 
-        : (value / 100);
+      const discountAmount = type === "percentage" ? (total * (value / 100)) : (value / 100);
 
       setDiscount(discountAmount);
       setDiscountType(type);
       toast.success("Coupon applied successfully!");
-      
     } catch (err: any) {
       setDiscount(0);
-      if (err.response?.status === 404) {
-        toast.error("Invalid coupon code");
-      } else {
-        toast.error(err.response?.data?.message || "Failed to apply coupon");
-      }
+      setDiscountType(null);
+      // Rely on the specific error message from the server
+      toast.error(err.response?.data?.message || "Failed to apply coupon");
     }
   }
 
@@ -113,15 +85,14 @@ export default function CheckoutPage() {
   async function onSubmit(data: RequirementsData) {
     try {
       const order = await createOrder(
-        { 
+        {
           name: data.name,
           email: data.email,
           notes: data.notes,
-          requirements: data.notes || "No additional requirements"
+          requirements: data.notes || "No additional requirements",
         },
         discount
       );
-      
       setOrderId(order.id);
       setStep(2);
       toast.success("Order created! Proceed to payment.");
@@ -135,9 +106,9 @@ export default function CheckoutPage() {
     return (
       <Container className="py-20 text-center">
         <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
-        <Button onClick={() => window.location.href = "/services"}>
-          Browse Services
-        </Button>
+        <Link to="/services">
+          <Button>Browse Services</Button>
+        </Link>
       </Container>
     );
   }
@@ -145,7 +116,6 @@ export default function CheckoutPage() {
   return (
     <Container className="py-10">
       <Stepper step={step} />
-
       <AnimatePresence mode="wait">
         {step === 1 && (
           <motion.div
@@ -158,7 +128,6 @@ export default function CheckoutPage() {
           >
             <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Review & Checkout</h2>
-
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
                 <div className="space-y-3 divide-y divide-gray-200 dark:divide-gray-700">
@@ -173,7 +142,6 @@ export default function CheckoutPage() {
                   ))}
                 </div>
               </div>
-
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3">Coupon</h3>
                 <div className="flex gap-2">
@@ -186,89 +154,52 @@ export default function CheckoutPage() {
                     className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {!discount ? (
-                    <Button onClick={applyCoupon} disabled={!couponCode.trim()}>
-                      Apply
-                    </Button>
+                    <Button onClick={applyCoupon} disabled={!couponCode.trim()}>Apply</Button>
                   ) : (
-                    <Button variant="ghost" onClick={removeCoupon}>
-                      Remove
-                    </Button>
+                    <Button variant="ghost" onClick={removeCoupon}>Remove</Button>
                   )}
                 </div>
                 {discount > 0 && (
                   <div className="mt-2 text-sm text-green-600">
-                    {discountType === "percentage" 
+                    {discountType === "percentage"
                       ? `Coupon applied: ${((discount / total) * 100).toFixed(0)}% off`
                       : `Coupon applied: -$${discount.toFixed(2)}`}
                   </div>
                 )}
               </div>
-
               <div className="border-t pt-4 mb-6">
                 <div className="flex justify-between items-center text-lg font-semibold">
                   <span>Total</span>
                   <span>${totalAfterDiscount.toFixed(2)}</span>
                 </div>
               </div>
-
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Customer Information</h3>
-                  
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Full Name *
-                      </label>
-                      <input
-                        {...register("name")}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="John Doe"
-                      />
-                      {formState.errors.name && (
-                        <p className="text-red-500 text-sm mt-1">{formState.errors.name.message}</p>
-                      )}
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
+                      <input {...register("name")} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="John Doe" />
+                      {formState.errors.name && <p className="text-red-500 text-sm mt-1">{formState.errors.name.message}</p>}
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Email Address *
-                      </label>
-                      <input
-                        {...register("email")}
-                        type="email"
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="john@example.com"
-                      />
-                      {formState.errors.email && (
-                        <p className="text-red-500 text-sm mt-1">{formState.errors.email.message}</p>
-                      )}
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address *</label>
+                      <input {...register("email")} type="email" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="john@example.com" />
+                      {formState.errors.email && <p className="text-red-500 text-sm mt-1">{formState.errors.email.message}</p>}
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Additional Requirements
-                      </label>
-                      <textarea
-                        {...register("notes")}
-                        rows={4}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Any specific requirements, branding preferences, timeline, etc..."
-                      />
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Additional Requirements</label>
+                      <textarea {...register("notes")} rows={4} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Any specific requirements, branding preferences, timeline, etc..." />
                     </div>
                   </div>
                 </div>
-
                 <div className="flex justify-end">
-                  <Button type="submit" className="px-6 py-3">
-                    Continue to Payment
-                  </Button>
+                  <Button type="submit" className="px-6 py-3">Continue to Payment</Button>
                 </div>
               </form>
             </div>
           </motion.div>
         )}
-
         {step === 2 && orderId && (
           <motion.div
             key="step2"
@@ -280,7 +211,6 @@ export default function CheckoutPage() {
           >
             <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
               <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">Complete Payment</h2>
-              
               <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 <div className="text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-300">Amount to pay</p>
@@ -288,33 +218,21 @@ export default function CheckoutPage() {
                   <p className="text-xs text-gray-500 mt-1">Order ID: {orderId}</p>
                 </div>
               </div>
-
               <PayPalButtons
                 createOrder={(_, actions) =>
                   actions.order.create({
                     intent: "AUTHORIZE",
-                    purchase_units: [
-                      {
-                        amount: {
-                          currency_code: "USD",
-                          value: totalAfterDiscount.toFixed(2),
-                        },
-                        custom_id: orderId,
-                      },
-                    ],
+                    purchase_units: [{ amount: { currency_code: "USD", value: totalAfterDiscount.toFixed(2) }, custom_id: orderId }],
                   })
                 }
                 onApprove={async (data, actions) => {
                   try {
                     const auth = await actions.order?.authorize();
                     const authorizationId = auth?.purchase_units?.[0].payments?.authorizations?.[0].id;
-                    
                     if (authorizationId) {
                       await api.post(`/orders/${orderId}/authorize`, { authorizationId });
                       toast.success("Payment completed! We'll begin our technical review shortly.");
-                      setTimeout(() => {
-                        window.location.href = "/";
-                      }, 2000);
+                      setTimeout(() => { window.location.href = "/"; }, 2000);
                     } else {
                       toast.error("Could not get authorization from PayPal.");
                     }
@@ -329,11 +247,8 @@ export default function CheckoutPage() {
                 }}
                 style={{ layout: "vertical" }}
               />
-              
               <div className="mt-6 text-center">
-                <Button variant="ghost" onClick={() => setStep(1)}>
-                  Back to Order Details
-                </Button>
+                <Button variant="ghost" onClick={() => setStep(1)}>Back to Order Details</Button>
               </div>
             </div>
           </motion.div>
@@ -345,33 +260,16 @@ export default function CheckoutPage() {
 
 function Stepper({ step }: { step: number }) {
   const steps = ["Order Details", "Payment"];
-  
   return (
     <div className="mb-8">
       <div className="flex justify-center gap-4">
         {steps.map((label, index) => (
           <div key={label} className="flex items-center">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
-                step === index + 1
-                  ? "bg-blue-600 text-white"
-                  : step > index + 1
-                  ? "bg-green-500 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-              }`}
-            >
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${step === index + 1 ? "bg-blue-600 text-white" : step > index + 1 ? "bg-green-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"}`}>
               {index + 1}
             </div>
-            <span className={`ml-2 hidden sm:inline text-sm ${
-              step === index + 1 ? "text-blue-600 font-semibold" : "text-gray-500"
-            }`}>
-              {label}
-            </span>
-            {index < steps.length - 1 && (
-              <div className={`w-8 h-0.5 ml-2 ${
-                step > index + 1 ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-              }`} />
-            )}
+            <span className={`ml-2 hidden sm:inline text-sm ${step === index + 1 ? "text-blue-600 font-semibold" : "text-gray-500"}`}>{label}</span>
+            {index < steps.length - 1 && <div className={`w-8 h-0.5 ml-2 ${step > index + 1 ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />}
           </div>
         ))}
       </div>

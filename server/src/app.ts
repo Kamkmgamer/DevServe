@@ -12,7 +12,16 @@ dotenv.config();
 const app = express();
 
 // Apply middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'http://192.168.0.100:5173',
+      /\.ngrok-free\.app$/
+    ],
+    credentials: true
+  })
+);
 app.use(express.json());
 
 // Request logging middleware
