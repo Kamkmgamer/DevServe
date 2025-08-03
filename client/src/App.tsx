@@ -19,6 +19,8 @@ import RegisterPage from "./pages/RegisterPage";
 import BlogPage from "./pages/BlogPage";
 import BlogDetailsPage from "./pages/BlogDetailsPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPolicyPage";
 
 // admin
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -59,6 +61,9 @@ function App() {
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/blog/:id" element={<BlogDetailsPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+
 
             <Route element={<ProtectedRoute />}>
               <Route element={<AdminLayout />}>
