@@ -1,4 +1,3 @@
-// client/src/pages/BlogFormPage.tsx
 import { useEffect, useState } from "react";
 import {
   useForm,
@@ -8,17 +7,24 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import Container from "../components/layout/Container";
 import Button from "../components/ui/Button";
 import api from "../api/axios";
 
 // Zod schema for blog post
 const schema = z.object({
-  title: z.string().min(1, "Title is required"),
-  summary: z.string().min(1, "Summary is required"),
+  title: z.string().min(1, "Title is required").max(160, "Max 160 characters"),
+  summary: z
+    .string()
+    .min(1, "Summary is required")
+    .max(300, "Max 300 characters"),
   content: z.string().min(1, "Content is required"),
-  thumbnailUrl: z.string().url("Must be a valid URL").optional().default(""),
+  thumbnailUrl: z
+    .string()
+    .url("Must be a valid URL")
+    .optional()
+    .or(z.literal("")),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -34,7 +40,8 @@ const BlogFormPage = () => {
     register,
     handleSubmit,
     setValue,
-    formState: { errors, isSubmitting },
+    watch,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver,
     defaultValues: {
@@ -43,7 +50,12 @@ const BlogFormPage = () => {
       content: "",
       thumbnailUrl: "",
     },
+    mode: "onBlur",
   });
+
+  const title = watch("title");
+  const summary = watch("summary");
+  const thumbnailUrl = watch("thumbnailUrl");
 
   // Load existing post
   useEffect(() => {
@@ -58,15 +70,15 @@ const BlogFormPage = () => {
         setValue("thumbnailUrl", p.thumbnailUrl || "");
       })
       .catch((e) => setError(e.response?.data?.error || e.message));
-  }, [id]);
+  }, [id, isEdit, setValue]);
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setError("");
     const payload = {
-      title: data.title,
-      summary: data.summary,
+      title: data.title.trim(),
+      summary: data.summary.trim(),
       content: data.content,
-      thumbnailUrl: data.thumbnailUrl || null,
+      thumbnailUrl: data.thumbnailUrl ? data.thumbnailUrl.trim() : null,
     };
     try {
       if (isEdit) {
@@ -81,72 +93,195 @@ const BlogFormPage = () => {
   };
 
   return (
-    <Container className="py-12 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-6">
-        {isEdit ? "Edit Blog Post" : "Add Blog Post"}
-      </h1>
-      <form
-        onSubmit={handleSubmit(onSubmit as SubmitHandler<FieldValues>)}
-        className="space-y-4"
-      >
-        {/* Title */}
-        <div>
-          <label className="block mb-1">Title</label>
-          <input
-            {...register("title")}
-            className="w-full border p-2 rounded"
-          />
-          {errors.title && (
-            <p className="text-red-500 text-sm">{errors.title.message}</p>
-          )}
-        </div>
+    <div className="bg-slate-50 dark:bg-slate-950">
+      <Container className="py-10 max-w-2xl">
+        <header className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+              {isEdit ? "Edit Blog Post" : "Add Blog Post"}
+            </h1>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Provide the article details. You can add a thumbnail image URL
+              for previews and listings.
+            </p>
+          </div>
+          <Link to="/admin/blog">
+            <Button variant="secondary">Back to list</Button>
+          </Link>
+        </header>
 
-        {/* Summary */}
-        <div>
-          <label className="block mb-1">Summary</label>
-          <textarea
-            {...register("summary")}
-            className="w-full border p-2 rounded"
-            rows={3}
-          />
-          {errors.summary && (
-            <p className="text-red-500 text-sm">{errors.summary.message}</p>
-          )}
-        </div>
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
+          >
+            {error}
+          </div>
+        )}
 
-        {/* Content */}
-        <div>
-          <label className="block mb-1">Content</label>
-          <textarea
-            {...register("content")}
-            className="w-full border p-2 rounded"
-            rows={6}
-          />
-          {errors.content && (
-            <p className="text-red-500 text-sm">{errors.content.message}</p>
-          )}
-        </div>
+        <form
+          onSubmit={handleSubmit(onSubmit as SubmitHandler<FieldValues>)}
+          className="space-y-8"
+          noValidate
+        >
+          {/* Post Details */}
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
+              Post Details
+            </h2>
 
-        {/* Thumbnail URL */}
-        <div>
-          <label className="block mb-1">Thumbnail URL</label>
-          <input
-            {...register("thumbnailUrl")}
-            className="w-full border p-2 rounded"
-          />
-        </div>
+            {/* Title */}
+            <div className="mb-4">
+              <label
+                htmlFor="title"
+                className="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-100"
+              >
+                Title *
+              </label>
+              <input
+                id="title"
+                {...register("title")}
+                className="w-full rounded border border-slate-300 p-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950"
+                aria-invalid={!!errors.title}
+                aria-describedby={errors.title ? "title-error" : undefined}
+                maxLength={160}
+                placeholder="Write a compelling title"
+              />
+              <div className="mt-1 flex items-center justify-between">
+                {errors.title ? (
+                  <p id="title-error" className="text-sm text-red-500">
+                    {errors.title.message}
+                  </p>
+                ) : (
+                  <span className="text-xs text-slate-500">
+                    {(title?.length || 0)}/160
+                  </span>
+                )}
+              </div>
+            </div>
 
-        {/* Submit */}
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? "Saving…"
-            : isEdit
-            ? "Update Post"
-            : "Create Post"}
-        </Button>
-        {error && <p className="text-red-500 mt-2">{error}</p>}
-      </form>
-    </Container>
+            {/* Summary */}
+            <div className="mb-4">
+              <label
+                htmlFor="summary"
+                className="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-100"
+              >
+                Summary *
+              </label>
+              <textarea
+                id="summary"
+                {...register("summary")}
+                className="w-full rounded border border-slate-300 p-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950"
+                rows={3}
+                aria-invalid={!!errors.summary}
+                aria-describedby={errors.summary ? "summary-error" : undefined}
+                maxLength={300}
+                placeholder="Short synopsis for list pages and meta description"
+              />
+              <div className="mt-1 flex items-center justify-between">
+                {errors.summary ? (
+                  <p id="summary-error" className="text-sm text-red-500">
+                    {errors.summary.message}
+                  </p>
+                ) : (
+                  <span className="text-xs text-slate-500">
+                    {(summary?.length || 0)}/300
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="mb-1">
+              <label
+                htmlFor="content"
+                className="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-100"
+              >
+                Content *
+              </label>
+              <textarea
+                id="content"
+                {...register("content")}
+                className="w-full rounded border border-slate-300 p-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950"
+                rows={10}
+                aria-invalid={!!errors.content}
+                aria-describedby={errors.content ? "content-error" : undefined}
+                placeholder="Write your article content here..."
+              />
+              {errors.content && (
+                <p id="content-error" className="mt-1 text-sm text-red-500">
+                  {errors.content.message}
+                </p>
+              )}
+            </div>
+          </section>
+
+          {/* Media */}
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
+              Media
+            </h2>
+            {/* Thumbnail URL */}
+            <div>
+              <label
+                htmlFor="thumbnailUrl"
+                className="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-100"
+              >
+                Thumbnail URL
+              </label>
+              <input
+                id="thumbnailUrl"
+                {...register("thumbnailUrl")}
+                className="w-full rounded border border-slate-300 p-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-950"
+                placeholder="https://example.com/thumbnail.jpg"
+              />
+              {errors.thumbnailUrl && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.thumbnailUrl.message}
+                </p>
+              )}
+
+              {thumbnailUrl && (
+                <div className="mt-3">
+                  <img
+                    src={thumbnailUrl}
+                    alt="Thumbnail preview"
+                    className="h-28 w-auto rounded border border-slate-200 object-cover dark:border-slate-800"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display =
+                        "none";
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Spacer for sticky bar */}
+          <div className="h-20" />
+
+          {/* Sticky Action Bar */}
+          <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+            <Container className="flex items-center justify-between py-3">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                {isEdit ? "Editing post" : "Creating new post"}
+                {isDirty ? " • Unsaved changes" : ""}
+              </div>
+              <div className="flex gap-3">
+                <Link to="/admin/blog">
+                  <Button variant="secondary" type="button">
+                    Cancel
+                  </Button>
+                </Link>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving…" : isEdit ? "Update Post" : "Create Post"}
+                </Button>
+              </div>
+            </Container>
+          </div>
+        </form>
+      </Container>
+    </div>
   );
 };
 
