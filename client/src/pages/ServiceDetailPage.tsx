@@ -43,13 +43,11 @@ const ServiceDetailPage = () => {
   const [copied, setCopied] = useState(false);
   const { addToCart } = useCart();
 
-  // Fetch service
   useEffect(() => {
     setLoading(true);
     setError("");
     setService(null);
     setCurrentImageIndex(0);
-
     api
       .get(`/services/${id}`)
       .then((res) => setService(res.data))
@@ -63,7 +61,6 @@ const ServiceDetailPage = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Derived images list (thumbnail + gallery)
   const images = useMemo(() => {
     const list = service?.imageUrls?.length ? service.imageUrls : [];
     const all = service?.thumbnailUrl ? [service.thumbnailUrl, ...list] : list;
@@ -80,7 +77,6 @@ const ServiceDetailPage = () => {
     setCurrentImageIndex((i) => (i + 1) % images.length);
   }, [images.length]);
 
-  // Keyboard navigation for gallery
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prev();
@@ -98,7 +94,6 @@ const ServiceDetailPage = () => {
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
-    // Check if navigator.share exists as a function
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({
@@ -106,9 +101,7 @@ const ServiceDetailPage = () => {
           text: service?.description?.slice(0, 100),
           url,
         });
-      } catch {
-        // User may have cancelled sharing.
-      }
+      } catch {}
     } else {
       try {
         await navigator.clipboard.writeText(url);
@@ -123,15 +116,17 @@ const ServiceDetailPage = () => {
 
   if (loading)
     return (
-      <Container className="py-20 text-center">
+      <Container className="px-4 sm:px-6 lg:px-8 py-20 text-center">
         <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-        <p className="mt-2 text-gray-600 dark:text-gray-300">Loading service…</p>
+        <p className="mt-2 text-gray-600 dark:text-gray-300">
+          Loading service…
+        </p>
       </Container>
     );
 
   if (error)
     return (
-      <Container className="py-20 text-center">
+      <Container className="px-4 sm:px-6 lg:px-8 py-20 text-center">
         <p className="text-red-600">{error}</p>
         <Link
           to="/services"
@@ -144,7 +139,7 @@ const ServiceDetailPage = () => {
 
   if (!service)
     return (
-      <Container className="py-20 text-center">
+      <Container className="px-4 sm:px-6 lg:px-8 py-20 text-center">
         <p>Service not found.</p>
         <Link
           to="/services"
@@ -159,9 +154,8 @@ const ServiceDetailPage = () => {
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950">
-      {/* Hero header band */}
       <div className="bg-gradient-to-b from-blue-50/70 to-transparent py-6 dark:from-slate-900/40">
-        <Container className="flex flex-wrap items-center justify-between gap-4">
+        <Container className="px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
           <Link
             to="/services"
             className="text-blue-600 hover:underline dark:text-blue-400"
@@ -175,14 +169,14 @@ const ServiceDetailPage = () => {
         </Container>
       </div>
 
-      <Container className="py-10 md:py-16">
+      <Container className="px-4 sm:px-6 lg:px-8 py-10 md:py-16">
         <motion.div
-          className="grid items-start gap-10 md:grid-cols-2"
+          className="grid grid-cols-1 gap-10 md:grid-cols-2"
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
         >
-          {/* Gallery Section */}
+          {/* Gallery */}
           <div className="relative">
             <motion.div
               layoutId={`service-image-${service.id}`}
@@ -192,12 +186,11 @@ const ServiceDetailPage = () => {
                 <img
                   src={mainImage}
                   alt={service.name}
-                  className="h-auto w-full object-cover"
+                  className="w-full object-cover"
                 />
               )}
             </motion.div>
 
-            {/* Gallery Controls */}
             {images.length > 1 && (
               <>
                 <button
@@ -214,45 +207,42 @@ const ServiceDetailPage = () => {
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>
-              </>
-            )}
 
-            {/* Thumbnails */}
-            {images.length > 1 && (
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                {images.map((url, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentImageIndex(idx)}
-                    className={[
-                      "h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg border",
-                      idx === currentImageIndex
-                        ? "border-blue-500 ring-2 ring-blue-200"
-                        : "border-slate-200 dark:border-slate-800",
-                    ].join(" ")}
-                    aria-label={`Thumbnail ${idx + 1}`}
-                  >
-                    <img
-                      src={url}
-                      alt={`Thumbnail ${idx + 1}`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {images.map((url, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={[
+                        "h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg border",
+                        idx === currentImageIndex
+                          ? "border-blue-500 ring-2 ring-blue-200"
+                          : "border-slate-200 dark:border-slate-800",
+                      ].join(" ")}
+                      aria-label={`Thumbnail ${idx + 1}`}
+                    >
+                      <img
+                        src={url}
+                        alt={`Thumbnail ${idx + 1}`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
-          {/* Details Section */}
-          <div>
+          {/* Details */}
+          <div className="flex flex-col">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white md:text-4xl">
+              <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white sm:text-3xl md:text-4xl">
                 {service.name}
               </h1>
               <button
                 onClick={handleShare}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 {typeof navigator.share === "function" ? (
                   <>
@@ -268,11 +258,10 @@ const ServiceDetailPage = () => {
               </button>
             </div>
 
-            <p className="mb-6 text-lg text-slate-600 dark:text-slate-300">
+            <p className="mb-6 text-base sm:text-lg text-slate-600 dark:text-slate-300">
               {service.description}
             </p>
 
-            {/* Badges */}
             <div className="mb-6 flex flex-wrap gap-2">
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-800">
                 High performance
@@ -285,9 +274,8 @@ const ServiceDetailPage = () => {
               </span>
             </div>
 
-            {/* Features List */}
             <div className="mb-8">
-              <h3 className="mb-3 text-xl font-semibold text-slate-900 dark:text-white">
+              <h3 className="mb-3 text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">
                 What’s Included
               </h3>
               <ul className="space-y-2">
@@ -302,32 +290,33 @@ const ServiceDetailPage = () => {
               </ul>
             </div>
 
-            {/* Price and Add-to-Cart */}
-            <div className="sticky bottom-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold text-slate-900 dark:text-white">
-                  {formatPrice(service.price)}
-                </span>
-                <Button onClick={handleAdd} className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5" />
-                  Add to Cart
-                </Button>
+            <div className="mt-auto">
+              <div className="relative">
+                <div className="sticky bottom-0 left-0 right-0 bg-white p-4 shadow sm:static sm:bg-transparent sm:p-0 dark:bg-slate-900 dark:sm:bg-transparent">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
+                      {formatPrice(service.price)}
+                    </span>
+                    <Button onClick={handleAdd} className="flex items-center gap-2">
+                      <ShoppingCart className="h-5 w-5" />
+                      Add to Cart
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    Secure checkout. No hidden fees.
+                  </p>
+                </div>
               </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                Secure checkout. No hidden fees.
-              </p>
             </div>
           </div>
         </motion.div>
 
-        {/* Navigation Links */}
         <div className="mt-12 text-center">
           <Link to="/services" className="text-blue-600 hover:underline">
             ← Back to Services
           </Link>
         </div>
 
-        {/* Teaser / Custom project callout */}
         <AnimatePresence>
           <motion.div
             initial={{ opacity: 0, y: 14 }}
@@ -337,7 +326,7 @@ const ServiceDetailPage = () => {
             className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
           >
             Looking for something tailored? I can customize features, integrate
-            third‑party APIs, or build internal tools that suit your workflow.
+            third-party APIs, or build internal tools that suit your workflow.
             <Link to="/contact" className="text-blue-600 hover:underline">
               {" "}
               Start a conversation →
