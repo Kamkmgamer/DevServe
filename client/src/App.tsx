@@ -24,13 +24,13 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import AdminPage from "./pages/admin/AdminPage";
 import AdminServicesPage from "./pages/admin/AdminServicesPage";
-import ServiceFormPage from "./pages/ServiceFormPage";
+import ServiceFormPage from "./pages/admin/ServiceFormPage";
 import AdminBlogPage from "./pages/admin/AdminBlogPage";
-import BlogFormPage from "./pages/BlogFormPage";
+import BlogFormPage from "./pages/admin/BlogFormPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import CouponFormPage from "./pages/CouponFormPage";
 import AdminPortfolioPage from "./pages/admin/AdminPortfolioPage";
-import PortfolioFormPage from "./pages/PortfolioFormPage";
+import PortfolioFormPage from "./pages/admin/PortfolioFormPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 
 // toaster

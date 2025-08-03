@@ -9,9 +9,9 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useParams, useNavigate } from "react-router-dom";
-import Container from "../components/layout/Container";
-import Button from "../components/ui/Button";
-import api from "../api/axios";
+import Container from "../../components/layout/Container";
+import Button from "../../components/ui/Button";
+import api from "../../api/axios";
 
 // Zod schema: all fields as strings; imageUrlsCsv for CSV
 const schema = z.object({
