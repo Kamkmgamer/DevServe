@@ -9,9 +9,12 @@ import {
   X,
   Search,
   ShieldCheck,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTheme } from "../../contexts/ThemeContext"; // <-- import your ThemeContext
 
 type LinkItem = {
   to: string;
@@ -31,7 +34,8 @@ export const AdminNavbar = () => {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
 
-  // Optionally support Cmd/Ctrl+K to focus search
+  const { theme, toggleTheme } = useTheme(); // <-- use the theme
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const metaK = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k";
@@ -71,7 +75,6 @@ export const AdminNavbar = () => {
     >
       <Icon className="h-4 w-4" />
       <span>{label}</span>
-      {/* Active indicator pill */}
       <span className="pointer-events-none absolute inset-0 -z-10 rounded-lg ring-1 ring-black/5 dark:ring-white/10" />
     </NavLink>
   );
@@ -101,7 +104,6 @@ export const AdminNavbar = () => {
             placeholder="Search sections…  (Ctrl/⌘K)"
             className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-700 outline-none ring-blue-200 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
           />
-          {/* Quick suggestions dropdown */}
           {q && (
             <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
               {filtered.length === 0 ? (
@@ -126,10 +128,24 @@ export const AdminNavbar = () => {
         </div>
 
         {/* Desktop links */}
-        <nav className="ml-auto hidden gap-2 md:flex">
+        <nav className="ml-auto hidden items-center gap-2 md:flex">
           {links.map((l) => (
             <Item key={l.to} {...l} />
           ))}
+
+          {/* Theme toggle (desktop) */}
+          <button
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className="ml-2 inline-flex items-center justify-center rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            title="Toggle theme"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5 text-yellow-500" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </button>
         </nav>
 
         {/* Mobile toggle */}
@@ -171,6 +187,25 @@ export const AdminNavbar = () => {
                   <Item key={l.to} {...l} />
                 ))}
               </div>
+
+              {/* Theme toggle (mobile) */}
+              <button
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+                className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg p-2 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                {theme === "dark" ? (
+                  <>
+                    <Sun className="h-5 w-5 text-yellow-500" />
+                    <span>Light mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="h-5 w-5" />
+                    <span>Dark mode</span>
+                  </>
+                )}
+              </button>
             </div>
           </motion.nav>
         )}
