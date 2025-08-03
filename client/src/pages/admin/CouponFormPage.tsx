@@ -3,9 +3,9 @@ import { useForm, SubmitHandler, Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useParams } from "react-router-dom";
-import Container from "../components/layout/Container";
-import Button from "../components/ui/Button";
-import api from "../api/axios";
+import Container from "../../components/layout/Container";
+import Button from "../../components/ui/Button";
+import api from "../../api/axios";
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 

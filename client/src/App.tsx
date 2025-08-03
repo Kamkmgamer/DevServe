@@ -28,7 +28,7 @@ import ServiceFormPage from "./pages/admin/ServiceFormPage";
 import AdminBlogPage from "./pages/admin/AdminBlogPage";
 import BlogFormPage from "./pages/admin/BlogFormPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
-import CouponFormPage from "./pages/CouponFormPage";
+import CouponFormPage from "./pages/admin/CouponFormPage";
 import AdminPortfolioPage from "./pages/admin/AdminPortfolioPage";
 import PortfolioFormPage from "./pages/admin/PortfolioFormPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
