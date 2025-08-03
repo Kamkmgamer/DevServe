@@ -29,6 +29,7 @@
     "prettier": "^3.3.2"
   },
   "dependencies": {
-    "@paypal/checkout-server-sdk": "^1.0.3"
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "framer-motion": "^12.23.12"
   }
 }

@@ -16,9 +16,9 @@ export default defineConfig(({ mode }) => {
   // HMR configuration for ngrok
   const hmr = env.NGROK_HOST
     ? {
-        protocol: 'wss', // Use WSS because ngrok uses HTTPS
-        host: env.NGROK_HOST,
-        port: 443
+        protocol: 'wss',
+        clientPort: 443,
+        clientUrl: `https://${env.NGROK_HOST}`
       }
     : undefined;
 

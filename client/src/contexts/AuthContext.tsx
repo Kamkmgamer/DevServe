@@ -57,6 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
         name,
       });
+      // Set the token immediately after registration
       setToken(data.token);
     },
     []
