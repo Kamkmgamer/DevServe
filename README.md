@@ -76,10 +76,10 @@ Follow these steps to get your development environment up and running.
 
 ### 1. Clone the Repository
 
-```bash
+
 git clone https://github.com/Kamkmgamer/DevServe.git
 cd web-services-ecommerce
-```
+
 **Note:** Replace `your-username/your-repo-name` with your actual GitHub repository URL.
 
 ### 2. Environment Variables
@@ -87,7 +87,7 @@ cd web-services-ecommerce
 Create `.env` files in both the `client` and `server` directories.
 
 **`server/.env`:**
-```env
+env
 PORT=8000
 
 # Database Connection (for Docker local setup)
@@ -104,28 +104,27 @@ EMAIL_PASS=your_email_password
 
 # Stripe API Keys
 STRIPE_SECRET_KEY=sk_test_... # Get from Stripe Dashboard
-```
+
 
 **`client/.env`:**
-```env
+env
 VITE_API_BASE_URL=http://localhost:8000
-```
+
 Remember to add these `.env` files to your `.gitignore`!
 
 ### 3. Database Setup (PostgreSQL with Docker)
 
 From the project root directory, start the PostgreSQL container:
 
-```bash
+
 docker-compose up -d
-```
+
 This will start a PostgreSQL database accessible on `localhost:5432`.
 
 ### 4. Install Dependencies
 
 Install dependencies for the root, frontend, and backend.
 
-```bash
 # From project root
 npm install
 
@@ -139,27 +138,27 @@ npm install
 
 # Navigate back to root
 cd ..
-```
+
 
 ### 5. Initialize Prisma and Seed Database
 
 Run Prisma migrations and seed initial data (admin user, services, etc.).
 
-```bash
+
 # From server directory
 cd server
 npx prisma migrate dev --name init # Creates tables based on schema
 npm run seed # Seeds initial data (including admin user and services)
 cd .. # Go back to root
-```
+
 
 ### 6. Run Development Servers
 
 From the project root directory, start both the frontend and backend development servers concurrently:
 
-```bash
+
 npm run dev
-```
+
 
 -   **Frontend:** Accessible at `http://localhost:5173`
 -   **Backend API:** Accessible at `http://localhost:8000`
@@ -168,7 +167,7 @@ npm run dev
 
 To run tests for the client and server:
 
-```bash
+
 # From client directory
 cd client
 npm test
@@ -178,7 +177,7 @@ cd ..
 cd server
 npm test
 cd ..
-```
+
 
 ### Admin Access
 
