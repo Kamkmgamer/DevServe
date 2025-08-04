@@ -792,7 +792,6 @@ const HomePage: React.FC = () => {
       toast.dismiss();
       toast("Welcome! Explore the work and services below.", {
         icon: "👋",
-        position: "bottom-center",
         duration: 1500,
         ariaProps: { role: "status", "aria-live": "polite" },
       });
