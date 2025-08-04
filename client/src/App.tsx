@@ -20,6 +20,15 @@ import BlogDetailsPage from "./pages/BlogDetailsPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPolicyPage";
+import AboutPage from "./pages/AboutPage";
+import CareersPage from "./pages/CareersPage";
+import DocsPage from "./pages/DocsPage";
+import GuidesPage from "./pages/GuidesPage";
+import ApiPage from "./pages/ApiPage";
+import CommunityPage from "./pages/CommunityPage";
+import RoadmapPage from "./pages/RoadmapPage";
+import ChangelogPage from "./pages/ChangelogPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 // Admin
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -60,6 +69,15 @@ function App() {
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/careers" element={<CareersPage />} />
+            <Route path="/docs" element={<DocsPage />} />
+            <Route path="/guides" element={<GuidesPage />} />
+            <Route path="/api" element={<ApiPage />} />
+            <Route path="/community" element={<CommunityPage />} />
+            <Route path="/roadmap" element={<RoadmapPage />} />
+            <Route path="/changelog" element={<ChangelogPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
 
           {/* Admin routes */}
