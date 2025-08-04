@@ -22,10 +22,40 @@ import {
 import { useSEO } from "../utils/useSEO";
 
 /**
- * Supernova Explosion Engine v2.1
- * Now accepts an `enabled` prop to be toggled.
+ * Hook to detect and manage system color scheme (light/dark).
  */
-function useSupernovaExplosion({ enabled = true }) {
+function useSystemTheme() {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const applyTheme = (isDark: boolean) => {
+      const newTheme = isDark ? "dark" : "light";
+      setTheme(newTheme);
+      if (newTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    };
+
+    applyTheme(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => applyTheme(e.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  return theme;
+}
+
+
+/**
+ * Supernova Explosion Engine v2.2
+ * Now accepts a `theme` prop to adjust colors for light/dark mode.
+ */
+function useSupernovaExplosion({ enabled = true, theme = 'dark' }: { enabled?: boolean; theme?: "light" | "dark" }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isShaking, setShaking] = useState(false);
 
@@ -55,19 +85,23 @@ function useSupernovaExplosion({ enabled = true }) {
         const speed = (Math.random() ** 2 * 12 + 8) * power;
         const life = Math.random() * 80 + 80;
         const shapeType = Math.random();
+        
+        const colorLightness = theme === 'dark' ? 75 : 55;
+        const colorSaturation = theme === 'dark' ? 100 : 95;
 
         return {
           x: cx, y: cy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
           r: Math.random() * 3 + 2, angle: Math.random() * Math.PI * 2,
           speed: speed, life: life, ttl: life,
-          color: `hsl(${Math.floor(Math.random() * 360)}, 100%, 75%)`,
+          color: `hsl(${Math.floor(Math.random() * 360)}, ${colorSaturation}%, ${colorLightness}%)`,
           spin: (Math.random() - 0.5) * 0.45, drag: 0.96 - Math.random() * 0.02,
           shape: shapeType > 0.9 ? "star" : shapeType > 0.6 ? "line" : shapeType > 0.3 ? "rect" : "circle",
           trail: [] as { x: number; y: number }[],
         };
       });
 
-      const ring = { r: 0, o: 0.8, alive: true, color: `hsl(${Math.random() * 360}, 100%, 70%)` };
+      const ringColorLightness = theme === 'dark' ? 70 : 60;
+      const ring = { r: 0, o: 0.8, alive: true, color: `hsl(${Math.random() * 360}, 100%, ${ringColorLightness}%)` };
 
       let frame = 0;
       const animate = () => {
@@ -159,7 +193,7 @@ function useSupernovaExplosion({ enabled = true }) {
 
       animate();
     },
-    [triggerScreenShake, enabled]
+    [triggerScreenShake, enabled, theme]
   );
 
   useEffect(() => {
@@ -182,10 +216,10 @@ function useSupernovaExplosion({ enabled = true }) {
 }
 
 /**
- * Cosmic Cursor v1.6
- * Now accepts an `enabled` prop to be toggled.
+ * Cosmic Cursor v1.7
+ * Now accepts a `theme` prop to adjust colors for light/dark mode.
  */
-function useCosmicCursor({ enabled = true }) {
+function useCosmicCursor({ enabled = true, theme = 'dark' }: { enabled?: boolean; theme?: "light" | "dark" }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -209,13 +243,20 @@ function useCosmicCursor({ enabled = true }) {
         const offsetX = (Math.random() - 0.5) * 20;
         const offsetY = (Math.random() - 0.5) * 20;
 
+        const color = theme === 'dark'
+          ? `hsl(${200 + Math.random() * 40}, 100%, 80%)`
+          : `hsl(${200 + Math.random() * 40}, 90%, 60%)`;
+        const filter = theme === 'dark'
+          ? "blur(2px) brightness(1.5)"
+          : "blur(1px) brightness(0.95)";
+
         dot.className = "pointer-events-none absolute rounded-full will-change-transform";
         dot.style.width = `${size}px`;
         dot.style.height = `${size}px`;
         dot.style.left = `${e.clientX + offsetX}px`;
         dot.style.top = `${e.clientY + offsetY}px`;
-        dot.style.background = `radial-gradient(circle, hsl(${200 + Math.random() * 40}, 100%, 80%) 0%, transparent 80%)`;
-        dot.style.filter = "blur(2px) brightness(1.5)";
+        dot.style.background = `radial-gradient(circle, ${color} 0%, transparent 80%)`;
+        dot.style.filter = filter;
         dot.style.opacity = "1";
         dot.style.transition = `transform ${700 + Math.random() * 300}ms ease-out, opacity ${800 + Math.random() * 400}ms ease-out`;
         container.appendChild(dot);
@@ -235,7 +276,7 @@ function useCosmicCursor({ enabled = true }) {
 
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
-  }, [enabled]);
+  }, [enabled, theme]);
 
   return { containerRef };
 }
@@ -243,7 +284,7 @@ function useCosmicCursor({ enabled = true }) {
 
 const NotFoundPage = () => {
   useSEO("404: Cosmic Singularity | DevServe", [{ name: "robots", content: "noindex" }]);
-
+  const theme = useSystemTheme();
   const navigate = useNavigate();
   
   // --- Central State for All Toggleable Features ---
@@ -264,8 +305,8 @@ const NotFoundPage = () => {
     blackHole: true,
   });
 
-  const { canvasRef, supernova, isShaking } = useSupernovaExplosion({ enabled: features.supernova });
-  const { containerRef: cosmicCursorRef } = useCosmicCursor({ enabled: features.cosmicCursor });
+  const { canvasRef, supernova, isShaking } = useSupernovaExplosion({ enabled: features.supernova, theme });
+  const { containerRef: cosmicCursorRef } = useCosmicCursor({ enabled: features.cosmicCursor, theme });
 
   // 3D Parallax Starfield
   const [stars] = useState(() =>
@@ -442,20 +483,20 @@ const NotFoundPage = () => {
   return (
     <main
       ref={stageRef}
-      className={`relative isolate min-h-[calc(100vh-128px)] overflow-hidden bg-slate-950 text-slate-100 ${isShaking ? "shake" : ""} ${vortex ? "vortex-active" : ""}`}
+      className={`relative isolate min-h-[calc(100vh-128px)] overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 ${isShaking ? "shake" : ""} ${vortex ? "vortex-active" : ""}`}
       style={{ perspective: "1200px", transform: "translateZ(0) rotateX(var(--camX, 0deg)) rotateY(var(--camY, 0deg))", transformStyle: "preserve-3d" }}
     >
       {features.cosmicCursor && <div ref={cosmicCursorRef} className="pointer-events-none absolute inset-0 z-50" />}
 
       {features.backgroundNebula && <>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 mix-blend-plus-lighter opacity-80" style={{ background: "radial-gradient(120% 100% at 50% 0%, rgba(56,189,248,0.15), transparent 50%), radial-gradient(110% 100% at 80% 20%, rgba(192,132,252,0.12), transparent 50%), radial-gradient(100% 100% at 20% 60%, rgba(244,63,94,0.12), transparent 50%)", filter: "saturate(1.5) brightness(1.2)", animation: "nebulaWarp 60s linear infinite" }} />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: "repeating-conic-gradient(from 0deg, rgba(255,255,255,0.02) 0deg 5deg, transparent 5deg 10deg)", mixBlendMode: "soft-light", animation: "nebulaSpin 80s linear infinite" }} />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 mix-blend-multiply opacity-20 dark:mix-blend-plus-lighter dark:opacity-80" style={{ background: "radial-gradient(120% 100% at 50% 0%, rgba(56,189,248,0.15), transparent 50%), radial-gradient(110% 100% at 80% 20%, rgba(192,132,252,0.12), transparent 50%), radial-gradient(100% 100% at 20% 60%, rgba(244,63,94,0.12), transparent 50%)", filter: "saturate(1.5) brightness(1.2)", animation: "nebulaWarp 60s linear infinite" }} />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: `repeating-conic-gradient(from 0deg, rgba(${theme === 'dark' ? '255,255,255' : '0,0,0'},0.02) 0deg 5deg, transparent 5deg 10deg)`, mixBlendMode: theme === 'dark' ? "soft-light" : "multiply", animation: "nebulaSpin 80s linear infinite" }} />
       </>}
 
       {features.starfield &&
         <div ref={starfieldRef} className="absolute inset-0 transition-transform duration-300 ease-out" style={{ transform: "translate(var(--mouseX, 0), var(--mouseY, 0))", transformStyle: "preserve-3d" }}>
           {stars.map((s, i) => (
-            <span key={i} className="absolute rounded-full bg-slate-300/80 shadow-[0_0_12px_rgba(255,255,255,0.8)]" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: s.o, animation: `twinkle ${s.d}s ease-in-out infinite`, animationDelay: `${(i % 10) * 0.2}s`, transform: `translateZ(${s.parallax * -200}px)` }} />
+            <span key={i} className="absolute rounded-full bg-slate-700/80 shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:bg-slate-300/80 dark:shadow-[0_0_12px_rgba(255,255,255,0.8)]" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: s.o, animation: `twinkle ${s.d}s ease-in-out infinite`, animationDelay: `${(i % 10) * 0.2}s`, transform: `translateZ(${s.parallax * -200}px)` }} />
           ))}
         </div>
       }
@@ -463,7 +504,7 @@ const NotFoundPage = () => {
       {features.shootingStars &&
         <div className="absolute inset-0 overflow-hidden">
           {shooters.map((s, i) => (
-            <span key={s.key} className="absolute h-0.5 w-48 -translate-x-full bg-gradient-to-r from-transparent via-purple-300 to-transparent opacity-0" style={{ top: `${s.top}%`, left: "-10%", filter: "drop-shadow(0 0 10px rgba(200,200,255,0.8)) drop-shadow(0 0 24px rgba(168,85,247,0.7))", animation: `shoot ${s.dur}s ease-in ${s.delay + i * 0.8}s infinite` }} />
+            <span key={s.key} className="absolute h-0.5 w-48 -translate-x-full bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-0 dark:via-purple-300" style={{ top: `${s.top}%`, left: "-10%", filter: "drop-shadow(0 0 10px rgba(168,85,247,0.7)) drop-shadow(0 0 24px rgba(168,85,247,0.6))", animation: `shoot ${s.dur}s ease-in ${s.delay + i * 0.8}s infinite` }} />
           ))}
         </div>
       }
@@ -471,7 +512,7 @@ const NotFoundPage = () => {
       {features.floatingDust &&
         <div className="absolute inset-0 overflow-hidden">
           {particles.map((p, i) => (
-            <span key={i} className="absolute rounded-full opacity-40 blur-lg mix-blend-screen" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, backgroundColor: `hsl(${p.hue}deg 100% 70%)`, animation: `floatY ${p.dur}s ease-in-out ${p.delay}s infinite alternate`, filter: "saturate(1.5) brightness(1.1)" }} />
+            <span key={i} className="absolute rounded-full opacity-40 blur-lg mix-blend-multiply dark:mix-blend-screen" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, backgroundColor: `hsl(${p.hue}deg 100% ${theme === 'dark' ? '70%' : '60%'})`, animation: `floatY ${p.dur}s ease-in-out ${p.delay}s infinite alternate`, filter: "saturate(1.5) brightness(1.1)" }} />
           ))}
         </div>
       }
@@ -480,29 +521,36 @@ const NotFoundPage = () => {
 
       {features.gridFloor &&
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[60vh]">
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
-          <div className="absolute inset-0 opacity-80 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ backgroundImage: "linear-gradient(rgba(129,140,248,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,0.3) 1px, transparent 1px)", backgroundSize: "40px 40px", backgroundPosition: "center center", animation: "gridPan 10s linear infinite", boxShadow: "inset 0 0 80px rgba(59,130,246,0.3), 0 0 100px rgba(59,130,246,0.25)" }} />
-          <div className="absolute inset-0 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ background: "radial-gradient(60% 80% at 50% 100%, rgba(129,140,248,0.2), transparent 70%)", animation: "pulse 4.5s ease-in-out infinite" }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent dark:from-slate-950 dark:via-slate-950/50" />
+          <div className="absolute inset-0 opacity-80 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ 
+            backgroundImage: theme === 'dark' ? "linear-gradient(rgba(129,140,248,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,0.3) 1px, transparent 1px)" : "linear-gradient(rgba(148,163,184,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.3) 1px, transparent 1px)", 
+            backgroundSize: "40px 40px", backgroundPosition: "center center", animation: "gridPan 10s linear infinite", 
+            boxShadow: theme === 'dark' ? "inset 0 0 80px rgba(59,130,246,0.3), 0 0 100px rgba(59,130,246,0.25)" : "inset 0 0 80px rgba(148,163,184,0.2), 0 0 100px rgba(148,163,184,0.15)"
+          }} />
+          <div className="absolute inset-0 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ 
+            background: theme === 'dark' ? "radial-gradient(60% 80% at 50% 100%, rgba(129,140,248,0.2), transparent 70%)" : "radial-gradient(60% 80% at 50% 100%, rgba(100,116,139,0.15), transparent 70%)", 
+            animation: "pulse 4.5s ease-in-out infinite" 
+          }} />
         </div>
       }
 
-      {features.scanlines && <div className="pointer-events-none absolute inset-0 z-20 bg-[url('/scanlines.png')] opacity-20 mix-blend-overlay"></div>}
+      {features.scanlines && <div className="pointer-events-none absolute inset-0 z-20 bg-[url('/scanlines.png')] opacity-[0.07] mix-blend-multiply dark:opacity-20 dark:mix-blend-overlay"></div>}
 
       <section className="relative mx-auto flex max-w-6xl flex-col items-center px-4 py-16 text-center sm:py-20 md:py-28 z-10">
-        <div className="inline-flex items-center gap-2 rounded-full border border-purple-400/40 bg-purple-950/50 px-3.5 py-1.5 text-xs text-purple-200 ring-1 ring-white/10 backdrop-blur-sm">
-          <Sparkles className="h-4 w-4 text-purple-300" />
+        <div className="inline-flex items-center gap-2 rounded-full border border-purple-300 bg-purple-100/70 px-3.5 py-1.5 text-xs font-semibold text-purple-700 ring-1 ring-black/5 backdrop-blur-sm dark:border-purple-400/40 dark:bg-purple-950/50 dark:text-purple-200 dark:ring-white/10">
+          <Sparkles className="h-4 w-4 text-purple-500 dark:text-purple-300" />
           SYSTEM STATUS: CATASTROPHIC SUCCESS
         </div>
 
         <div className="relative mt-8 grid place-items-center">
-          <h1 ref={titleRef} className={features.glitchText ? "glitch-text" : ""} style={{ textShadow: "0 0 24px rgba(167,139,250,0.6), 0 0 48px rgba(236,72,153,0.4), 0 0 1px rgba(255,255,255,0.8)", filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.5))", transformStyle: "preserve-3d", color: "#fff", position: "relative", zIndex: 10, fontSize: "clamp(3.5rem, 10vw, 6rem)", fontWeight: "900", letterSpacing: "-0.05em" }} data-text="404">
+          <h1 ref={titleRef} className={features.glitchText ? "glitch-text" : ""} style={{ textShadow: "var(--h1-shadow)", filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.15)) dark:drop-shadow(0 10px 20px rgba(0,0,0,0.5))", transformStyle: "preserve-3d", position: "relative", zIndex: 10, fontSize: "clamp(3.5rem, 10vw, 6rem)", fontWeight: "900", letterSpacing: "-0.05em" }} data-text="404">
             404
           </h1>
 
           {features.orbitalEmojis &&
             <div className="pointer-events-none absolute inset-0">
               {emojiRing.map((em, i) => (
-                <span key={i} className="absolute select-none text-2xl md:text-4xl" style={{ left: "50%", top: "50%", transformOrigin: "0 -160px", transform: `translate(-50%,-50%) rotate(${(360 / emojiRing.length) * i}deg)`, animation: `orbit 12s linear infinite`, animationDelay: `${i * -1.0}s`, filter: "drop-shadow(0 0 8px rgba(255,255,255,0.7)) drop-shadow(0 0 20px rgba(236,72,153,0.6))" }}>
+                <span key={i} className="absolute select-none text-2xl md:text-4xl" style={{ left: "50%", top: "50%", transformOrigin: "0 -160px", transform: `translate(-50%,-50%) rotate(${(360 / emojiRing.length) * i}deg)`, animation: `orbit 12s linear infinite`, animationDelay: `${i * -1.0}s`, filter: "drop-shadow(0 0 8px rgba(0,0,0,0.3)) dark:drop-shadow(0 0 8px rgba(255,255,255,0.7)) dark:drop-shadow(0 0 20px rgba(236,72,153,0.6))" }}>
                   <span style={{ display: "inline-block", transform: `rotate(${-((360 / emojiRing.length) * i)}deg) rotate(-90deg)` }}>{em}</span>
                 </span>
               ))}
@@ -510,19 +558,19 @@ const NotFoundPage = () => {
           }
         </div>
 
-        <p className="mt-6 max-w-2xl text-lg font-medium text-slate-300 md:text-xl">
+        <p className="mt-6 max-w-2xl text-lg font-medium text-slate-600 dark:text-slate-300 md:text-xl">
           {typed || "\u00A0"}
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          <Link ref={btnRef} to="/" onMouseMove={(e) => { onMagnetic(e); onPointerGlow(e); }} onMouseLeave={onMagneticLeave} className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl border border-blue-500/50 bg-gradient-to-br from-blue-600 to-indigo-600 px-6 py-3 text-base font-bold text-white shadow-[0_10px_40px_-10px_rgba(59,130,246,0.8)] transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-[0.97]" style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15), 0 10px 40px -10px rgba(59,130,246,0.8)", filter: "drop-shadow(0 0 12px rgba(59,130,246,0.7)) drop-shadow(0 0 30px rgba(59,130,246,0.5))" }}>
-            <span ref={glowRef} className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: "radial-gradient(160px 120px at var(--x,50%) var(--y,50%), rgba(255,255,255,0.35), transparent 70%)" }} />
+          <Link ref={btnRef} to="/" onMouseMove={(e) => { onMagnetic(e); onPointerGlow(e); }} onMouseLeave={onMagneticLeave} className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl border border-slate-300 bg-gradient-to-br from-slate-50 to-slate-200 px-6 py-3 text-base font-bold text-slate-800 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.2)] transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-[0.97] dark:border-blue-500/50 dark:from-blue-600 dark:to-indigo-600 dark:text-white dark:shadow-[0_10px_40px_-10px_rgba(59,130,246,0.8)]" style={{ filter: "drop-shadow(0 0 2px rgba(0,0,0,0.1)) dark:drop-shadow(0 0 12px rgba(59,130,246,0.7)) dark:drop-shadow(0 0 30px rgba(59,130,246,0.5))" }}>
+            <span ref={glowRef} className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: theme === 'dark' ? "radial-gradient(160px 120px at var(--x,50%) var(--y,50%), rgba(255,255,255,0.35), transparent 70%)" : "radial-gradient(160px 120px at var(--x,50%) var(--y,50%), rgba(0,0,0,0.08), transparent 70%)" }} />
             <Home className="h-5 w-5" />
             ESCAPE REALITY
-            <span aria-hidden="true" className="ml-1.5 inline-flex items-center rounded-md bg-white/25 px-2 py-0.5 text-[11px] font-semibold" title="Press H">H</span>
+            <span aria-hidden="true" className="ml-1.5 inline-flex items-center rounded-md bg-black/10 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-white/25 dark:text-white" title="Press H">H</span>
           </Link>
           
-          <button type="button" onClick={() => supernova(undefined, undefined, 3.0)} className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl border border-rose-500/50 bg-gradient-to-br from-rose-500 to-red-600 px-6 py-3 text-base font-bold text-white shadow-[0_10px_40px_-10px_rgba(244,63,94,0.8)] transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-[0.97]" style={{ filter: "drop-shadow(0 0 12px rgba(244,63,94,0.7)) drop-shadow(0 0 30px rgba(244,63,94,0.5))" }}>
+          <button type="button" onClick={() => supernova(undefined, undefined, 3.0)} className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl border border-rose-400/80 bg-gradient-to-br from-rose-400 to-red-500 px-6 py-3 text-base font-bold text-white shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)] transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-[0.97] dark:border-rose-500/50 dark:from-rose-500 dark:to-red-600 dark:shadow-[0_10px_40px_-10px_rgba(244,63,94,0.8)]" style={{ filter: "drop-shadow(0 0 10px rgba(244,63,94,0.5)) dark:drop-shadow(0 0 12px rgba(244,63,94,0.7)) dark:drop-shadow(0 0 30px rgba(244,63,94,0.5))" }}>
             <ShieldAlert className="h-5 w-5" />
             GALAXY MODE
             <span aria-hidden="true" className="ml-1.5 inline-flex items-center rounded-md bg-white/25 px-2 py-0.5 text-[11px] font-semibold" title="Press G">G</span>
@@ -540,8 +588,8 @@ const NotFoundPage = () => {
 
       {/* --- Help Panel for Keyboard Toggles --- */}
       {showHelp &&
-        <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-slate-500/50 bg-slate-800/60 p-4 text-slate-300 shadow-2xl backdrop-blur-lg animate-fadeIn">
-          <h3 className="mb-3 flex items-center gap-2 font-bold text-white"><Keyboard className="h-5 w-5"/> FX Controls</h3>
+        <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-slate-300/80 bg-white/60 p-4 text-slate-700 shadow-2xl backdrop-blur-lg animate-fadeIn dark:border-slate-500/50 dark:bg-slate-800/60 dark:text-slate-300">
+          <h3 className="mb-3 flex items-center gap-2 font-bold text-slate-900 dark:text-white"><Keyboard className="h-5 w-5"/> FX Controls</h3>
           <ul className="space-y-1.5 text-xs">
             {Object.entries(featureKeyMap).map(([key, name]) => (
                 <li key={name} className="flex justify-between items-center gap-4">
@@ -552,17 +600,34 @@ const NotFoundPage = () => {
                 </li>
             ))}
           </ul>
-          <button onClick={() => setShowHelp(false)} className="mt-4 w-full rounded-md bg-slate-700/80 py-1 text-xs text-slate-200 hover:bg-slate-700">
+          <button onClick={() => setShowHelp(false)} className="mt-4 w-full rounded-md bg-slate-200/80 py-1 text-xs text-slate-600 hover:bg-slate-200 dark:bg-slate-700/80 dark:text-slate-200 dark:hover:bg-slate-700">
             Close (or press K)
           </button>
         </div>
       }
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-slate-950 dark:via-slate-950/80" />
 
       <style>{`
-        .info-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; border: 1px solid rgba(148, 163, 184, 0.3); background-color: rgba(30, 41, 59, 0.5); padding: 4px 10px; color: rgb(160 174 192); backdrop-filter: blur(4px); }
-        .glitch-text { color: transparent; -webkit-text-stroke: 1px rgba(255, 255, 255, 0.6); background: linear-gradient(135deg, white 40%, rgba(255,255,255,0.2)); -webkit-background-clip: text; background-clip: text; }
+        :root {
+            --h1-shadow: 0 0 12px rgba(0,0,0,0.1);
+        }
+        .dark:root {
+            --h1-shadow: 0 0 24px rgba(167,139,250,0.6), 0 0 48px rgba(236,72,153,0.4), 0 0 1px rgba(255,255,255,0.8);
+        }
+        .info-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; border: 1px solid; padding: 4px 10px; backdrop-filter: blur(4px); }
+        .info-chip { @apply border-slate-300 bg-slate-100/50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400; }
+        
+        .glitch-text { color: transparent; background-clip: text; -webkit-background-clip: text; }
+        .glitch-text { 
+            -webkit-text-stroke: 1px rgba(0, 0, 0, 0.4); 
+            background-image: linear-gradient(135deg, #475569 40%, rgba(0,0,0,0.1)); 
+        }
+        .dark .glitch-text {
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.6);
+            background-image: linear-gradient(135deg, white 40%, rgba(255,255,255,0.2));
+        }
+
         .glitch-text::before { content: attr(data-text); position: absolute; left: -2px; top: 0; color: transparent; background: linear-gradient(135deg, #f87171, #60a5fa); -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: 1px transparent; mix-blend-mode: screen; animation: glitch 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite; }
         @keyframes glitch { 0%, 100% { transform: translate(0, 0); clip-path: inset(45% 0 35% 0); } 25% { clip-path: inset(15% 0 55% 0); } 50% { transform: translate(0.5em, -0.1em); clip-path: inset(65% 0 15% 0); } 75% { clip-path: inset(35% 0 45% 0); } }
         .shake { animation: screenShake 0.5s ease-in-out both; }
