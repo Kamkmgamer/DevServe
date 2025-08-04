@@ -788,13 +788,13 @@ const HomePage: React.FC = () => {
   const heroOpacity = useTransform(scrollY, [0, 300], [1, reduce ? 1 : 0.9]);
 
   useEffect(() => {
-    // Dismiss previous toasts and show welcome toast after a brief delay
     const t = setTimeout(() => {
       toast.dismiss();
       toast("Welcome! Explore the work and services below.", {
         icon: "👋",
-        duration: 3000, // Toast disappears after 3 seconds
-        ariaProps: { role: "status", "aria-live": "polite" }, // Announce to screen readers politely
+        position: "bottom-center",
+        duration: 1500,
+        ariaProps: { role: "status", "aria-live": "polite" },
       });
     }, 600);
     return () => clearTimeout(t);
