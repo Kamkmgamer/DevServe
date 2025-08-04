@@ -935,26 +935,23 @@ const HomePage: React.FC = () => {
               {/* Technology logos */}
               <div className="mt-8 flex items-center justify-center gap-4 md:justify-start">
                 <img
-                  src="/logos/vercel.svg"
-                  srcSet="/logos/vercel.svg 1x, /logos/vercel@2x.svg 2x" // High-res for Retina
+                  src="https://www.svgrepo.com/show/354512/vercel.svg"
                   alt="Vercel"
-                  width={80} // Explicit width for CLS prevention
-                  height={20} // Explicit height for CLS prevention
+                  width={80}
+                  height={20}
                   className="h-5 w-auto opacity-70 grayscale"
-                  loading="lazy" // Lazy load images below the fold
+                  loading="lazy"
                 />
                 <img
-                  src="/logos/aws.svg"
-                  srcSet="/logos/aws.svg 1x, /logos/aws@2x.svg 2x"
-                  alt="AWS"
+                  src="https://www.svgrepo.com/show/448299/aws.svg"
+                  alt="Amazon Web Services"
                   width={60}
                   height={20}
                   className="h-5 w-auto opacity-70 grayscale"
                   loading="lazy"
                 />
                 <img
-                  src="/logos/react.svg"
-                  srcSet="/logos/react.svg 1x, /logos/react@2x.svg 2x"
+                  src="https://www.svgrepo.com/show/521303/react-16.svg"
                   alt="React"
                   width={60}
                   height={20}
@@ -962,8 +959,7 @@ const HomePage: React.FC = () => {
                   loading="lazy"
                 />
                 <img
-                  src="/logos/ts.svg"
-                  srcSet="/logos/ts.svg 1x, /logos/ts@2x.svg 2x"
+                  src="https://www.svgrepo.com/show/521320/typescript-16.svg"
                   alt="TypeScript"
                   width={80}
                   height={20}
