@@ -28,6 +28,9 @@ import ApiPage from "./pages/ApiPage";
 import CommunityPage from "./pages/CommunityPage";
 import RoadmapPage from "./pages/RoadmapPage";
 import ChangelogPage from "./pages/ChangelogPage";
+import GettingStartedGuide from "./pages/GettingStartedGuide";
+import DeployingGuide from "./pages/DeployingGuide";
+import AuthenticationGuide from "./pages/AuthenticationGuide";
 import NotFoundPage from "./pages/NotFoundPage";
 
 // Admin
@@ -77,6 +80,9 @@ function App() {
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
             <Route path="/changelog" element={<ChangelogPage />} />
+            <Route path="/GettingStartedGuide" element={<GettingStartedGuide />} />
+            <Route path="/DeployingGuide" element={<DeployingGuide />} />
+            <Route path="/changeAuthenticationGuidelog" element={<ChangelogPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
 
