@@ -77,7 +77,7 @@ const BlogFormPage = () => {
     const payload = {
       title: data.title.trim(),
       summary: data.summary.trim(),
-      content: data.content,
+      content: data.content, // Markdown or HTML by your choice; BlogDetails renders Markdown
       thumbnailUrl: data.thumbnailUrl ? data.thumbnailUrl.trim() : null,
     };
     try {
@@ -101,8 +101,8 @@ const BlogFormPage = () => {
               {isEdit ? "Edit Blog Post" : "Add Blog Post"}
             </h1>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Provide the article details. You can add a thumbnail image URL
-              for previews and listings.
+              Provide the article details. You can add a thumbnail image URL for
+              previews and listings.
             </p>
           </div>
           <Link to="/admin/blog">
@@ -206,7 +206,7 @@ const BlogFormPage = () => {
                 rows={10}
                 aria-invalid={!!errors.content}
                 aria-describedby={errors.content ? "content-error" : undefined}
-                placeholder="Write your article content here..."
+                placeholder="Write your article content here (Markdown supported)..."
               />
               {errors.content && (
                 <p id="content-error" className="mt-1 text-sm text-red-500">

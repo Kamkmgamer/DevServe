@@ -30,6 +30,8 @@
   },
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.3",
+    "@tailwindcss/typography": "^0.5.16",
+    "dompurify": "^3.2.6",
     "framer-motion": "^12.23.12"
   }
 }
