@@ -52,7 +52,7 @@ const Footer = () => {
   const resourcesLinks = [
     { label: "Docs", href: "/docs" },
     { label: "Guides", href: "/guides" },
-    { label: "API", href: "/api" },
+    { label: "API", href: "/ApplicationProgrammingInterface" },
     { label: "Community", href: "/community" },
   ];
 

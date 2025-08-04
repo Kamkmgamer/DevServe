@@ -73,7 +73,7 @@ function App() {
             <Route path="/careers" element={<CareersPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/guides" element={<GuidesPage />} />
-            <Route path="/api" element={<ApiPage />} />
+            <Route path="/ApplicationProgrammingInterface" element={<ApiPage />} />
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
             <Route path="/changelog" element={<ChangelogPage />} />
