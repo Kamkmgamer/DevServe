@@ -39,7 +39,7 @@ const Navbar = () => {
       { href: "/", label: "Home", isNavLink: true },
       { href: "/services", label: "Services", isNavLink: true },
       {
-        href: "https://portfolio-delta-ruby-48.vercel.app/",
+        href: "https://khalils-portfolio.vercel.app/",
         label: "Portfolio",
         isExternal: true,
       },

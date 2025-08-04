@@ -523,7 +523,7 @@ const CaseStudies: React.FC = () => {
     {
       title: "Fintech Dashboard",
       impact: "↑ 38% user retention",
-      href: "https://portfolio-delta-ruby-48.vercel.app/",
+      href: "https://khalils-portfolio.vercel.app/",
       tag: "B2B",
       desc:
         "Refactored data layer and optimized charts; improved TTI by 42% and simplified workflows for B2B users.",
@@ -531,7 +531,7 @@ const CaseStudies: React.FC = () => {
     {
       title: "E‑commerce Revamp",
       impact: "↑ 24% conversion rate",
-      href: "https://portfolio-delta-ruby-48.vercel.app/",
+      href: "https://khalils-portfolio.vercel.app/",
       tag: "DTC",
       desc:
         "Redesigned PDP/checkout, implemented performance budget, and A/B tested for significant UX wins.",
@@ -539,7 +539,7 @@ const CaseStudies: React.FC = () => {
     {
       title: "SaaS Marketing Site",
       impact: "↑ SEO traffic +67%",
-      href: "https://portfolio-delta-ruby-48.vercel.app/",
+      href: "https://khalils-portfolio.vercel.app/",
       tag: "SaaS",
       desc:
         "Built fast-loading pages with semantic markup; improved Core Web Vitals and boosted organic search traffic.",
@@ -894,7 +894,7 @@ const HomePage: React.FC = () => {
                   </Button>
                 </Link>
                 <a
-                  href="https://portfolio-delta-ruby-48.vercel.app/"
+                  href="https://khalils-portfolio.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="View my work"
