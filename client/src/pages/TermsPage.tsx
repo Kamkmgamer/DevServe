@@ -291,7 +291,7 @@ const TermsPage = () => {
               <h2>Contact</h2>
               <p>
                 Questions about these Terms? Contact{" "}
-                <a href="mailto:legal@example.com">legal@example.com</a>.
+                <a href="mailto:khalil@soft-magic.com">khalil@soft-magic.com</a>.
               </p>
             </section>
           </article>
