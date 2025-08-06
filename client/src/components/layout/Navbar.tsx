@@ -83,7 +83,7 @@ const Navbar = () => {
     const onClick = opts?.onClick ?? (() => setIsOpen(false));
 
     const base =
-      "py-2 px-3 rounded-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60";
+      "py-0 px-4 rounded-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60";
     const size = isMobile ? "text-xl" : "text-sm";
     const inactive =
       "text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400";
