@@ -9,6 +9,7 @@ import portfolioRoutes from "./portfolio";
 import blogRoutes from "./blog";
 import ordersRoutes from "./orders";
 import couponsRoutes from "./coupons";
+import paymentsRoutes from "./payments";
 
 const router = Router();
 
