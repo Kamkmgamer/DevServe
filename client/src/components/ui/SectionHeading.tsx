@@ -18,7 +18,7 @@ export const SectionHeading: React.FC<SectionHeadingProps> = ({
     className={`mx-auto mb-12 max-w-2xl ${center ? "text-center" : ""} ${
       className || ""
     }`}
-  >
+    data-testid="section-heading">
     <h2
       className={`mb-3 text-4xl font-bold tracking-tight ${TOKENS.textHeading}`}
     >
