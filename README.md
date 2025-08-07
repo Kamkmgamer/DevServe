@@ -127,6 +127,9 @@ Follow these steps to set up your development environment:
 
    JWT_SECRET=YOUR_VERY_STRONG_JWT_SECRET_HERE  # Change this!
 
+   # Admin password for seeding
+   ADMIN_PASSWORD=YourSecurePasswordHere # Add a secure password here
+
    # Email Sending Configuration
    EMAIL_HOST=smtp.your-email-provider.com
    EMAIL_PORT=587
