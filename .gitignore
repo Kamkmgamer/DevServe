@@ -19,3 +19,4 @@
 # Logs
 server/combined.log
 server/error.log
+server/public/
