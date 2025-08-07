@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig(({ mode }) => {
   // Load environment variables
@@ -25,9 +26,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      host: true, // Listen on all interfaces
+      host: true,
       port: 5173,
-      allowedHosts, // Allow the specified hosts
+      allowedHosts,
       proxy: {
         '/api': {
           target: 'http://127.0.0.1:8000',
@@ -35,7 +36,11 @@ export default defineConfig(({ mode }) => {
           secure: false
         }
       },
-      hmr // Hot Module Replacement settings
+      hmr
+    },
+    build: {
+      outDir: path.resolve(__dirname, '../server/public'),
+      emptyOutDir: true
     }
   };
 });

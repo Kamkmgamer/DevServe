@@ -3,7 +3,7 @@
 /client/node_modules
 /server/node_modules
 /server/dist
-
+/ngrok.yml
 # Docker
 /postgres_data
 
@@ -15,3 +15,7 @@
 # IDE / OS files
 .DS_Store
 .vscode/
+
+# Logs
+server/combined.log
+server/error.log

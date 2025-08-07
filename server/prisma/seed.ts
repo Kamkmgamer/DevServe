@@ -6,7 +6,13 @@ const prisma = new PrismaClient();
 async function main() {
   // 1. Create an admin user
   const adminEmail = "khalil@khalil.excellence.sd";
-  const adminPassword = "SuperSecret123"; // Change this in production!
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminPassword) {
+    console.error("ADMIN_PASSWORD environment variable is not set. Please set it and try again.");
+    process.exit(1);
+  }
+
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
   await prisma.user.upsert({

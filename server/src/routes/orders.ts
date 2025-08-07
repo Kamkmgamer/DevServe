@@ -3,6 +3,8 @@ import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authMiddleware } from "../middleware/auth";
 import { AuthRequest } from "../middleware/auth";
+import { validate } from "../middleware/validation";
+import { createOrderSchema } from "../lib/validation";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -33,7 +35,7 @@ router.get("/", async (req: Req, res) => {
 });
 
 // POST /api/orders
-router.post("/", async (req: Req, res) => {
+router.post("/", validate(createOrderSchema), async (req: Req, res) => {
   try {
     const { items, requirements, discount } = req.body;
     

@@ -15,7 +15,7 @@ import "./index.css";
 // Example for Vite: import.meta.env.VITE_PAYPAL_CLIENT_ID
 // Example for Create React App: process.env.REACT_APP_PAYPAL_CLIENT_ID
 const initialPayPalOptions = {
-  clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "sb", // Replace with your actual client ID
+  clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "",
   currency: "USD",
   intent: "authorize", // Ensure this matches your createOrder intent
   // Add other options as needed, e.g., 'data-sdk-integration-source': 'integrationbuilder'
