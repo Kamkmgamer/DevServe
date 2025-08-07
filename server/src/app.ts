@@ -28,7 +28,20 @@ app.use(express.json());
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
-  logger.info(`[${req.method}] ${req.path} - Headers: ${JSON.stringify(req.headers)} - Body: ${JSON.stringify(req.body)}`);
+  const redactedHeaders = { ...req.headers };
+  if (redactedHeaders.authorization) {
+    redactedHeaders.authorization = '[REDACTED]';
+  }
+
+  const redactedBody = { ...req.body };
+  if (redactedBody.password) {
+    redactedBody.password = '[REDACTED]';
+  }
+
+  const bodyString = JSON.stringify(redactedBody);
+  const truncatedBody = bodyString.length > 200 ? `${bodyString.substring(0, 200)}...` : bodyString;
+
+  logger.info(`[${req.method}] ${req.path} - Headers: ${JSON.stringify(redactedHeaders)} - Body: ${truncatedBody}`);
   next();
 });
 
