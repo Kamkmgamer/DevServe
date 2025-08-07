@@ -1,27 +1,3 @@
-feat: Comprehensive project updates and refactoring
+Security: Remove public admin registration endpoint
 
-This commit encompasses a wide range of updates across the client and server, including:
-
-Client-side:
-- Refactored `HomePage.tsx` into modular components (`client/src/components/home/*`).
-- Introduced new reusable UI components (`AnimatedCounter`, `Badge`, `Card`, `SectionHeading`, `SectionSkeleton`) in `client/src/components/ui`.
-- Added a new utility for tokens (`client/src/utils/tokens.ts`).
-- Added a test file for `PublicLayout` (`client/src/components/layout/PublicLayout.test.tsx`).
-- Updated `client/package.json` and `client/package-lock.json` (added `vitest`, changed `dev` to `devOptional` for some dependencies).
-- Adjusted `client/src/main.tsx` (changed `VITE_PAYPAL_CLIENT_ID`).
-- Configured `client/vite.config.ts` for build output to `../server/public`.
-
-Server-side:
-- Updated `server/package.json` and `server/package-lock.json` (added `winston`, updated `zod`, set `type` to `commonjs`).
-- Enhanced `server/prisma/seed.ts` to use `ADMIN_PASSWORD` environment variable.
-- Integrated `errorHandler` middleware and `logger` utility in `server/src/app.ts`.
-- Improved JWT secret handling and error types in `server/src/middleware/auth.ts`.
-- Added validation middleware to various routes (`server/src/routes/auth.ts`, `cart.ts`, `orders.ts`, `services.ts`).
-- Expanded service test cases in `server/src/tests/services.test.ts`.
-- Updated `server/tsconfig.json` compiler options.
-- Added new server-side utilities (`server/src/lib/logger.ts`, `server/src/lib/validation.ts`) and middleware (`server/src/middleware/errorHandler.ts`, `server/src/middleware/validation.ts`).
-
-General:
-- Updated `.gitignore` to include log files and the `server/public` directory.
-- Removed `useLocation` import from `client/src/components/layout/PublicLayout.tsx`.
-- Added a newline to `client/src/components/ui/Button.tsx`.
+This commit removes the publicly accessible admin registration endpoint. Admin users should be created through a secure, controlled process (e.g., via the seeding script) to prevent unauthorized access and potential security vulnerabilities.

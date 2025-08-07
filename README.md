@@ -223,9 +223,7 @@ Follow these steps to set up your development environment:
 ### Admin Access
 
 - Admin Login: [http://localhost:5173/login](http://localhost:5173/login)
-- Default credentials (from `prisma/seed.ts`):
-  - Email: `admin@example.com`
-  - Password: `SuperSecret123` (Please change this immediately in production!)
+- Default credentials (from `prisma/seed.ts`): Refer to `server/prisma/seed.ts` for default admin credentials. **Please change these immediately in production!**
 
 --------------------------------------------------
 
