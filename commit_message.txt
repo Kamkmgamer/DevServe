@@ -1,3 +1,0 @@
-Security: Remove public admin registration endpoint
-
-This commit removes the publicly accessible admin registration endpoint. Admin users should be created through a secure, controlled process (e.g., via the seeding script) to prevent unauthorized access and potential security vulnerabilities.

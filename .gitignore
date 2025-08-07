@@ -20,3 +20,6 @@
 server/combined.log
 server/error.log
 server/public/
+
+# Temporary files
+commit_message.txt
