@@ -39,7 +39,7 @@ const Navbar = () => {
       { href: "/", label: "Home", isNavLink: true },
       { href: "/services", label: "Services", isNavLink: true },
       {
-        href: import.meta.env.VITE_PORTFOLIO_URL,
+        href: process.env.VITE_PORTFOLIO_URL,
         label: "Portfolio",
         isExternal: true,
       },
