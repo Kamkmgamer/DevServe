@@ -8,7 +8,8 @@
     "dev:server": "npm run dev --prefix server",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build": "npm run build --prefix client"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
