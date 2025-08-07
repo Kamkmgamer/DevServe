@@ -5,8 +5,8 @@ interface SectionSkeletonProps {
   rows?: number;
 }
 
-export const SectionSkeleton: React.FC<SectionSkeletonProps> = ({ rows = 3 }) => (
-  <div className="grid gap-6 md:grid-cols-3">
+export const SectionSkeleton: React.FC<SectionSkeletonProps> = ({ rows = 3, className = "" }) => (
+  <div className={`grid gap-6 md:grid-cols-3 ${className}`} data-testid="section-skeleton">
     {Array.from({ length: rows }).map((_, i) => (
       <div
         key={i}
