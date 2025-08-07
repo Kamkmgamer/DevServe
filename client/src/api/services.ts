@@ -1,10 +1,16 @@
 import api from "./axios";
 
-// This is a placeholder. We will define the Service type later.
-interface Service {
+export interface Service {
   id: string;
   name: string;
   description: string;
+  price: number;
+  features: string[];
+  category: string;
+  thumbnailUrl: string | null;
+  imageUrls: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const getServices = async (): Promise<Service[]> => {
