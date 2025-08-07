@@ -20,6 +20,7 @@ router.use("/blog", blogRoutes);
 router.use("/cart", cartRoutes);
 router.use("/contact", contactRoutes);
 router.use("/orders", ordersRoutes);
-router.use("/coupons", couponsRoutes); 
+router.use("/coupons", couponsRoutes);
+router.use("/payments", paymentsRoutes); 
 
 export default router;
