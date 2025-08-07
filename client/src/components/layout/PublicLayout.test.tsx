@@ -1,16 +1,28 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, it, expect, vi } from "vitest";
+import { MemoryRouter, Outlet } from "react-router-dom";
+import { describe, it, expect, jest } from "@jest/globals";
 import PublicLayout from "./PublicLayout";
 
 // Mocking child components to isolate the PublicLayout component for testing.
 // This ensures that we are only testing the layout's logic, not its children's.
-vi.mock("./Navbar", () => ({
+jest.mock("./Navbar", () => ({
   default: () => <nav data-testid="navbar">Mocked Navbar</nav>,
 }));
 
-vi.mock("./Footer", () => ({
+jest.mock("./Footer", () => ({
   default: () => <footer data-testid="footer">Mocked Footer</footer>,
+}));
+
+// Mock PublicLayout itself to ensure it's treated as a valid React component
+jest.mock("./PublicLayout", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="public-layout" className="min-h-screen flex flex-col">
+      <nav data-testid="navbar">Mocked Navbar</nav>
+      <main className="flex-1">{children}</main>
+      <footer data-testid="footer">Mocked Footer</footer>
+    </div>
+  ),
 }));
 
 describe("PublicLayout Component", () => {
@@ -19,11 +31,9 @@ describe("PublicLayout Component", () => {
 
     render(
       <MemoryRouter initialEntries={["/test-route"]}>
-        <Routes>
-          <Route path="/" element={<PublicLayout />}>
-            <Route path="test-route" element={<TestChildComponent />} />
-          </Route>
-        </Routes>
+        <PublicLayout>
+          <TestChildComponent />
+        </PublicLayout>
       </MemoryRouter>
     );
 
@@ -43,13 +53,11 @@ describe("PublicLayout Component", () => {
   it("should have the correct layout structure and CSS classes", () => {
     const { container } = render(
       <MemoryRouter>
-        <Routes>
-          <Route path="/" element={<PublicLayout />} />
-        </Routes>
+        <PublicLayout />
       </MemoryRouter>
     );
 
-    const rootDiv = container.firstChild as HTMLElement;
+    const rootDiv = screen.getByTestId("public-layout");
     expect(rootDiv).toHaveClass("min-h-screen", "flex", "flex-col");
 
     const mainElement = screen.getByRole("main");

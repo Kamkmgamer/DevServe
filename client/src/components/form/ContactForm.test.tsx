@@ -11,9 +11,9 @@ beforeEach(() => {
 
 test('shows validation errors on empty submit', async () => {
   render(<ContactForm />);
-  fireEvent.click(screen.getByRole('button', { name: /submit/i }));
-  expect(await screen.findByText(/name is too short/i)).toBeInTheDocument();
-  expect(await screen.findByText(/invalid email/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+  expect(await screen.findByText(/Name must be at least 2 characters/i)).toBeInTheDocument();
+  expect(await screen.findByText(/Please enter a valid email address/i)).toBeInTheDocument();
 });
 
 test('submits valid form', async () => {
@@ -21,7 +21,7 @@ test('submits valid form', async () => {
   fireEvent.input(screen.getByLabelText(/name/i), { target: { value: 'Khalil' } });
   fireEvent.input(screen.getByLabelText(/email/i), { target: { value: 'contact@khalil.excellence.sd' } });
   fireEvent.input(screen.getByLabelText(/message/i), { target: { value: 'Hello world!!' } });
-  fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+  fireEvent.click(screen.getByRole('button', { name: /send message/i }));
   await waitFor(() =>
     expect(mocked.post).toHaveBeenCalledWith('/contact', {
       name: 'Khalil',
