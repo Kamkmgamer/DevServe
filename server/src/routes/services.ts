@@ -6,7 +6,7 @@ import {
   updateService,
   deleteService,
 } from "../api/services";
-import { authMiddleware } from "../middleware/auth";
+import { protect } from "../middleware/auth"; // Changed from authMiddleware
 import { validate } from "../middleware/validation";
 import { createServiceSchema, updateServiceSchema } from "../lib/validation";
 
@@ -14,8 +14,8 @@ const router = Router();
 
 router.get("/", getAllServices);
 router.get("/:id", getServiceById);
-router.post("/", authMiddleware, validate(createServiceSchema), createService);
-router.patch("/:id", authMiddleware, validate(updateServiceSchema), updateService);
-router.delete("/:id", authMiddleware, deleteService);
+router.post("/", protect, validate(createServiceSchema), createService);
+router.patch("/:id", protect, validate(updateServiceSchema), updateService);
+router.delete("/:id", protect, deleteService);
 
 export default router;

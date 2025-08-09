@@ -29,7 +29,7 @@ const DeployingGuide = React.lazy(() => import("../pages/DeployingGuide"));
 const AuthenticationGuide = React.lazy(() => import("../pages/AuthenticationGuide"));
 const NotFoundPage = React.lazy(() => import("../pages/NotFoundPage"));
 const PromoterPage = React.lazy(() => import("../pages/PromoterPage"));
-import ProtectedRoute from "../components/ProtectedRoute";
+import { ProtectedRoute } from "../components/ProtectedRoute";
 
 const PublicRoutes = () => (
   <Routes>
@@ -58,7 +58,9 @@ const PublicRoutes = () => (
     <Route path="/GettingStartedGuide" element={<GettingStartedGuide />} />
     <Route path="/DeployingGuide" element={<DeployingGuide />} />
     <Route path="/changeAuthenticationGuidelog" element={<ChangelogPage />} />
-    <Route path="/promoter" element={<ProtectedRoute><PromoterPage /></ProtectedRoute>} />
+    <Route path="/promoter" element={<ProtectedRoute />}>
+      <Route index element={<PromoterPage />} />
+    </Route>
     <Route path="*" element={<NotFoundPage />} />
   </Routes>
 );

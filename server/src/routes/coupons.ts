@@ -1,7 +1,16 @@
 // server/src/routes/coupons.ts
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { admin } from "../middleware/auth";
+
+export interface AuthRequest extends Request {
+  userId?: string;
+  user?: {
+    id: string;
+    role: string;
+  };
+}
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -15,7 +24,7 @@ const couponSchema = z
       .string()
       .trim()
       .min(1, "Code is required")
-      .transform((s) => s.toUpperCase()),
+      .transform((s: string) => s.toUpperCase()),
     type: z.enum(["percentage", "fixed"]),
     value: z.number().positive().int(),
     minOrderAmount: z.number().positive().int().optional().nullable(),
@@ -23,7 +32,8 @@ const couponSchema = z
     expiresAt: z.string().datetime().optional().nullable(),
     active: z.boolean(),
   })
-  .refine((d) => (d.type === "percentage" ? d.value <= 100 : true), {
+  .refine((d: { type: "percentage" | "fixed"; value: number }) =>
+    (d.type === "percentage" ? d.value <= 100 : true), {
     path: ["value"],
     message: "Percentage value may not exceed 100",
   });
@@ -39,7 +49,7 @@ const formatZodError = (err: z.ZodError) =>
  * NEW: Public route to validate and fetch a coupon by its code.
  * This is used on the checkout page.
  */
-router.get("/code/:code", async (req: Request, res: Response) => {
+router.get("/code/:code", async (req: AuthRequest, res: Response) => {
   try {
     const code = req.params.code.toUpperCase();
     const coupon = await prisma.coupon.findUnique({ where: { code } });
@@ -66,7 +76,7 @@ router.get("/code/:code", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/:id", async (req: Request, res: Response) => {
+router.get("/:id", async (req: AuthRequest, res: Response) => {
   try {
     const coupon = await prisma.coupon.findUnique({
       where: { id: req.params.id },
@@ -79,7 +89,7 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", async (req: AuthRequest, res: Response) => {
   const page = Number(req.query.page) || 1;
   const pageSize = Number(req.query.pageSize) || 100;
   try {
@@ -101,9 +111,9 @@ router.get("/", async (req: Request, res: Response) => {
 /* ------------------------------------------------------------------ */
 /* Protected Admin Routes                                             */
 /* ------------------------------------------------------------------ */
-router.use(require("../middleware/auth").authMiddleware);
+router.use(admin);
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", async (req: AuthRequest, res: Response) => {
   const parsed = couponSchema.safeParse(req.body);
   if (!parsed.success)
     return res.status(400).json({ message: "Validation failed", errors: formatZodError(parsed.error) });
@@ -121,7 +131,7 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-router.patch("/:id", async (req: Request, res: Response) => {
+router.patch("/:id", async (req: AuthRequest, res: Response) => {
   const parsed = couponSchema.partial().safeParse(req.body);
   if (!parsed.success)
     return res.status(400).json({ message: "Validation failed", errors: formatZodError(parsed.error) });
@@ -145,7 +155,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.delete("/:id", async (req: Request, res: Response) => {
+router.delete("/:id", async (req: AuthRequest, res: Response) => {
   try {
     await prisma.coupon.delete({ where: { id: req.params.id } });
     res.status(204).send();

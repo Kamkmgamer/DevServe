@@ -1,10 +1,11 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
-import Button from '../ui/Button';
-import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
-import { TOKENS } from '../../utils/tokens';
+import React from "react";
+import { Link } from "react-router-dom";
+import { CheckCircle2, Star } from "lucide-react";
+import { motion } from "framer-motion";
+import Button from "../ui/Button";
+import { Card } from "../ui/Card";
+import { Badge } from "../ui/Badge";
+import { TOKENS } from "../../utils/tokens";
 
 export const PricingTeaser: React.FC = () => {
   const plans = [
@@ -33,39 +34,67 @@ export const PricingTeaser: React.FC = () => {
   ];
 
   return (
-    <div className="grid gap-6 md:grid-cols-3">
-      {plans.map((p) => (
-        <Card
+    <div className="grid gap-8 md:grid-cols-3">
+      {plans.map((p, index) => (
+        <motion.div
           key={p.name}
-          className={`p-6 ${p.featured ? "ring-1 ring-blue-500/30" : ""}`}
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: index * 0.15 }}
+          viewport={{ once: true }}
         >
-          <div className="mb-1 text-xs uppercase tracking-wide text-blue-600">
-            {p.featured ? <Badge tone="blue">Recommended</Badge> : "Package"}
-          </div>
-          <h3 className={`mb-2 text-lg font-semibold ${TOKENS.textHeading}`}>
-            {p.name}
-          </h3>
-          <div className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-            Timeline: {p.price}
-          </div>
-          <p className={`mb-4 text-sm ${TOKENS.textBody}`}>{p.pitch}</p>
-          <ul className="mb-6 space-y-2 text-sm">
-            {p.bullets.map((b) => (
-              <li key={b} className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span className={`${TOKENS.textBody}`}>{b}</span>
-              </li>
-            ))}
-          </ul>
-          <Link to={p.cta}>
-            <Button
-              variant={p.featured ? "primary" : "cta-light"}
-              className="w-full"
+          <Card
+            className={`relative p-6 border shadow-lg rounded-2xl transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl ${
+              p.featured
+                ? "border-blue-500 bg-gradient-to-b from-blue-50/50 dark:from-blue-900/20"
+                : "border-slate-200 dark:border-slate-800"
+            }`}
+          >
+            {p.featured && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <Badge tone="blue" className="flex items-center gap-1">
+                  <Star className="h-3.5 w-3.5" /> Recommended
+                </Badge>
+              </div>
+            )}
+
+            <h3
+              className={`mt-4 mb-2 text-xl font-bold tracking-tight ${
+                TOKENS.textHeading
+              } ${p.featured ? "text-blue-600 dark:text-blue-400" : ""}`}
             >
-              Let’s Talk
-            </Button>
-          </Link>
-        </Card>
+              {p.name}
+            </h3>
+
+            <p className="mb-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+              Timeline: {p.price}
+            </p>
+
+            <p className={`mb-5 text-sm ${TOKENS.textBody}`}>{p.pitch}</p>
+
+            <ul className="mb-6 space-y-3 text-sm">
+              {p.bullets.map((b) => (
+                <li key={b} className="flex items-center gap-2">
+                  <CheckCircle2
+                    className={`h-4 w-4 ${
+                      p.featured ? "text-blue-500" : "text-green-500"
+                    }`}
+                  />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+
+            <Link to={p.cta}>
+              <Button
+                variant={p.featured ? "primary" : "cta-light"}
+                className="w-full transition-transform duration-200 hover:scale-[1.02]"
+              >
+                Let’s Talk
+              </Button>
+            </Link>
+          </Card>
+        </motion.div>
       ))}
     </div>
   );

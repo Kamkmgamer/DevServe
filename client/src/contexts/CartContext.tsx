@@ -43,7 +43,7 @@ export interface CartContextType {
   refresh: () => Promise<void>;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+export const CartContext = createContext<CartContextType | undefined>(undefined);
 
 type Props = { children: ReactNode };
 

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
-import { Card } from '../ui/Card';
-import { TOKENS } from '../../utils/tokens';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronRight } from "lucide-react";
+import { Card } from "../ui/Card";
+import { TOKENS } from "../../utils/tokens";
 
 export const FAQ: React.FC = () => {
   const faqs = [
@@ -28,37 +28,56 @@ export const FAQ: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {faqs.map((f, i) => (
-        <Card key={f.q} className={`mb-3 p-4`}>
-          <h3 className="text-base font-medium">
-            <button
-              className={`flex w-full items-center justify-between text-left ${TOKENS.ring}`}
-              onClick={() => setOpen((o) => (o === i ? null : i))}
-              aria-expanded={open === i}
-              aria-controls={`faq-${i}`}
+      {faqs.map((f, i) => {
+        const isOpen = open === i;
+        return (
+          <motion.div
+            key={f.q}
+            layout
+            transition={{ layout: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] } }}
+          >
+            <Card
+              className={`mb-3 p-4 transition-colors duration-200 ${
+                isOpen ? "bg-slate-50 dark:bg-slate-800/50" : "hover:bg-slate-50/60 dark:hover:bg-slate-800/40"
+              }`}
             >
-              <span className={`${TOKENS.textHeading}`}>{f.q}</span>
-              <ChevronRight
-                className={`h-5 w-5 text-slate-500 transition-transform ${open === i ? "rotate-90" : ""}`}
-              />
-            </button>
-          </h3>
-          <AnimatePresence initial={false}>
-            {open === i && (
-              <motion.div
-                id={`faq-${i}`}
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <p className={`pt-3 text-sm ${TOKENS.textBody}`}>{f.a}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Card>
-      ))}
+              <h3 className="text-base font-medium">
+                <button
+                  onClick={() => setOpen((o) => (o === i ? null : i))}
+                  className={`flex w-full items-center justify-between text-left focus:outline-none ${TOKENS.ring}`}
+                  aria-expanded={isOpen}
+                  aria-controls={`faq-${i}`}
+                >
+                  <span className={`${TOKENS.textHeading}`}>{f.q}</span>
+                  <motion.span
+                    animate={{ rotate: isOpen ? 90 : 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                  >
+                    <ChevronRight className="h-5 w-5 text-slate-500" />
+                  </motion.span>
+                </button>
+              </h3>
+
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    id={`faq-${i}`}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <p className={`pt-3 text-sm leading-relaxed ${TOKENS.textBody}`}>
+                      {f.a}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };

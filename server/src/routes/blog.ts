@@ -6,14 +6,14 @@ import {
   updateBlogPost,
   deleteBlogPost,
 } from "../api/blog";
-import { authMiddleware } from "../middleware/auth";
+import { protect } from "../middleware/auth";
 
 const router = Router();
 
 router.get("/", getAllBlogPosts);
 router.get("/:id", getBlogPostById);
-router.post("/", authMiddleware, createBlogPost);
-router.patch("/:id", authMiddleware, updateBlogPost);
-router.delete("/:id", authMiddleware, deleteBlogPost);
+router.post("/", protect, createBlogPost);
+router.patch("/:id", protect, updateBlogPost);
+router.delete("/:id", protect, deleteBlogPost);
 
 export default router;

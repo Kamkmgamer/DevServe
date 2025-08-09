@@ -3,6 +3,7 @@ import { TOKENS } from '../../utils/tokens';
 
 interface SectionSkeletonProps {
   rows?: number;
+  className?: string;
 }
 
 export const SectionSkeleton: React.FC<SectionSkeletonProps> = ({ rows = 3, className = "" }) => (

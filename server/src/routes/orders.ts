@@ -1,7 +1,7 @@
 // server/src/routes/orders.ts
 import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
-import { authMiddleware } from "../middleware/auth";
+import { protect } from "../middleware/auth"; // Changed from authMiddleware
 import { AuthRequest } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { createOrderSchema } from "../lib/validation";
@@ -9,7 +9,7 @@ import { createOrderSchema } from "../lib/validation";
 const router = Router();
 const prisma = new PrismaClient();
 
-router.use(authMiddleware);
+router.use(protect); // Changed from authMiddleware
 
 type Req = AuthRequest;
 

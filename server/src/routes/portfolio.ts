@@ -6,14 +6,14 @@ import {
   updatePortfolio,
   deletePortfolio,
 } from "../api/portfolio";
-import { authMiddleware } from "../middleware/auth";
+import { protect } from "../middleware/auth";
 
 const router = Router();
 
 router.get("/", getAllPortfolio);
 router.get("/:id", getPortfolioById);
-router.post("/", authMiddleware, createPortfolio);
-router.patch("/:id", authMiddleware, updatePortfolio);
-router.delete("/:id", authMiddleware, deletePortfolio);
+router.post("/", protect, createPortfolio);
+router.patch("/:id", protect, updatePortfolio);
+router.delete("/:id", protect, deletePortfolio);
 
 export default router;

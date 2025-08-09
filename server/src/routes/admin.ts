@@ -1,9 +1,10 @@
 import { Router } from "express";
 import prisma from "../lib/prisma";
-import { authMiddleware } from "../middleware/auth";
+import { protect, admin } from "../middleware/auth"; // Import protect and admin
 
 const router = Router();
-router.use(authMiddleware);
+router.use(protect); // Use protect middleware for all admin routes
+router.use(admin); // Use admin middleware for all admin routes
 
 // Dashboard stats (unchanged)
 router.get("/", async (_req, res) => {
@@ -43,16 +44,16 @@ router.patch("/orders/:id/status", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!status) {
       return res.status(400).json({ message: "Status is required" });
     }
-    
+
     const order = await prisma.order.update({
       where: { id },
       data: { status },
     });
-    
+
     res.json(order);
   } catch (error) {
     console.error("Error updating order status:", error);
