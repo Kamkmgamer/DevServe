@@ -6,7 +6,12 @@ export interface AuthRequest extends Request {
   userId?: string;
   user?: {
     id: string;
+    email: string;
+    password?: string;
+    name?: string | null;
     role: string;
+    createdAt: Date;
+    updatedAt: Date;
   };
 }
 
@@ -17,7 +22,7 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-export const protect = (
+export const protect = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
@@ -33,8 +38,21 @@ export const protect = (
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    req.userId = decoded.userId;
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
+    req.userId = decoded.id;
+    console.log('Protect middleware: decoded.userId', decoded.id);
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+    });
+    console.log('Protect middleware: fetched user', user);
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found." });
+    }
+
+    req.user = user; // Attach the full user object to the request
+    console.log('Protect middleware: req.user set', req.user);
     next();
   } catch (error) {
     if (error instanceof TokenExpiredError) {

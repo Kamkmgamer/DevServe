@@ -41,7 +41,7 @@ async function main() {
         "SEO optimization for better visibility",
       ]),
       category: "Web Design",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Portfolio+Website+1", "https://via.placeholder.com/600x400?text=Portfolio+Website+2", "https://via.placeholder.com/600x400?text=Portfolio+Website+3"]),
     },
     {
       name: "Landing Page",
@@ -54,7 +54,7 @@ async function main() {
         "Lightning-fast loading speed",
       ]),
       category: "Web Design",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Landing+Page+1", "https://via.placeholder.com/600x400?text=Landing+Page+2", "https://via.placeholder.com/600x400?text=Landing+Page+3"]),
     },
     {
       name: "E-commerce Website",
@@ -68,7 +68,7 @@ async function main() {
         "Multi-vendor and dropshipping ready",
       ]),
       category: "E-commerce",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=E-commerce+Website+1", "https://via.placeholder.com/600x400?text=E-commerce+Website+2", "https://via.placeholder.com/600x400?text=E-commerce+Website+3"]),
     },
     {
       name: "Business/Corporate Website",
@@ -81,7 +81,7 @@ async function main() {
         "Custom branding and design",
       ]),
       category: "Web Design",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Business+Website+1", "https://via.placeholder.com/600x400?text=Business+Website+2", "https://via.placeholder.com/600x400?text=Business+Website+3"]),
     },
     {
       name: "Blog/Personal Website",
@@ -94,7 +94,7 @@ async function main() {
         "SEO optimized for writers",
       ]),
       category: "Web Design",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Blog+Website+1", "https://via.placeholder.com/600x400?text=Blog+Website+2", "https://via.placeholder.com/600x400?text=Blog+Website+3"]),
     },
     {
       name: "Odoo Custom Development",
@@ -107,7 +107,7 @@ async function main() {
         "Third-party API integrations",
       ]),
       category: "Odoo",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Odoo+Development+1", "https://via.placeholder.com/600x400?text=Odoo+Development+2", "https://via.placeholder.com/600x400?text=Odoo+Development+3"]),
     },
     {
       name: "Website Maintenance & Optimization",
@@ -120,7 +120,7 @@ async function main() {
         "SEO audits and improvements",
       ]),
       category: "Support",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Website+Maintenance+1", "https://via.placeholder.com/600x400?text=Website+Maintenance+2", "https://via.placeholder.com/600x400?text=Website+Maintenance+3"]),
     },
     {
       name: "AI Integration for Websites",
@@ -133,7 +133,7 @@ async function main() {
         "Data dashboards with AI analytics",
       ]),
       category: "AI",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=AI+Integration+1", "https://via.placeholder.com/600x400?text=AI+Integration+2", "https://via.placeholder.com/600x400?text=AI+Integration+3"]),
     },
     {
       name: "Tech Consultation & Digital Strategy",
@@ -146,7 +146,7 @@ async function main() {
         "Scalable tech stack planning",
       ]),
       category: "Consulting",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Tech+Consultation+1", "https://via.placeholder.com/600x400?text=Tech+Consultation+2", "https://via.placeholder.com/600x400?text=Tech+Consultation+3"]),
     },
     {
       name: "UI/UX Design",
@@ -159,7 +159,7 @@ async function main() {
         "Focus on usability and conversion",
       ]),
       category: "Design",
-      imageUrls: JSON.stringify([]),
+      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=UI/UX+Design+1", "https://via.placeholder.com/600x400?text=UI/UX+Design+2", "https://via.placeholder.com/600x400?text=UI/UX+Design+3"]),
     },
   ];
 

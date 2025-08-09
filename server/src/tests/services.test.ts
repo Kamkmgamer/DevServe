@@ -55,6 +55,7 @@ describe('Services API', () => {
         price: 100,
         features: ['f1', 'f2'],
         category: 'Portfolio',
+        imageUrls: ['image1.jpg', 'image2.jpg'], // Added imageUrls
       };
       const res = await request(app)
         .post('/api/services')

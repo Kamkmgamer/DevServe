@@ -11,12 +11,13 @@ interface InputFieldProps
   as?: "input" | "textarea" | "select";
   children?: React.ReactNode;
   autoResize?: boolean; // for textarea
+  helpText?: string;
 }
 
 export const InputField = React.forwardRef<
   HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
   InputFieldProps
->(({ label, name, error, as: Component = "input", children, autoResize, required, ...props }, ref) => {
+>(({ label, name, error, as: Component = "input", children, autoResize, required, helpText, ...props }, ref) => {
   const localRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
 
   useEffect(() => {
@@ -61,6 +62,11 @@ export const InputField = React.forwardRef<
       {error && (
         <p id={`${id}-error`} className="mt-1 text-xs text-red-600 dark:text-red-400">
           {error.message}
+        </p>
+      )}
+      {helpText && (
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          {helpText}
         </p>
       )}
     </div>

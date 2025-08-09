@@ -29,6 +29,7 @@ export const createService = async (req: Request, res: Response) => {
     const service = await prisma.service.create({ data });
     res.status(201).json(service);
   } catch (e) {
+    console.error(e); // Added this line
     res.status(400).json({ error: "Failed to create" });
   }
 };

@@ -125,6 +125,7 @@ export const deleteReferral = async (req: Request, res: Response) => {
 
 export const getMyReferral = async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
+    console.log('getMyReferral: userId from req.user', userId);
 
     try {
         const referral = await prisma.referral.findUnique({
@@ -135,6 +136,7 @@ export const getMyReferral = async (req: Request, res: Response) => {
                 commissions: true,
             },
         });
+        console.log('getMyReferral: fetched referral', referral);
 
         if (!referral) {
             return res.status(404).json({ message: 'Referral not found' });

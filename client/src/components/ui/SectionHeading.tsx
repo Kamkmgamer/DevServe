@@ -4,6 +4,7 @@ import { TOKENS } from '../../utils/tokens';
 interface SectionHeadingProps {
   title: string;
   subtitle?: string;
+  description?: string;
   center?: boolean;
   className?: string;
 }
@@ -11,6 +12,7 @@ interface SectionHeadingProps {
 export const SectionHeading: React.FC<SectionHeadingProps> = ({
   title,
   subtitle,
+  description,
   center,
   className,
 }) => (
