@@ -5,6 +5,7 @@ import path from 'path';
 export default defineConfig(({ mode }) => {
   // Load environment variables
   const env = loadEnv(mode, process.cwd(), '');
+  console.log('NGROK_HOST from env:', env.NGROK_HOST);
 
   // Define allowed hosts
   const allowedHosts: string[] | 'all' = [
@@ -36,7 +37,11 @@ export default defineConfig(({ mode }) => {
           secure: false
         }
       },
-      hmr
+      hmr: env.NGROK_HOST ? {
+        protocol: 'wss',
+        host: env.NGROK_HOST,
+        clientPort: 443,
+      } : undefined,
     },
     build: {
       outDir: path.resolve(__dirname, '../server/public'),

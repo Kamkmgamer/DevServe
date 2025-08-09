@@ -50,3 +50,12 @@ export interface Coupon extends CouponFormData {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  role: 'USER' | 'ADMIN' | 'SUPERADMIN';
+  createdAt: string;
+  updatedAt: string;
+}

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import prisma from "../lib/prisma";
-import { protect, admin } from "../middleware/auth"; // Import protect and admin
+import { protect, admin, superadmin, AuthRequest } from "../middleware/auth"; // Import protect, admin, superadmin, and AuthRequest
+import bcrypt from "bcryptjs";
 
 const router = Router();
 router.use(protect); // Use protect middleware for all admin routes
@@ -58,6 +59,129 @@ router.patch("/orders/:id/status", async (req, res) => {
   } catch (error) {
     console.error("Error updating order status:", error);
     res.status(500).json({ message: "Failed to update order status" });
+  }
+});
+
+// User Management Routes
+
+// GET all users
+router.get("/users", async (_req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true },
+    });
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
+// GET single user by ID
+router.get("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true },
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ message: "Failed to fetch user" });
+  }
+});
+
+// POST create new user
+router.post("/users", async (req, res) => {
+  try {
+    const { email, password, name, role } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await prisma.user.create({
+      data: { email, password: hashedPassword, name, role: role || "USER" },
+      select: { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true },
+    });
+    res.status(201).json(newUser);
+  } catch (error: any) {
+    console.error("Error creating user:", error);
+    if (error.code === 'P2002') { // Unique constraint failed for email
+      return res.status(409).json({ message: "User with this email already exists" });
+    }
+    res.status(500).json({ message: "Failed to create user" });
+  }
+});
+
+// PUT update user
+router.put("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, password, name, role } = req.body;
+
+    const updateData: any = { name, role };
+    if (email) {
+      updateData.email = email;
+    }
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true },
+    });
+    res.json(updatedUser);
+  } catch (error: any) {
+    console.error("Error updating user:", error);
+    if (error.code === 'P2002') { // Unique constraint failed for email
+      return res.status(409).json({ message: "User with this email already exists" });
+    }
+    res.status(500).json({ message: "Failed to update user" });
+  }
+});
+
+// DELETE user
+router.delete("/users/:id", superadmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const requestingUser = req.user; // User making the request (from protect middleware)
+
+    if (!requestingUser) {
+      return res.status(401).json({ message: "Not authenticated." });
+    }
+
+    // Prevent self-deletion
+    if (requestingUser.id === id) {
+      return res.status(403).json({ message: "You cannot delete your own account." });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Only SUPERADMIN can delete ADMIN users
+    if (targetUser.role === "ADMIN" && requestingUser.role !== "SUPERADMIN") {
+      return res.status(403).json({ message: "Only superadmins can delete admin accounts." });
+    }
+
+    await prisma.user.delete({
+      where: { id },
+    });
+    res.status(204).send(); // No Content
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ message: "Failed to delete user" });
   }
 });
 
