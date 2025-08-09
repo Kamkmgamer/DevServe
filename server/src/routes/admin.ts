@@ -38,4 +38,26 @@ router.get("/orders", async (_req, res) => {
   );
 });
 
+// PATCH /api/admin/orders/:id/status
+router.patch("/orders/:id/status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+    
+    const order = await prisma.order.update({
+      where: { id },
+      data: { status },
+    });
+    
+    res.json(order);
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    res.status(500).json({ message: "Failed to update order status" });
+  }
+});
+
 export default router;

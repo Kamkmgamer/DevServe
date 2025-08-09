@@ -4,7 +4,6 @@ import { toast } from "react-hot-toast";
 
 const api = axios.create({
   baseURL: '/api',  // Use relative path; Vite proxy will handle forwarding
-  headers: { "Content-Type": "application/json" },
 });
 
 /* Attach token to every request */

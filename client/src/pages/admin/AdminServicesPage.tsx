@@ -54,10 +54,10 @@ const AdminServicesPage: React.FC = () => {
     try {
       const res = await api.get<Service[]>("/services");
       setServices(res.data);
-    } catch (e: any) {
-      const msg = e.response?.data?.error || e.message || "Failed to load";
-      setError(msg);
-      toast.error(msg);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || "Failed to load services";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -162,11 +162,11 @@ const AdminServicesPage: React.FC = () => {
       try {
         await api.delete(`/services/${id}`);
         toast.success("Service permanently deleted");
-      } catch (e: any) {
+      } catch (error: any) {
         // Revert on failure
-        const msg = e.response?.data?.error || e.message || "Delete failed";
+        const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || "Delete failed";
         if (toDelete) setServices((prev) => [toDelete, ...prev]);
-        toast.error(msg);
+        toast.error(errorMessage);
       } finally {
         undoTimer.current = null;
       }

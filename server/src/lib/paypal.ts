@@ -21,11 +21,21 @@ export async function createPayPalOrder(totalCents: number) {
   return result;
 }
 
-export async function capturePayPalOrder(authorizationId: string) {
+export async function capturePayPalOrder(authorizationId: string, totalCents: number) {
   const request = new paypal.payments.AuthorizationsCaptureRequest(
     authorizationId
   );
-  request.requestBody({});
+  // @ts-ignore
+  request.requestBody({
+    amount: {
+      currency_code: "USD",
+      value: (totalCents / 100).toFixed(2),
+    },
+    final_capture: true,
+    invoice_id: "",
+    note_to_payer: "",
+    soft_descriptor: "",
+  });
   const { result } = await client.execute(request);
   return result;
 }

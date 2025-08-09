@@ -23,6 +23,29 @@ export const registerAdmin = async (req: Request, res: Response) => {
   }
 };
 
+export const register = async (req: Request, res: Response) => {
+  const { email, password, name } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  try {
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        role: "USER",
+      },
+    });
+    
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
+      expiresIn: "1d",
+    });
+
+    res.status(201).json({ token });
+  } catch (error) {
+    res.status(400).json({ error: "User already exists" });
+  }
+};
+
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });

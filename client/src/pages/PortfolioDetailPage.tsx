@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api from "../api/axios";
 import Container from "../components/layout/Container";
 import Button from "../components/ui/Button";
@@ -11,8 +11,17 @@ type PortfolioItem = {
   title: string;
   description: string;
   thumbnailUrl?: string; // Main image
-  imageUrls: string[];   // For the carousel/gallery
+  imageUrls: string;     // JSON string for the carousel/gallery
   projectUrl?: string;   // Link to live project
+};
+
+// Helper function to parse JSON string to array
+const parseJsonArray = (jsonString: string): string[] => {
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    return [];
+  }
 };
 
 const PortfolioDetailPage = () => {
@@ -32,11 +41,17 @@ const PortfolioDetailPage = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Parse imageUrls from JSON string to array
+  const imageUrls = useMemo(() => {
+    if (!item) return [];
+    return parseJsonArray(item.imageUrls);
+  }, [item]);
+
   if (loading) return <Container className="py-20 text-center">Loading project details...</Container>;
   if (error) return <Container className="py-20 text-center text-red-500">{error}</Container>;
   if (!item) return <Container className="py-20 text-center">Project not found.</Container>;
 
-  const imagesToShow = item.imageUrls.length > 0 ? item.imageUrls : [item.thumbnailUrl || "https://via.placeholder.com/800x600/eee?text=No+Image"];
+  const imagesToShow = imageUrls.length > 0 ? imageUrls : [item.thumbnailUrl || "https://via.placeholder.com/800x600/eee?text=No+Image"];
   const mainImage = imagesToShow[currentImageIndex];
 
   return (

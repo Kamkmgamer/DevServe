@@ -104,8 +104,12 @@ const ServiceFormPage = () => {
         setValue("price", String(s.price ?? ""));
         setValue("category", s.category);
         setValue("thumbnailUrl", s.thumbnailUrl || "");
-        setValue("featuresCsv", (s.features || []).join(", "));
-        setValue("imageUrlsCsv", (s.imageUrls || []).join(", "));
+        // Parse features from JSON string to array
+        const features = typeof s.features === 'string' ? JSON.parse(s.features) : (s.features || []);
+        setValue("featuresCsv", features.join(", "));
+        // Parse imageUrls from JSON string to array
+        const imageUrls = typeof s.imageUrls === 'string' ? JSON.parse(s.imageUrls) : (s.imageUrls || []);
+        setValue("imageUrlsCsv", imageUrls.join(", "));
       })
       .catch((e) => setError(e.response?.data?.error || e.message));
   }, [id, isEdit, setValue]);

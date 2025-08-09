@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -28,6 +29,7 @@ const links: LinkItem[] = [
   { to: "/admin/coupons", label: "Coupons", icon: TicketPercent },
   { to: "/admin/blog", label: "Blog", icon: FileText },
   { to: "/admin/orders", label: "Orders", icon: Tags },
+  { to: "/admin/referrals", label: "Referrals", icon: Users },
 ];
 
 export const AdminNavbar = () => {

@@ -1,13 +1,12 @@
 import { Router } from "express";
-import { registerAdmin, login } from "../api/auth";
+import { registerAdmin, login, register } from "../api/auth";
 import { validate } from "../middleware/validation";
 import { registerSchema, loginSchema } from "../lib/validation";
 
 const router = Router();
 
-
-
-// Admin login → returns a JWT
+// Public auth routes
+router.post("/register", validate(registerSchema), register);
 router.post("/login", validate(loginSchema), login);
 
 export default router;

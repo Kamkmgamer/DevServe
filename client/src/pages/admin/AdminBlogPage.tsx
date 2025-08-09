@@ -40,9 +40,10 @@ const AdminBlogPage: React.FC = () => {
     try {
       const res = await api.get<BlogPost[]>("/blog");
       setPosts(res.data);
-    } catch {
-      setError("Failed to load posts");
-      toast.error("Failed to load posts");
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || "Failed to load posts";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -137,10 +138,11 @@ const AdminBlogPage: React.FC = () => {
       try {
         await api.delete(`/blog/${id}`);
         toast.success("Post permanently deleted");
-      } catch {
+      } catch (error: any) {
         // Revert on failure
+        const errorMessage = error.response?.data?.message || error.message || "Failed to delete post";
         if (toDelete) setPosts((prev) => [toDelete, ...prev]);
-        toast.error("Failed to delete post");
+        toast.error(errorMessage);
       } finally {
         undoTimer.current = null;
       }

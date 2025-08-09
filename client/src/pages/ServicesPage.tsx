@@ -11,6 +11,8 @@ type Service = {
   description: string;
   category: string;
   price: number;
+  features: string;
+  imageUrls: string;
   thumbnailUrl?: string;
 };
 
@@ -62,6 +64,24 @@ const ServicesPage = () => {
         s.category.toLowerCase().includes(q)
     );
   }, [services, activeCategory, query]);
+
+  // Helper function to parse features JSON string
+  const parseFeatures = (featuresJson: string): string[] => {
+    try {
+      return JSON.parse(featuresJson);
+    } catch {
+      return [];
+    }
+  };
+
+  // Helper function to parse imageUrls JSON string
+  const parseImageUrls = (imageUrlsJson: string): string[] => {
+    try {
+      return JSON.parse(imageUrlsJson);
+    } catch {
+      return [];
+    }
+  };
 
   if (loading)
     return (

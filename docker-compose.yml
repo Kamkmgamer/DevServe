@@ -4,9 +4,9 @@ services:
     container_name: web_services_db
     restart: always
     environment:
-      - POSTGRES_USER=myuser
-      - POSTGRES_PASSWORD=mypassword
-      - POSTGRES_DB=mydatabase
+      - POSTGRES_USER=devserveuser
+      - POSTGRES_PASSWORD=9cf18f8c5f9bbd3ea6d645c8ffc917d2
+      - POSTGRES_DB=DevServeMainDB
     ports:
       - "5432:5432"
     volumes:

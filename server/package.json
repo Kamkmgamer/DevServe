@@ -37,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.1.0",
     "@types/nodemailer": "^6.4.17",
+    "@types/paypal__checkout-server-sdk": "^1.0.8",
     "@types/pg": "^8.15.4",
     "@types/stripe": "^8.0.416",
     "@types/supertest": "^6.0.3",

@@ -3,20 +3,22 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = "postgresql://myuser:mypassword@localhost:5432/mydatabase"
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      String   @default("USER")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  cart      Cart?
-  orders    Order[] 
+  id           String     @id @default(cuid())
+  email        String     @unique
+  password     String
+  name         String?
+  role         String     @default("USER")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  cart         Cart?
+  orders       Order[]
+  referredById String?
+  referredBy   Referral?  @relation(fields: [referredById], references: [id])
 }
 
 model PortfolioItem {
@@ -24,7 +26,7 @@ model PortfolioItem {
   title        String
   description  String
   thumbnailUrl String?
-  imageUrls    String[] 
+  imageUrls    String // Store as JSON string
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -44,14 +46,14 @@ model Service {
   name           String          @unique
   description    String
   price          Float
-  features       String[]
+  features       String // Store as JSON string
   category       String
   thumbnailUrl   String?
-  imageUrls      String[]
+  imageUrls      String // Store as JSON string
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   cartItems      CartItem[]
-  orderLineItems OrderLineItem[] 
+  orderLineItems OrderLineItem[]
 }
 
 model Cart {
@@ -76,22 +78,25 @@ model CartItem {
 }
 
 model Order {
-  id           String          @id @default(cuid())
-  userId       String
-  user         User            @relation(fields: [userId], references: [id])
-  couponId     String?
-  coupon       Coupon?         @relation(fields: [couponId], references: [id])
-  status       OrderStatus     @default(PENDING)
-  currency     String          @default("USD")
-  totalAmount  Int // in cents
-  requirements String
-  suggestions  String?
-  preferences  String?
-  questions    String?
-  metadata     Json?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  lineItems    OrderLineItem[]
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  couponId       String?
+  coupon         Coupon?         @relation(fields: [couponId], references: [id])
+  status         OrderStatus     @default(PENDING)
+  currency       String          @default("USD")
+  totalAmount    Int // in cents
+  requirements   String
+  suggestions    String?
+  preferences    String?
+  questions      String?
+  metadata       String? // Store as JSON string
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  lineItems      OrderLineItem[]
+  referralId     String?
+  referral       Referral?       @relation(fields: [referralId], references: [id])
+  commission     Commission?
 }
 
 model OrderLineItem {
@@ -108,9 +113,9 @@ model OrderLineItem {
 model Coupon {
   id             String    @id @default(cuid())
   code           String    @unique
-  type           String    @db.VarChar(10) // "percentage" | "fixed"
-  value          Int       // store as integer: percent OR cents
-  minOrderAmount Int?      // cents
+  type           String // "percentage" | "fixed"
+  value          Int // store as integer: percent OR cents
+  minOrderAmount Int? // cents
   maxUses        Int?
   currentUses    Int       @default(0)
   active         Boolean   @default(true)
@@ -118,10 +123,43 @@ model Coupon {
   orders         Order[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
 
-  @@index([code])
-  @@index([active])
-  @@index([expiresAt])
+model Referral {
+  id              String       @id @default(cuid())
+  userId          String       @unique // The user who is the promoter
+  code            String       @unique
+  commissionRate  Float        @default(0.10) // 10% commission rate
+  referredUsers   User[]
+  orders          Order[]
+  commissions     Commission[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Commission {
+  id          String        @id @default(cuid())
+  orderId     String        @unique
+  order       Order         @relation(fields: [orderId], references: [id])
+  referralId  String
+  referral    Referral      @relation(fields: [referralId], references: [id])
+  amount      Int // in cents
+  status      PayoutStatus  @default(UNPAID)
+  payoutId    String?
+  payout      Payout?       @relation(fields: [payoutId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Payout {
+  id           String       @id @default(cuid())
+  referralId   String
+  amount       Int // in cents
+  status       PayoutStatus @default(PENDING)
+  payoutDate   DateTime     @default(now())
+  commissions  Commission[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 enum OrderStatus {
@@ -132,4 +170,11 @@ enum OrderStatus {
   FAILED
   REFUNDED
   CANCELED
+}
+
+enum PayoutStatus {
+  PENDING
+  PAID
+  FAILED
+  UNPAID
 }

@@ -50,9 +50,10 @@ export default function AdminOrdersPage() {
     api
       .get<Order[]>("/admin/orders")
       .then((res) => setOrders(res.data))
-      .catch(() => {
-        setError("Failed to load orders");
-        toast.error("Failed to load orders");
+      .catch((error: any) => {
+        const errorMessage = error.response?.data?.message || error.message || "Failed to load orders";
+        setError(errorMessage);
+        toast.error(errorMessage);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -122,9 +123,10 @@ export default function AdminOrdersPage() {
     try {
       await api.patch(`/admin/orders/${id}/status`, { status });
       toast.success("Status updated");
-    } catch {
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || "Update failed";
       setOrders(prev); // revert
-      toast.error("Update failed");
+      toast.error(errorMessage);
     } finally {
       setUpdatingId(null);
     }
@@ -144,9 +146,10 @@ export default function AdminOrdersPage() {
       );
       toast.success(`Updated ${ids.length} orders`);
       setSelectedIds(new Set());
-    } catch {
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || "Bulk update failed";
       setOrders(prev);
-      toast.error("Bulk update failed");
+      toast.error(errorMessage);
     }
   };
 

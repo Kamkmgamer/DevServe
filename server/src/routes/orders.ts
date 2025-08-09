@@ -19,10 +19,10 @@ router.get("/", async (req: Req, res) => {
     const orders = await prisma.order.findMany({
       where: { userId: req.userId },
       include: {
-        lineItems: { 
-          include: { 
-            service: true 
-          } 
+        lineItems: {
+          include: {
+            service: true
+          }
         },
       },
       orderBy: { createdAt: "desc" },
@@ -37,8 +37,8 @@ router.get("/", async (req: Req, res) => {
 // POST /api/orders
 router.post("/", validate(createOrderSchema), async (req: Req, res) => {
   try {
-    const { items, requirements, discount } = req.body;
-    
+    const { items, requirements, discount, referralCode } = req.body;
+
     if (!items?.length) {
       return res.status(400).json({ message: "No items provided" });
     }
@@ -59,7 +59,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
       const service = await prisma.service.findUnique({
         where: { id: item.serviceId },
       });
-      
+
       if (!service) {
         return res.status(400).json({ message: `Service not found: ${item.serviceId}` });
       }
@@ -77,7 +77,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
     }
 
     let couponId: string | null = null;
-    
+
     // Apply coupon if provided
     if (discount?.code) {
       const coupon = await prisma.coupon.findUnique({
@@ -86,7 +86,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
 
       if (coupon && coupon.active) {
         const now = new Date();
-        
+
         // Check if coupon is expired
         if (coupon.expiresAt && new Date(coupon.expiresAt) < now) {
           return res.status(400).json({ message: "Coupon has expired" });
@@ -99,8 +99,8 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
 
         // Check minimum order amount
         if (coupon.minOrderAmount && totalCents < coupon.minOrderAmount) {
-          return res.status(400).json({ 
-            message: `Minimum order amount is ${formatCurrency(coupon.minOrderAmount)}` 
+          return res.status(400).json({
+            message: `Minimum order amount is ${formatCurrency(coupon.minOrderAmount)}`
           });
         }
 
@@ -125,6 +125,19 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
       }
     }
 
+    let referralId: string | null = null;
+    if (referralCode) {
+        const referral = await prisma.referral.findUnique({
+            where: { code: referralCode },
+        });
+
+        if (referral) {
+            referralId = referral.id;
+        } else {
+            return res.status(400).json({ message: "Invalid referral code" });
+        }
+    }
+
     // Create the order
     const order = await prisma.order.create({
       data: {
@@ -132,9 +145,24 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
         totalAmount: totalCents,
         requirements: typeof requirements === 'string' ? requirements : JSON.stringify(requirements),
         couponId,
+        referralId,
         lineItems: { create: lineData },
       },
     });
+
+    if (referralId) {
+        const referral = await prisma.referral.findUnique({ where: { id: referralId } });
+        if (referral) {
+            const commissionAmount = Math.round(totalCents * referral.commissionRate);
+            await prisma.commission.create({
+                data: {
+                    orderId: order.id,
+                    referralId: referral.id,
+                    amount: commissionAmount,
+                },
+            });
+        }
+    }
 
     // Clear user's cart
     await prisma.cartItem.deleteMany({
@@ -152,5 +180,27 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
 function formatCurrency(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
+
+// PATCH /api/orders/:id/status
+router.patch("/:id/status", async (req: Req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    const order = await prisma.order.update({
+      where: { id },
+      data: { status },
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    res.status(500).json({ message: "Failed to update order status" });
+  }
+});
 
 export default router;

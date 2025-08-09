@@ -17,10 +17,10 @@ export const createServiceSchema = z.object({
   name: z.string(),
   description: z.string(),
   price: z.number().positive(),
-  features: z.array(z.string()),
+  features: z.union([z.array(z.string()), z.string()]),
   category: z.string(),
   thumbnailUrl: z.string().url().optional(),
-  imageUrls: z.array(z.string().url()).optional(),
+  imageUrls: z.union([z.array(z.string().url()), z.string()]).optional(),
 });
 
 export const updateServiceSchema = createServiceSchema.partial();
@@ -39,6 +39,8 @@ export const createOrderSchema = z.object({
       quantity: z.number().int().positive(),
     })
   ),
-  requirements: z.record(z.string(), z.unknown()),
-  discount: z.number().optional(),
+  requirements: z.union([z.record(z.string(), z.unknown()), z.string()]),
+  discount: z.object({
+    code: z.string(),
+  }).optional(),
 });

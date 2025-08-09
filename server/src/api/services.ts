@@ -18,7 +18,15 @@ export const getServiceById = async (req: Request, res: Response) => {
 // POST /api/services (protected)
 export const createService = async (req: Request, res: Response) => {
   try {
-    const service = await prisma.service.create({ data: req.body });
+    const { features, imageUrls, ...rest } = req.body;
+    
+    const data = {
+      ...rest,
+      features: Array.isArray(features) ? JSON.stringify(features) : features,
+      imageUrls: Array.isArray(imageUrls) ? JSON.stringify(imageUrls) : imageUrls,
+    };
+    
+    const service = await prisma.service.create({ data });
     res.status(201).json(service);
   } catch (e) {
     res.status(400).json({ error: "Failed to create" });
@@ -29,9 +37,17 @@ export const createService = async (req: Request, res: Response) => {
 export const updateService = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
+    const { features, imageUrls, ...rest } = req.body;
+    
+    const data = {
+      ...rest,
+      ...(features && { features: Array.isArray(features) ? JSON.stringify(features) : features }),
+      ...(imageUrls && { imageUrls: Array.isArray(imageUrls) ? JSON.stringify(imageUrls) : imageUrls }),
+    };
+    
     const service = await prisma.service.update({
       where: { id },
-      data: req.body,
+      data,
     });
     res.json(service);
   } catch (e) {

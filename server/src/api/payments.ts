@@ -49,9 +49,9 @@ export const createPaypalOrder = async (req: Request, res: Response) => {
 };
 
 export const capturePaypalOrder = async (req: Request, res: Response) => {
-  const { authorizationId } = req.body;
+  const { authorizationId, totalCents } = req.body;
   try {
-    const capture = await capturePayPalOrder(authorizationId);
+    const capture = await capturePayPalOrder(authorizationId, totalCents);
     res.status(200).json(capture);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

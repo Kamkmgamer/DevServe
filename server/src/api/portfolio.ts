@@ -18,7 +18,14 @@ export const getPortfolioById = async (req: Request, res: Response) => {
 // POST /api/portfolio (protected)
 export const createPortfolio = async (req: Request, res: Response) => {
   try {
-    const item = await prisma.portfolioItem.create({ data: req.body });
+    const { imageUrls, ...rest } = req.body;
+    
+    const data = {
+      ...rest,
+      imageUrls: Array.isArray(imageUrls) ? JSON.stringify(imageUrls) : imageUrls,
+    };
+    
+    const item = await prisma.portfolioItem.create({ data });
     res.status(201).json(item);
   } catch (e) {
     res.status(400).json({ error: "Failed to create" });
@@ -29,9 +36,16 @@ export const createPortfolio = async (req: Request, res: Response) => {
 export const updatePortfolio = async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
+    const { imageUrls, ...rest } = req.body;
+    
+    const data = {
+      ...rest,
+      ...(imageUrls && { imageUrls: Array.isArray(imageUrls) ? JSON.stringify(imageUrls) : imageUrls }),
+    };
+    
     const item = await prisma.portfolioItem.update({
       where: { id },
-      data: req.body,
+      data,
     });
     res.json(item);
   } catch {

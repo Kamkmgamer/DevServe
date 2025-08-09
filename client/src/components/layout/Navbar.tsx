@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Code,
@@ -39,7 +39,7 @@ const Navbar = () => {
       { href: "/", label: "Home", isNavLink: true },
       { href: "/services", label: "Services", isNavLink: true },
       {
-        href: process.env.VITE_PORTFOLIO_URL,
+        href: import.meta.env.VITE_PORTFOLIO_URL,
         label: "Portfolio",
         isExternal: true,
       },
@@ -90,10 +90,12 @@ const Navbar = () => {
     const active =
       "text-blue-700 dark:text-blue-300 bg-blue-50/60 dark:bg-slate-800/70";
 
+    const uniqueKey = link.href || `link-${link.label}-${Math.random().toString(36).substring(7)}`;
+
     if ((link as any).isExternal) {
       return (
         <a
-          key={link.href}
+          key={uniqueKey}
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
@@ -107,7 +109,7 @@ const Navbar = () => {
 
     return (
       <NavLink
-        key={link.href}
+        key={uniqueKey}
         to={link.href}
         className={({ isActive }) =>
           `${base} ${size} ${isActive ? active : inactive}`
@@ -158,7 +160,11 @@ const Navbar = () => {
                        bg-white/70 dark:bg-slate-900/60 dark:border-slate-800
                        px-1 py-1 shadow-sm backdrop-blur"
           >
-            {navLinks.map((l) => renderLink(l))}
+            {navLinks.map((l, idx) => (
+              <React.Fragment key={idx}>
+                {renderLink(l)}
+              </React.Fragment>
+            ))}
           </div>
         </nav>
 
@@ -273,7 +279,7 @@ const Navbar = () => {
                 <div className="flex flex-col items-stretch gap-2">
                   {navLinks.map((link, idx) => (
                     <motion.div
-                      key={link.href}
+                      key={idx}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.03 * idx }}

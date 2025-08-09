@@ -101,9 +101,10 @@ const AdminCouponsPage: React.FC = () => {
       const res = await api.get<{ data: Coupon[] } | Coupon[]>("/coupons");
       const list = Array.isArray(res.data) ? res.data : res.data.data;
       setCoupons(list);
-    } catch {
-      setError("Could not load coupons");
-      toast.error("Could not load coupons");
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || "Could not load coupons";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -226,9 +227,10 @@ const AdminCouponsPage: React.FC = () => {
       try {
         await api.delete(`/coupons/${id}`);
         toast.success("Coupon permanently deleted");
-      } catch {
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.message || error.message || "Delete failed";
         if (toDelete) setCoupons((prev) => [toDelete, ...prev]);
-        toast.error("Delete failed");
+        toast.error(errorMessage);
       } finally {
         undoTimer.current = null;
       }

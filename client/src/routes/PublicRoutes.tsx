@@ -1,4 +1,4 @@
-import { Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import React from "react";
 
 // Public pages
@@ -28,9 +28,11 @@ const GettingStartedGuide = React.lazy(() => import("../pages/GettingStartedGuid
 const DeployingGuide = React.lazy(() => import("../pages/DeployingGuide"));
 const AuthenticationGuide = React.lazy(() => import("../pages/AuthenticationGuide"));
 const NotFoundPage = React.lazy(() => import("../pages/NotFoundPage"));
+const PromoterPage = React.lazy(() => import("../pages/PromoterPage"));
+import ProtectedRoute from "../components/ProtectedRoute";
 
 const PublicRoutes = () => (
-  <>
+  <Routes>
     <Route path="/" element={<HomePage />} />
     <Route path="/services" element={<ServicesPage />} />
     <Route path="/services/:id" element={<ServiceDetailPage />} />
@@ -56,8 +58,9 @@ const PublicRoutes = () => (
     <Route path="/GettingStartedGuide" element={<GettingStartedGuide />} />
     <Route path="/DeployingGuide" element={<DeployingGuide />} />
     <Route path="/changeAuthenticationGuidelog" element={<ChangelogPage />} />
+    <Route path="/promoter" element={<ProtectedRoute><PromoterPage /></ProtectedRoute>} />
     <Route path="*" element={<NotFoundPage />} />
-  </>
+  </Routes>
 );
 
 export default PublicRoutes;

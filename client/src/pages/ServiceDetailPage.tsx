@@ -21,10 +21,10 @@ type Service = {
   name: string;
   description: string;
   price: number;
-  features: string[];
+  features: string;
   category: string;
   thumbnailUrl?: string;
-  imageUrls: string[];
+  imageUrls: string;
 };
 
 const formatPrice = (n: number) =>
@@ -33,6 +33,15 @@ const formatPrice = (n: number) =>
     currency: "USD",
     maximumFractionDigits: 2,
   }).format(n);
+
+// Helper function to parse JSON string to array
+const parseJsonArray = (jsonString: string): string[] => {
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    return [];
+  }
+};
 
 const ServiceDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -62,9 +71,16 @@ const ServiceDetailPage = () => {
   }, [id]);
 
   const images = useMemo(() => {
-    const list = service?.imageUrls?.length ? service.imageUrls : [];
+    if (!service) return [];
+    const imageUrls = parseJsonArray(service.imageUrls);
+    const list = imageUrls?.length ? imageUrls : [];
     const all = service?.thumbnailUrl ? [service.thumbnailUrl, ...list] : list;
     return all;
+  }, [service]);
+
+  const features = useMemo(() => {
+    if (!service) return [];
+    return parseJsonArray(service.features);
   }, [service]);
 
   const prev = useCallback(() => {
@@ -279,7 +295,7 @@ const ServiceDetailPage = () => {
                 What’s Included
               </h3>
               <ul className="space-y-2">
-                {service.features.map((f, i) => (
+                {features.map((f, i) => (
                   <li key={i} className="flex items-start">
                     <CheckCircle className="mr-2 h-5 w-5 text-emerald-500" />
                     <span className="text-slate-700 dark:text-slate-200">

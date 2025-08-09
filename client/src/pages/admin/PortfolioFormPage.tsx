@@ -55,7 +55,9 @@ const PortfolioFormPage = () => {
         setValue("title", it.title);
         setValue("description", it.description);
         setValue("thumbnailUrl", it.thumbnailUrl || "");
-        setValue("imageUrlsCsv", (it.imageUrls || []).join(", "));
+        // Parse imageUrls from JSON string to array
+        const imageUrls = typeof it.imageUrls === 'string' ? JSON.parse(it.imageUrls) : (it.imageUrls || []);
+        setValue("imageUrlsCsv", imageUrls.join(", "));
       })
       .catch((e) => setError(e.response?.data?.error || e.message));
   }, [id]);
