@@ -38,7 +38,7 @@ const BlogPage = () => {
     return ["All", ...Array.from(ys).sort((a, b) => Number(b) - Number(a))];
   }, [posts]);
 
-  const filtered = useMemo(() => {
+  const filteredPosts = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = posts;
     if (activeYear !== "All") {
@@ -132,7 +132,7 @@ const BlogPage = () => {
         </div>
 
         {/* Empty state */}
-        {filtered.length === 0 ? (
+        {filteredPosts.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-10 text-center dark:border-slate-800 dark:bg-slate-900">
             <p className="text-slate-600 dark:text-slate-300">
               No posts found. Try another year or search term.
@@ -142,16 +142,20 @@ const BlogPage = () => {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            <AnimatePresence>
-              {filtered.map((post, i) => (
+          <motion.div
+            layout
+            className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
+          >
+            <AnimatePresence mode="sync">
+              {filteredPosts.map((post, index) => (
                 <motion.div
                   key={post.id}
-                  className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900"
-                  initial={{ opacity: 0, y: 24 }}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 12 }}
-                  transition={{ delay: i * 0.05 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.35, delay: index * 0.05 }}
+                  className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900"
                 >
                   <Link to={`/blog/${post.id}`} className="block">
                     {post.thumbnailUrl && (
@@ -189,7 +193,7 @@ const BlogPage = () => {
                 </motion.div>
               ))}
             </AnimatePresence>
-          </div>
+          </motion.div>
         )}
       </Container>
     </motion.div>
