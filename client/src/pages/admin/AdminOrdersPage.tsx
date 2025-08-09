@@ -1,9 +1,22 @@
-
-import { useEffect, useMemo, useState } from "react";
+// client/src/pages/admin/AdminOrdersPage.tsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import Container from "../../components/layout/Container";
+import Button from "../../components/ui/Button";
+import TagButton from "../../components/ui/TagButton";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import Container from "../../components/layout/Container";
-import { HiArrowsUpDown, HiMagnifyingGlass } from "react-icons/hi2";
+import {
+  Grid,
+  List,
+  Search,
+  SortAsc,
+  SortDesc,
+  Loader2,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 type Order = {
   id: string;
@@ -27,35 +40,74 @@ const statusOptions = [
 type SortKey = "createdAt" | "total" | "email" | "status";
 type SortDir = "asc" | "desc";
 
-export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+const PAGE_SIZE = 12;
 
-  const [query, setQuery] = useState<string>("");
+const AdminOrdersPage: React.FC = () => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
+  const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-
-  const [page, setPage] = useState<number>(1);
-  const pageSize = 10;
+  const [page, setPage] = useState(1);
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const nav = useNavigate();
+
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const applyMobileState = (matches: boolean) => {
+      setIsMobile(matches);
+      if (matches) {
+        setViewMode("grid");
+      }
+    };
+    applyMobileState(mq.matches);
+    const handleChange = (e: MediaQueryListEvent) => {
+      applyMobileState(e.matches);
+    };
+    if (mq.addEventListener) {
+      mq.addEventListener("change", handleChange);
+    } else {
+      mq.addListener(handleChange);
+    }
+    return () => {
+      if (mq.removeEventListener) {
+        mq.removeEventListener("change", handleChange);
+      } else {
+        mq.removeListener(handleChange);
+      }
+    };
+  }, []);
+
+  const fetchOrders = async () => {
     setLoading(true);
-    setError(null);
-    api
-      .get<Order[]>("/admin/orders")
-      .then((res) => setOrders(res.data))
-      .catch((error: any) => {
-        const errorMessage = error.response?.data?.message || error.message || "Failed to load orders";
-        setError(errorMessage);
-        toast.error(errorMessage);
-      })
-      .finally(() => setLoading(false));
+    setError("");
+    try {
+      const res = await api.get<Order[]>("/admin/orders");
+      setOrders(res.data);
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to load orders";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchOrders();
   }, []);
 
   const filtered = useMemo(() => {
@@ -93,16 +145,16 @@ export default function AdminOrdersPage() {
     return copy;
   }, [filtered, sortKey, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageSafe = Math.min(page, totalPages);
   const paged = useMemo(() => {
-    const start = (pageSafe - 1) * pageSize;
-    return sorted.slice(start, start + pageSize);
+    const start = (pageSafe - 1) * PAGE_SIZE;
+    return sorted.slice(start, start + PAGE_SIZE);
   }, [sorted, pageSafe]);
 
   useEffect(() => {
     setPage(1);
-  }, [query, statusFilter]);
+  }, [query, statusFilter, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -116,7 +168,6 @@ export default function AdminOrdersPage() {
   const updateStatus = async (id: string, status: string) => {
     const prev = orders;
     setUpdatingId(id);
-    // optimistic
     setOrders((prevState) =>
       prevState.map((o) => (o.id === id ? { ...o, status } : o))
     );
@@ -124,51 +175,15 @@ export default function AdminOrdersPage() {
       await api.patch(`/admin/orders/${id}/status`, { status });
       toast.success("Status updated");
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || "Update failed";
-      setOrders(prev); // revert
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Update failed";
+      setOrders(prev);
       toast.error(errorMessage);
     } finally {
       setUpdatingId(null);
     }
-  };
-
-  const bulkUpdateStatus = async (status: string) => {
-    if (selectedIds.size === 0) return;
-    const ids = Array.from(selectedIds);
-    const prev = orders;
-    // optimistic
-    setOrders((prevState) =>
-      prevState.map((o) => (selectedIds.has(o.id) ? { ...o, status } : o))
-    );
-    try {
-      await Promise.all(
-        ids.map((id) => api.patch(`/admin/orders/${id}/status`, { status }))
-      );
-      toast.success(`Updated ${ids.length} orders`);
-      setSelectedIds(new Set());
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || "Bulk update failed";
-      setOrders(prev);
-      toast.error(errorMessage);
-    }
-  };
-
-  const toggleSelectAll = (checked: boolean) => {
-    if (!checked) {
-      setSelectedIds(new Set());
-      return;
-    }
-    const idsOnPage = paged.map((o) => o.id);
-    setSelectedIds(new Set(idsOnPage));
-  };
-
-  const toggleSelectOne = (id: string, checked: boolean) => {
-    setSelectedIds((prevSet) => {
-      const next = new Set(prevSet);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
   };
 
   const StatusPill = ({ value }: { value: string }) => {
@@ -231,319 +246,279 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <Container className="py-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
-            Orders
-          </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Monitor, filter, and update customer orders.
-          </p>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.35 }}
+      className="overflow-x-hidden"
+    >
+      <Container className="py-10 space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
+              Manage Orders
+            </h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              Search, filter, sort and manage customer orders.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {!isMobile && (
+              <Button
+                variant={viewMode === "table" ? "secondary" : "ghost"}
+                onClick={() => setViewMode("table")}
+                aria-pressed={viewMode === "table"}
+                title="Table view"
+              >
+                <List className="h-5 w-5" />
+              </Button>
+            )}
+            <Button
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              onClick={() => setViewMode("grid")}
+              aria-pressed={viewMode === "grid"}
+              title="Grid view"
+            >
+              <Grid className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative">
-            <HiMagnifyingGlass className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by ID, email, or item…"
-              className="w-72 rounded-md border border-gray-300 bg-white pl-8 pr-3 py-2 text-sm
-                         focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20
-                         dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-            />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="search"
+                placeholder="Search by ID, email, or item…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-72 rounded-md border border-gray-300 bg-white py-2 pl-8 pr-3 text-sm
+                           focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20
+                           dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Sort by
+              </span>
+              <Button
+                variant="ghost"
+                className={`h-9 px-3 text-sm ${
+                  sortKey === "createdAt" ? "text-blue-600 dark:text-blue-400" : ""
+                }`}
+                onClick={() => toggleSort("createdAt")}
+                aria-pressed={sortKey === "createdAt"}
+              >
+                Date
+              </Button>
+              <Button
+                variant="ghost"
+                className={`h-9 px-3 text-sm ${
+                  sortKey === "total" ? "text-blue-600 dark:text-blue-400" : ""
+                }`}
+                onClick={() => toggleSort("total")}
+                aria-pressed={sortKey === "total"}
+              >
+                Total
+              </Button>
+              {sortDir === "asc" ? (
+                <SortAsc className="h-4 w-4 text-gray-500" />
+              ) : (
+                <SortDesc className="h-4 w-4 text-gray-500" />
+              )}
+            </div>
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
-                       focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20
-                       dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-          >
-            <option value="ALL">All statuses</option>
-            {statusOptions.map((s) => (
-              <option key={s} value={s}>
-                {s.replaceAll("_", " ")}
-              </option>
+          <div className="flex flex-wrap gap-2">
+            <TagButton
+              label="All Statuses"
+              isActive={statusFilter === "ALL"}
+              onClick={() => setStatusFilter("ALL")}
+            />
+            {statusOptions.map((status) => (
+              <TagButton
+                key={status}
+                label={status.replace("_", " ")}
+                isActive={statusFilter === status}
+                onClick={() => setStatusFilter(status)}
+              />
             ))}
-          </select>
+          </div>
         </div>
-      </div>
 
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <input
-            id="select-all"
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 dark:border-gray-700"
-            checked={
-              paged.length > 0 &&
-              paged.every((o) => selectedIds.has(o.id))
-            }
-            onChange={(e) => toggleSelectAll(e.target.checked)}
-            aria-label="Select all on page"
-          />
-          <label
-            htmlFor="select-all"
-            className="text-sm text-gray-700 dark:text-gray-300"
-          >
-            Select page
-          </label>
-
-          {selectedIds.size > 0 && (
-            <div className="ml-3 flex items-center gap-2">
-              <span className="text-xs text-gray-500">
-                {selectedIds.size} selected
-              </span>
-              <select
-                onChange={(e) => {
-                  if (!e.target.value) return;
-                  void bulkUpdateStatus(e.target.value);
-                  e.currentTarget.selectedIndex = 0;
-                }}
-                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs
-                           dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-              >
-                <option value="">Bulk: change status…</option>
-                {statusOptions.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+        <div className="rounded-xl border border-gray-200 shadow-sm dark:border-gray-700">
+          {loading && (
+            <div className="flex items-center justify-center p-10 text-gray-600 dark:text-gray-300">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Loading orders…
             </div>
           )}
-        </div>
 
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {filtered.length} result{filtered.length === 1 ? "" : "s"}
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border border-gray-200 shadow-sm dark:border-gray-700">
-        <div className="max-h-[70vh] overflow-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
-              <tr>
-                <th className="w-10 px-3 py-3">
-                  <span className="sr-only">Select</span>
-                </th>
-                <SortableTh
-                  label="Created"
-                  active={sortKey === "createdAt"}
-                  dir={sortDir}
-                  onClick={() => toggleSort("createdAt")}
-                />
-                <SortableTh
-                  label="Email"
-                  active={sortKey === "email"}
-                  dir={sortDir}
-                  onClick={() => toggleSort("email")}
-                />
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
-                  Items
-                </th>
-                <SortableTh
-                  label="Total"
-                  active={sortKey === "total"}
-                  dir={sortDir}
-                  onClick={() => toggleSort("total")}
-                />
-                <SortableTh
-                  label="Status"
-                  active={sortKey === "status"}
-                  dir={sortDir}
-                  onClick={() => toggleSort("status")}
-                />
-                <th className="px-3 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {loading && (
-                <tr>
-                  <td colSpan={7} className="p-6">
-                    <div className="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-                      <Spinner />
-                      Loading orders…
-                    </div>
-                  </td>
-                </tr>
-              )}
-
-              {!loading && error && (
-                <tr>
-                  <td colSpan={7} className="p-6">
-                    <div className="text-center text-sm text-red-600 dark:text-red-400">
-                      {error}
-                    </div>
-                  </td>
-                </tr>
-              )}
-
-              {!loading && !error && paged.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="p-10">
-                    <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                      No orders found. Try adjusting filters or search.
-                    </div>
-                  </td>
-                </tr>
-              )}
-
-              {!loading &&
-                !error &&
-                paged.map((order) => {
-                  const isChecked = selectedIds.has(order.id);
-                  return (
-                    <tr
-                      key={order.id}
-                      className="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750"
-                    >
-                      <td className="px-3 py-3">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 dark:border-gray-700"
-                          checked={isChecked}
-                          onChange={(e) =>
-                            toggleSelectOne(order.id, e.target.checked)
-                          }
-                          aria-label={`Select order ${order.id}`}
-                        />
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100">
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {new Date(
-                              order.createdAt
-                            ).toLocaleDateString()}{" "}
-                            {new Date(
-                              order.createdAt
-                            ).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            ID: {order.id}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-sm">
-                        <span className="text-gray-900 dark:text-gray-100">
-                          {order.email}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        <span className="line-clamp-2">
-                          {order.lineItems
-                            .map((li) => li.service.name)
-                            .join(", ")}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        ${(order.total / 100).toFixed(2)}
-                      </td>
-                      <td className="px-3 py-3">
-                        <StatusPill value={order.status} />
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <div className="inline-flex items-center gap-2">
-                          <select
-                            value={order.status}
-                            onChange={(e) =>
-                              updateStatus(order.id, e.target.value)
-                            }
-                            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs
-                                       dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                            disabled={updatingId === order.id}
-                          >
-                            {statusOptions.map((s) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                          {updatingId === order.id && <Spinner size="sm" />}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
-
-        {!loading && !error && totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 dark:border-gray-700">
-            <button
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={pageSafe === 1}
-            >
-              Previous
-            </button>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              Page {pageSafe} of {totalPages}
+          {!loading && error && (
+            <div className="p-10 text-center text-sm text-red-600 dark:text-red-400">
+              {error}
             </div>
-            <button
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={pageSafe === totalPages}
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </div>
-    </Container>
-  );
-}
+          )}
 
-function SortableTh({
-  label,
-  active,
-  dir,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  dir: "asc" | "desc";
-  onClick: () => void;
-}) {
-  return (
-    <th
-      scope="col"
-      className="select-none px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300"
-    >
-      <button
-        onClick={onClick}
-        className={`inline-flex items-center gap-1.5 rounded px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 ${
-          active ? "text-blue-600 dark:text-blue-400" : ""
-        }`}
-      >
-        {label}
-        <HiArrowsUpDown className="h-4 w-4 opacity-70" />
-        <span className="sr-only">
-          Sort {active ? (dir === "asc" ? "descending" : "ascending") : ""}
-        </span>
-      </button>
-    </th>
-  );
-}
+          {!loading && !error && sorted.length === 0 && (
+            <div className="p-10 text-center text-sm text-gray-600 dark:text-gray-400">
+              No orders found. Try adjusting filters.
+            </div>
+          )}
 
-function Spinner({ size = "md" }: { size?: "sm" | "md" }) {
-  const cls =
-    size === "sm"
-      ? "h-4 w-4 border-2"
-      : "h-5 w-5 border-[3px]";
-  return (
-    <span
-      className={`${cls} inline-block animate-spin rounded-full border-gray-300 border-t-transparent dark:border-gray-600`}
-      aria-label="Loading"
-      role="status"
-    />
+          {!loading && !error && sorted.length > 0 && (
+            <>
+              {viewMode === "table" && !isMobile ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                          Created
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                          Email
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                          Items
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                          Total
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                          Status
+                        </th>
+                        <th className="px-4 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
+                      <AnimatePresence initial={false}>
+                        {paged.map((order, idx) => (
+                          <motion.tr
+                            key={order.id}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            transition={{ duration: 0.2, delay: idx * 0.02 }}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                          >
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                              {order.email}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                              {order.lineItems
+                                .map((li) => li.service.name)
+                                .join(", ")}
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              ${(order.total / 100).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusPill value={order.status} />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-2">
+                                <select
+                                  value={order.status}
+                                  onChange={(e) =>
+                                    updateStatus(order.id, e.target.value)
+                                  }
+                                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs
+                                       dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                  disabled={updatingId === order.id}
+                                >
+                                  {statusOptions.map((s) => (
+                                    <option key={s} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
+                                {updatingId === order.id && (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                )}
+                              </div>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <AnimatePresence initial={false}>
+                    {paged.map((order) => (
+                      <motion.div
+                        key={order.id}
+                        className="rounded-xl bg-white p-5 shadow hover:shadow-lg dark:bg-gray-900 transition"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                              {order.email}
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                              {order.lineItems
+                                .map((li) => li.service.name)
+                                .join(", ")}
+                            </p>
+                          </div>
+                          <div className="text-right text-xl font-bold text-gray-900 dark:text-gray-100">
+                            ${(order.total / 100).toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="mt-4">
+                          <StatusPill value={order.status} />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-gray-700">
+                  <div className="text-gray-600 dark:text-gray-400">
+                    {filtered.length} result{filtered.length === 1 ? "" : "s"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={pageSafe === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Page {pageSafe} of {totalPages}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={pageSafe === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </Container>
+    </motion.div>
   );
-}
+};
+
+export default AdminOrdersPage;

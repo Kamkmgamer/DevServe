@@ -1,5 +1,5 @@
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { PaymentProcessor } from './PaymentProcessor';
 import { Toaster } from 'react-hot-toast';
 
@@ -45,7 +45,9 @@ describe('PaymentProcessor', () => {
     expect(screen.getByText('Complete Your Payment')).toBeInTheDocument();
 
     // Simulate a click on the approve button
-    screen.getByText('Approve Payment').click();
+    await act(async () => {
+      screen.getByText('Approve Payment').click();
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Order placed! We'll begin our technical review shortly.")).toBeInTheDocument();

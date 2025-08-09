@@ -44,6 +44,45 @@ const AdminServicesPage: React.FC = () => {
 
   const nav = useNavigate();
 
+  // Mobile detection (Tailwind 'sm' breakpoint -> 640px)
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+
+    const applyMobileState = (matches: boolean) => {
+      setIsMobile(matches);
+      if (matches) {
+        // Force grid view on mobile
+        setViewMode("grid");
+      }
+    };
+
+    // Initial
+    applyMobileState(mq.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      applyMobileState(e.matches);
+    };
+
+    // Add listener (fallback for older browsers)
+    if (mq.addEventListener) {
+      mq.addEventListener("change", handleChange);
+    } else {
+      // @ts-ignore - legacy Safari
+      mq.addListener(handleChange);
+    }
+
+    return () => {
+      if (mq.removeEventListener) {
+        mq.removeEventListener("change", handleChange);
+      } else {
+        // @ts-ignore - legacy Safari
+        mq.removeListener(handleChange);
+      }
+    };
+  }, []);
+
   // For optimistic delete + undo
   const undoTimer = useRef<number | null>(null);
   const lastDeletedRef = useRef<Service | null>(null);
@@ -55,7 +94,11 @@ const AdminServicesPage: React.FC = () => {
       const res = await api.get<Service[]>("/services");
       setServices(res.data);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || "Failed to load services";
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to load services";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -93,7 +136,8 @@ const AdminServicesPage: React.FC = () => {
     arr.sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.name.localeCompare(b.name);
-      else if (sortKey === "category") cmp = a.category.localeCompare(b.category);
+      else if (sortKey === "category")
+        cmp = a.category.localeCompare(b.category);
       else cmp = a.price - b.price;
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -164,7 +208,11 @@ const AdminServicesPage: React.FC = () => {
         toast.success("Service permanently deleted");
       } catch (error: any) {
         // Revert on failure
-        const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || "Delete failed";
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Delete failed";
         if (toDelete) setServices((prev) => [toDelete, ...prev]);
         toast.error(errorMessage);
       } finally {
@@ -179,6 +227,7 @@ const AdminServicesPage: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.35 }}
+      className="overflow-x-hidden"
     >
       <Container className="py-10 space-y-6">
         {/* Top Bar */}
@@ -192,14 +241,17 @@ const AdminServicesPage: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant={viewMode === "table" ? "secondary" : "ghost"}
-              onClick={() => setViewMode("table")}
-              aria-pressed={viewMode === "table"}
-              title="Table view"
-            >
-              <List className="h-5 w-5" />
-            </Button>
+            {/* Hide/disable table view on mobile */}
+            {!isMobile && (
+              <Button
+                variant={viewMode === "table" ? "secondary" : "ghost"}
+                onClick={() => setViewMode("table")}
+                aria-pressed={viewMode === "table"}
+                title="Table view"
+              >
+                <List className="h-5 w-5" />
+              </Button>
+            )}
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               onClick={() => setViewMode("grid")}
@@ -311,8 +363,9 @@ const AdminServicesPage: React.FC = () => {
 
           {!loading && !error && sorted.length > 0 && (
             <>
-              {viewMode === "table" ? (
-                <div className="max-h-[70vh] overflow-auto">
+              {/* Force grid on mobile, only show table when not mobile and selected */}
+              {viewMode === "table" && !isMobile ? (
+                <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
                       <tr>
@@ -448,7 +501,9 @@ const AdminServicesPage: React.FC = () => {
                     </span>
                     <Button
                       variant="ghost"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={pageSafe === totalPages}
                     >
                       Next

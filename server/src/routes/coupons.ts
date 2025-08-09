@@ -2,7 +2,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
-import { admin } from "../middleware/auth";
+import { admin, protect } from "../middleware/auth";
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -76,19 +76,6 @@ router.get("/code/:code", async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.get("/:id", async (req: AuthRequest, res: Response) => {
-  try {
-    const coupon = await prisma.coupon.findUnique({
-      where: { id: req.params.id },
-    });
-    if (!coupon) return res.status(404).json({ message: "Coupon not found" });
-    res.json(coupon);
-  } catch (e) {
-    console.error("Fetch coupon error", e);
-    res.status(500).json({ message: "Failed to fetch coupon" });
-  }
-});
-
 router.get("/", async (req: AuthRequest, res: Response) => {
   const page = Number(req.query.page) || 1;
   const pageSize = Number(req.query.pageSize) || 100;
@@ -108,10 +95,23 @@ router.get("/", async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.get("/:id", async (req: AuthRequest, res: Response) => {
+  try {
+    const coupon = await prisma.coupon.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!coupon) return res.status(404).json({ message: "Coupon not found" });
+    res.json(coupon);
+  } catch (e) {
+    console.error("Fetch coupon error", e);
+    res.status(500).json({ message: "Failed to fetch coupon" });
+  }
+});
+
 /* ------------------------------------------------------------------ */
 /* Protected Admin Routes                                             */
 /* ------------------------------------------------------------------ */
-router.use(admin);
+router.use(protect, admin);
 
 router.post("/", async (req: AuthRequest, res: Response) => {
   const parsed = couponSchema.safeParse(req.body);

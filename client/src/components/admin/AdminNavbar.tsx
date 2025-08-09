@@ -130,7 +130,7 @@ export const AdminNavbar = () => {
         </div>
 
         {/* Desktop links */}
-        <nav className="ml-auto hidden items-center gap-2 md:flex">
+        <nav className="ml-auto hidden items-center gap-2 lg:flex">
           {links.map((l) => (
             <Item key={l.to} {...l} />
           ))}
@@ -153,7 +153,7 @@ export const AdminNavbar = () => {
         {/* Mobile toggle */}
         <button
           onClick={() => setOpen((v) => !v)}
-          className="ml-auto inline-flex items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden"
+          className="ml-auto inline-flex items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 lg:hidden"
           aria-label="Open admin menu"
           aria-expanded={open}
         >
@@ -169,7 +169,7 @@ export const AdminNavbar = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18 }}
-            className="border-t border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:hidden"
+            className="border-t border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:hidden"
           >
             <div className="mx-auto flex max-w-7xl flex-col gap-2">
               {/* mobile search */}

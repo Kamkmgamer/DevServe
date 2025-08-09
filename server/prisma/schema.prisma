@@ -14,17 +14,19 @@ enum Role {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  password     String
-  name         String?
-  role         Role       @default(USER)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  cart         Cart?
-  orders       Order[]
-  referredById String?
-  referredBy   Referral?  @relation(fields: [referredById], references: [id])
+  id               String     @id @default(cuid())
+  email            String     @unique
+  password         String
+  name             String?
+  role             Role       @default(USER)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  cart             Cart?
+  orders           Order[]
+  referredById     String?
+  referredBy       Referral?  @relation("ReferredUsers", fields: [referredById], references: [id])
+  promoterReferral Referral?  @relation("Promoter")
+  blogPosts        BlogPost[] @relation("UserBlogPosts")
 }
 
 model PortfolioItem {
@@ -45,6 +47,8 @@ model BlogPost {
   thumbnailUrl String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  userId       String
+  user         User     @relation("UserBlogPosts", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Service {
@@ -64,7 +68,7 @@ model Service {
 
 model Cart {
   id        String     @id @default(cuid())
-  user      User       @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String     @unique
   items     CartItem[]
   createdAt DateTime   @default(now())
@@ -84,25 +88,25 @@ model CartItem {
 }
 
 model Order {
-  id             String          @id @default(cuid())
-  userId         String
-  user           User            @relation(fields: [userId], references: [id])
-  couponId       String?
-  coupon         Coupon?         @relation(fields: [couponId], references: [id])
-  status         OrderStatus     @default(PENDING)
-  currency       String          @default("USD")
-  totalAmount    Int // in cents
-  requirements   String
-  suggestions    String?
-  preferences    String?
-  questions      String?
-  metadata       String? // Store as JSON string
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  lineItems      OrderLineItem[]
-  referralId     String?
-  referral       Referral?       @relation(fields: [referralId], references: [id])
-  commission     Commission?
+  id           String          @id @default(cuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  couponId     String?
+  coupon       Coupon?         @relation(fields: [couponId], references: [id])
+  status       OrderStatus     @default(PENDING)
+  currency     String          @default("USD")
+  totalAmount  Int // in cents
+  requirements String
+  suggestions  String?
+  preferences  String?
+  questions    String?
+  metadata     String? // Store as JSON string
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  lineItems    OrderLineItem[]
+  referralId   String?
+  referral     Referral?       @relation(fields: [referralId], references: [id])
+  commission   Commission?
 }
 
 model OrderLineItem {
@@ -132,40 +136,41 @@ model Coupon {
 }
 
 model Referral {
-  id              String       @id @default(cuid())
-  userId          String       @unique // The user who is the promoter
-  code            String       @unique
-  commissionRate  Float        @default(0.10) // 10% commission rate
-  referredUsers   User[]
-  orders          Order[]
-  commissions     Commission[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  user           User         @relation("Promoter", fields: [userId], references: [id], onDelete: Cascade) // Named relation
+  code           String       @unique
+  commissionRate Float        @default(0.10) // 10% commission rate
+  referredUsers  User[]       @relation("ReferredUsers") // Named relation
+  orders         Order[]
+  commissions    Commission[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model Commission {
-  id          String        @id @default(cuid())
-  orderId     String        @unique
-  order       Order         @relation(fields: [orderId], references: [id])
-  referralId  String
-  referral    Referral      @relation(fields: [referralId], references: [id])
-  amount      Int // in cents
-  status      PayoutStatus  @default(UNPAID)
-  payoutId    String?
-  payout      Payout?       @relation(fields: [payoutId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id         String       @id @default(cuid())
+  orderId    String       @unique
+  order      Order        @relation(fields: [orderId], references: [id])
+  referralId String
+  referral   Referral     @relation(fields: [referralId], references: [id])
+  amount     Int // in cents
+  status     PayoutStatus @default(UNPAID)
+  payoutId   String?
+  payout     Payout?      @relation(fields: [payoutId], references: [id])
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 }
 
 model Payout {
-  id           String       @id @default(cuid())
-  referralId   String
-  amount       Int // in cents
-  status       PayoutStatus @default(PENDING)
-  payoutDate   DateTime     @default(now())
-  commissions  Commission[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id          String       @id @default(cuid())
+  referralId  String
+  amount      Int // in cents
+  status      PayoutStatus @default(PENDING)
+  payoutDate  DateTime     @default(now())
+  commissions Commission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 enum OrderStatus {

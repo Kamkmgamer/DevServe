@@ -6,10 +6,12 @@ import PublicLayout from "./PublicLayout";
 // Mocking child components to isolate the PublicLayout component for testing.
 // This ensures that we are only testing the layout's logic, not its children's.
 jest.mock("./Navbar", () => ({
+  __esModule: true,
   default: () => <nav data-testid="navbar">Mocked Navbar</nav>,
 }));
 
 jest.mock("./Footer", () => ({
+  __esModule: true,
   default: () => <footer data-testid="footer">Mocked Footer</footer>,
 }));
 

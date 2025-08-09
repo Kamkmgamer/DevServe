@@ -1,27 +1,30 @@
 // client/src/pages/admin/AdminCouponsPage.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import Container from "../../components/layout/Container";
 import Button from "../../components/ui/Button";
+import TagButton from "../../components/ui/TagButton";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  Loader2,
-  Trash2,
-  Pencil,
-  Copy,
+  Grid,
+  List,
   Search,
   SortAsc,
   SortDesc,
+  Loader2,
+  Pencil,
+  Trash2,
+  Copy,
 } from "lucide-react";
 
 type Coupon = {
   id: string;
   code: string;
   type: "percentage" | "fixed";
-  value: number; // percentage OR cents
-  minOrderAmount: number | null; // cents
+  value: number;
+  minOrderAmount: number | null;
   maxUses: number | null;
   currentUses: number;
   expiresAt: string | null;
@@ -40,33 +43,56 @@ type SortKey =
   | "createdAt";
 type SortDir = "asc" | "desc";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 12;
 
 const AdminCouponsPage: React.FC = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
 
   const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "percentage" | "fixed">(
-    "all"
-  );
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "expired">(
-    "all"
-  );
+  const [typeFilter, setTypeFilter] = useState<"all" | "percentage" | "fixed">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "expired">("all");
 
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-
   const [page, setPage] = useState(1);
 
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
-  // Optimistic delete + undo
+  const nav = useNavigate();
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const applyMobileState = (matches: boolean) => {
+      setIsMobile(matches);
+      if (matches) {
+        setViewMode("grid");
+      }
+    };
+    applyMobileState(mq.matches);
+    const handleChange = (e: MediaQueryListEvent) => {
+      applyMobileState(e.matches);
+    };
+    if (mq.addEventListener) {
+      mq.addEventListener("change", handleChange);
+    } else {
+      mq.addListener(handleChange);
+    }
+    return () => {
+      if (mq.removeEventListener) {
+        mq.removeEventListener("change", handleChange);
+      } else {
+        mq.removeListener(handleChange);
+      }
+    };
+  }, []);
+
   const undoTimer = useRef<number | null>(null);
   const lastDeletedRef = useRef<Coupon | null>(null);
-
-  const navigate = useNavigate();
 
   const formatCurrency = (cents: number | null) =>
     cents == null ? "-" : `$${(cents / 100).toFixed(2)}`;
@@ -96,13 +122,17 @@ const AdminCouponsPage: React.FC = () => {
 
   const fetchCoupons = async () => {
     setLoading(true);
-    setError(null);
+    setError("");
     try {
       const res = await api.get<{ data: Coupon[] } | Coupon[]>("/coupons");
       const list = Array.isArray(res.data) ? res.data : res.data.data;
       setCoupons(list);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || "Could not load coupons";
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to load coupons";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -114,7 +144,6 @@ const AdminCouponsPage: React.FC = () => {
     void fetchCoupons();
   }, []);
 
-  // Derived data
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return coupons.filter((c) => {
@@ -122,7 +151,7 @@ const AdminCouponsPage: React.FC = () => {
         !q ||
         c.code.toLowerCase().includes(q) ||
         c.id.toLowerCase().includes(q);
-      const status = getStatus(c.active, c.expiresAt).toLowerCase(); // active/inactive/expired
+      const status = getStatus(c.active, c.expiresAt).toLowerCase();
       const matchesType = typeFilter === "all" ? true : c.type === typeFilter;
       const matchesStatus =
         statusFilter === "all" ? true : status === statusFilter;
@@ -137,7 +166,6 @@ const AdminCouponsPage: React.FC = () => {
       if (sortKey === "code") cmp = a.code.localeCompare(b.code);
       else if (sortKey === "type") cmp = a.type.localeCompare(b.type);
       else if (sortKey === "value") {
-        // Normalize for mixed type: percentage vs cents
         const va = a.type === "percentage" ? a.value : a.value / 100;
         const vb = b.type === "percentage" ? b.value : b.value / 100;
         cmp = va - vb;
@@ -158,7 +186,6 @@ const AdminCouponsPage: React.FC = () => {
         const tb = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
         cmp = ta - tb;
       } else {
-        // createdAt
         cmp =
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       }
@@ -191,7 +218,6 @@ const AdminCouponsPage: React.FC = () => {
     const coup = coupons.find((c) => c.id === id);
     if (!coup) return;
 
-    // Optimistic removal
     setCoupons((prev) => prev.filter((c) => c.id !== id));
     lastDeletedRef.current = coup;
 
@@ -228,7 +254,11 @@ const AdminCouponsPage: React.FC = () => {
         await api.delete(`/coupons/${id}`);
         toast.success("Coupon permanently deleted");
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || error.message || "Delete failed";
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Delete failed";
         if (toDelete) setCoupons((prev) => [toDelete, ...prev]);
         toast.error(errorMessage);
       } finally {
@@ -253,31 +283,46 @@ const AdminCouponsPage: React.FC = () => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="min-h-screen bg-gray-50 dark:bg-gray-900"
+      transition={{ duration: 0.35 }}
+      className="overflow-x-hidden"
     >
-      <Container className="py-8">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <Container className="py-10 space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
-              Coupons
+              Manage Coupons
             </h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Search, filter, and manage discount codes.
+              Search, filter, sort and manage your coupons.
             </p>
           </div>
-          <Button
-            onClick={() => navigate("/admin/coupons/new")}
-            variant="primary"
-          >
-            Add Coupon
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {!isMobile && (
+              <Button
+                variant={viewMode === "table" ? "secondary" : "ghost"}
+                onClick={() => setViewMode("table")}
+                aria-pressed={viewMode === "table"}
+                title="Table view"
+              >
+                <List className="h-5 w-5" />
+              </Button>
+            )}
+            <Button
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              onClick={() => setViewMode("grid")}
+              aria-pressed={viewMode === "grid"}
+              title="Grid view"
+            >
+              <Grid className="h-5 w-5" />
+            </Button>
+            <Button as={Link} to="/admin/coupons/new" variant="primary">
+              Add Coupon
+            </Button>
+          </div>
         </div>
 
-        {/* Controls */}
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
@@ -291,210 +336,259 @@ const AdminCouponsPage: React.FC = () => {
               />
             </div>
 
-            <select
-              value={typeFilter}
-              onChange={(e) =>
-                setTypeFilter(e.target.value as "all" | "percentage" | "fixed")
-              }
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-            >
-              <option value="all">All types</option>
-              <option value="percentage">Percentage</option>
-              <option value="fixed">Fixed amount</option>
-            </select>
-
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(
-                  e.target.value as "all" | "active" | "inactive" | "expired"
-                )
-              }
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-            >
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="expired">Expired</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Sort by
+              </span>
+              <Button
+                variant="ghost"
+                className={`h-9 px-3 text-sm ${
+                  sortKey === "code" ? "text-blue-600 dark:text-blue-400" : ""
+                }`}
+                onClick={() => toggleSort("code")}
+                aria-pressed={sortKey === "code"}
+              >
+                Code
+              </Button>
+              <Button
+                variant="ghost"
+                className={`h-9 px-3 text-sm ${
+                  sortKey === "expiresAt" ? "text-blue-600 dark:text-blue-400" : ""
+                }`}
+                onClick={() => toggleSort("expiresAt")}
+                aria-pressed={sortKey === "expiresAt"}
+              >
+                Expires
+              </Button>
+              {sortDir === "asc" ? (
+                <SortAsc className="h-4 w-4 text-gray-500" />
+              ) : (
+                <SortDesc className="h-4 w-4 text-gray-500" />
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              Sort by
-            </span>
-            <Button
-              variant="ghost"
-              className={`h-9 px-3 text-sm ${
-                sortKey === "createdAt" ? "text-blue-600 dark:text-blue-400" : ""
-              }`}
-              onClick={() => toggleSort("createdAt")}
-              aria-pressed={sortKey === "createdAt"}
-            >
-              Created
-            </Button>
-            <Button
-              variant="ghost"
-              className={`h-9 px-3 text-sm ${
-                sortKey === "code" ? "text-blue-600 dark:text-blue-400" : ""
-              }`}
-              onClick={() => toggleSort("code")}
-              aria-pressed={sortKey === "code"}
-            >
-              Code
-            </Button>
-            <Button
-              variant="ghost"
-              className={`h-9 px-3 text-sm ${
-                sortKey === "expiresAt" ? "text-blue-600 dark:text-blue-400" : ""
-              }`}
-              onClick={() => toggleSort("expiresAt")}
-              aria-pressed={sortKey === "expiresAt"}
-            >
-              Expires
-            </Button>
-            {sortDir === "asc" ? (
-              <SortAsc className="h-4 w-4 text-gray-500" />
-            ) : (
-              <SortDesc className="h-4 w-4 text-gray-500" />
-            )}
+          <div className="flex flex-wrap gap-2">
+            <TagButton
+              label="All Types"
+              isActive={typeFilter === "all"}
+              onClick={() => setTypeFilter("all")}
+            />
+            <TagButton
+              label="Percentage"
+              isActive={typeFilter === "percentage"}
+              onClick={() => setTypeFilter("percentage")}
+            />
+            <TagButton
+              label="Fixed"
+              isActive={typeFilter === "fixed"}
+              onClick={() => setTypeFilter("fixed")}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <TagButton
+              label="All Statuses"
+              isActive={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            />
+            <TagButton
+              label="Active"
+              isActive={statusFilter === "active"}
+              onClick={() => setStatusFilter("active")}
+            />
+            <TagButton
+              label="Inactive"
+              isActive={statusFilter === "inactive"}
+              onClick={() => setStatusFilter("inactive")}
+            />
+            <TagButton
+              label="Expired"
+              isActive={statusFilter === "expired"}
+              onClick={() => setStatusFilter("expired")}
+            />
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-700">
-          <div className="max-h-[70vh] overflow-auto">
-            <table className="min-w-full border-collapse text-left">
-              <thead className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-800">
-                <tr>
-                  <Th
-                    label="Code"
-                    active={sortKey === "code"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("code")}
-                  />
-                  <Th
-                    label="Type"
-                    active={sortKey === "type"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("type")}
-                  />
-                  <Th
-                    label="Value"
-                    active={sortKey === "value"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("value")}
-                  />
-                  <Th
-                    label="Min Order"
-                    active={sortKey === "minOrderAmount"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("minOrderAmount")}
-                  />
-                  <Th
-                    label="Uses"
-                    active={sortKey === "uses"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("uses")}
-                  />
-                  <Th
-                    label="Status"
-                    active={sortKey === "status"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("status")}
-                  />
-                  <Th
-                    label="Expires"
-                    active={sortKey === "expiresAt"}
-                    dir={sortDir}
-                    onClick={() => toggleSort("expiresAt")}
-                  />
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
+        <div className="rounded-xl border border-gray-200 shadow-sm dark:border-gray-700">
+          {loading && (
+            <div className="flex items-center justify-center p-10 text-gray-600 dark:text-gray-300">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Loading coupons…
+            </div>
+          )}
 
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {loading && (
-                  <tr>
-                    <td colSpan={8} className="p-10">
-                      <div className="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Loading coupons…
-                      </div>
-                    </td>
-                  </tr>
-                )}
+          {!loading && error && (
+            <div className="p-10 text-center text-sm text-red-600 dark:text-red-400">
+              {error}
+            </div>
+          )}
 
-                {!loading && error && (
-                  <tr>
-                    <td colSpan={8} className="p-10">
-                      <div className="text-center text-sm text-red-600 dark:text-red-400">
-                        {error}
-                      </div>
-                    </td>
-                  </tr>
-                )}
+          {!loading && !error && sorted.length === 0 && (
+            <div className="p-10 text-center text-sm text-gray-600 dark:text-gray-400">
+              No coupons found. Try adjusting filters or add a new one.
+            </div>
+          )}
 
-                {!loading && !error && paged.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="p-10">
-                      <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                        No coupons found. Try adjusting filters or create a new
-                        one.
-                      </div>
-                    </td>
-                  </tr>
-                )}
-
-                <AnimatePresence initial={false}>
-                  {!loading &&
-                    !error &&
-                    paged.map((c, idx) => {
+          {!loading && !error && sorted.length > 0 && (
+            <>
+              {viewMode === "table" && !isMobile ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <Th
+                          label="Code"
+                          active={sortKey === "code"}
+                          dir={sortDir}
+                          onClick={() => toggleSort("code")}
+                        />
+                        <Th
+                          label="Type"
+                          active={sortKey === "type"}
+                          dir={sortDir}
+                          onClick={() => toggleSort("type")}
+                        />
+                        <Th
+                          label="Value"
+                          active={sortKey === "value"}
+                          dir={sortDir}
+                          onClick={() => toggleSort("value")}
+                        />
+                        <Th
+                          label="Min Order"
+                          active={sortKey === "minOrderAmount"}
+                          dir={sortDir}
+                          onClick={() => toggleSort("minOrderAmount")}
+                        />
+                        <Th
+                          label="Uses"
+                          active={sortKey === "uses"}
+                          dir={sortDir}
+                          onClick={() => toggleSort("uses")}
+                        />
+                        <Th
+                          label="Status"
+                          active={sortKey === "status"}
+                          dir={sortDir}
+                          onClick={() => toggleSort("status")}
+                        />
+                        <Th
+                          label="Expires"
+                          active={sortKey === "expiresAt"}
+                          dir={sortDir}
+                          onClick={() => toggleSort("expiresAt")}
+                        />
+                        <th className="px-4 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
+                      <AnimatePresence initial={false}>
+                        {paged.map((c, idx) => {
+                          const status = getStatus(c.active, c.expiresAt);
+                          return (
+                            <motion.tr
+                              key={c.id}
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              transition={{ duration: 0.2, delay: idx * 0.02 }}
+                              className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                            >
+                              <td className="px-4 py-3 font-mono text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span>{c.code}</span>
+                                  <button
+                                    title="Copy code"
+                                    onClick={() => copyToClipboard(c.code)}
+                                    className={`text-gray-400 transition-colors hover:text-gray-600 ${
+                                      copySuccess === c.code ? "text-green-600" : ""
+                                    }`}
+                                    aria-label={`Copy code ${c.code}`}
+                                  >
+                                    <Copy size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 capitalize text-sm">
+                                {c.type}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-medium">
+                                {c.type === "percentage"
+                                  ? `${c.value}%`
+                                  : formatCurrency(c.value)}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {formatCurrency(c.minOrderAmount)}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {c.currentUses} / {c.maxUses ?? "∞"}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`rounded-full px-2 py-1 text-xs font-medium ${statusColor(
+                                    status
+                                  )}`}
+                                >
+                                  {status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {formatDate(c.expiresAt)}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="secondary"
+                                    className="flex items-center gap-1 px-2 py-1 text-sm"
+                                    onClick={() =>
+                                      nav(`/admin/coupons/${c.id}/edit`)
+                                    }
+                                    aria-label={`Edit ${c.code}`}
+                                  >
+                                    <Pencil size={16} /> Edit
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    className="flex items-center gap-1 px-2 py-1 text-sm text-red-600 hover:text-red-700"
+                                    onClick={() => doDelete(c.id)}
+                                    aria-label={`Delete ${c.code}`}
+                                  >
+                                    <Trash2 size={16} /> Delete
+                                  </Button>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <AnimatePresence initial={false}>
+                    {paged.map((c) => {
                       const status = getStatus(c.active, c.expiresAt);
                       return (
-                        <motion.tr
+                        <motion.div
                           key={c.id}
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -5 }}
-                          transition={{ duration: 0.2, delay: idx * 0.03 }}
-                          className="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800"
+                          className="rounded-xl bg-white p-5 shadow hover:shadow-lg dark:bg-gray-900 transition"
+                          initial={{ opacity: 0, scale: 0.98 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.98 }}
                         >
-                          <td className="px-4 py-3 font-mono text-sm">
-                            <div className="flex items-center gap-2">
-                              <span>{c.code}</span>
-                              <button
-                                title="Copy code"
-                                onClick={() => copyToClipboard(c.code)}
-                                className={`text-gray-400 transition-colors hover:text-gray-600 ${
-                                  copySuccess === c.code ? "text-green-600" : ""
-                                }`}
-                                aria-label={`Copy code ${c.code}`}
-                              >
-                                <Copy size={14} />
-                              </button>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-mono text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                {c.code}
+                              </h3>
+                              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                {c.type === "percentage"
+                                  ? `${c.value}% off`
+                                  : `${formatCurrency(c.value)} off`}
+                              </p>
                             </div>
-                          </td>
-
-                          <td className="px-4 py-3 capitalize text-sm">
-                            {c.type}
-                          </td>
-
-                          <td className="px-4 py-3 text-sm font-medium">
-                            {c.type === "percentage"
-                              ? `${c.value}%`
-                              : formatCurrency(c.value)}
-                          </td>
-
-                          <td className="px-4 py-3 text-sm">
-                            {formatCurrency(c.minOrderAmount)}
-                          </td>
-
-                          <td className="px-4 py-3 text-sm">
-                            {c.currentUses} / {c.maxUses ?? "∞"}
-                          </td>
-
-                          <td className="px-4 py-3">
                             <span
                               className={`rounded-full px-2 py-1 text-xs font-medium ${statusColor(
                                 status
@@ -502,69 +596,59 @@ const AdminCouponsPage: React.FC = () => {
                             >
                               {status}
                             </span>
-                          </td>
-
-                          <td className="px-4 py-3 text-sm">
-                            {formatDate(c.expiresAt)}
-                          </td>
-
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                className="flex items-center gap-1 text-sm"
-                                variant="secondary"
-                                onClick={() =>
-                                  navigate(`/admin/coupons/${c.id}/edit`)
-                                }
-                                aria-label={`Edit ${c.code}`}
-                              >
-                                <Pencil size={16} />
-                                Edit
-                              </Button>
-                              <Button
-                                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
-                                variant="ghost"
-                                onClick={() => doDelete(c.id)}
-                                aria-label={`Delete ${c.code}`}
-                              >
-                                <Trash2 size={16} />
-                                Delete
-                              </Button>
-                            </div>
-                          </td>
-                        </motion.tr>
+                          </div>
+                          <div className="mt-4 flex gap-2">
+                            <Button
+                              variant="secondary"
+                              className="flex-1 px-2 py-1 text-sm"
+                              onClick={() => nav(`/admin/coupons/${c.id}/edit`)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="flex-1 px-2 py-1 text-sm text-red-600 hover:text-red-700"
+                              onClick={() => doDelete(c.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </motion.div>
                       );
                     })}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
+                  </AnimatePresence>
+                </div>
+              )}
 
-          {!loading && !error && totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-gray-700">
-              <div className="text-gray-600 dark:text-gray-400">
-                {filtered.length} result{filtered.length === 1 ? "" : "s"}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={pageSafe === 1}
-                >
-                  Previous
-                </Button>
-                <span className="text-gray-600 dark:text-gray-400">
-                  Page {pageSafe} of {totalPages}
-                </span>
-                <Button
-                  variant="ghost"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={pageSafe === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-gray-700">
+                  <div className="text-gray-600 dark:text-gray-400">
+                    {filtered.length} result{filtered.length === 1 ? "" : "s"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={pageSafe === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Page {pageSafe} of {totalPages}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={pageSafe === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </Container>

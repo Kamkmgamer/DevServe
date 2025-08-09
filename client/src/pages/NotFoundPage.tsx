@@ -21,10 +21,23 @@ import {
 } from "lucide-react";
 import { useSEO } from "../utils/useSEO";
 
-/**
- * Hook to detect and manage system color scheme (light/dark).
- * No performance issues here, code is unchanged.
- */
+function useGPULayer<T extends HTMLElement>(
+  ref: React.RefObject<T>,
+  props?: {
+    willChange?: string;
+    contain?: string;
+  }
+) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.willChange = props?.willChange ?? "transform, opacity";
+    el.style.transform = "translateZ(0)";
+    el.style.backfaceVisibility = "hidden";
+    el.style.contain = props?.contain ?? "layout paint style size";
+  }, [ref, props?.willChange, props?.contain]);
+}
+
 function useSystemTheme() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
@@ -341,12 +354,58 @@ const NotFoundPage = () => {
   const { canvasRef, supernova, isShaking } = useSupernovaExplosion({ enabled: features.supernova, theme });
   const { containerRef: cosmicCursorRef } = useCosmicCursor({ enabled: features.cosmicCursor, theme });
 
-  const [stars] = useState(() => Array.from({ length: 200 }, () => ({ x: Math.random() * 100, y: Math.random() * 100, s: Math.random() * 1.8 + 0.2, d: Math.random() * 6 + 4, o: Math.random() * 0.6 + 0.2, parallax: Math.random() * 0.4 + 0.1, })));
-  const [particles] = useState(() => Array.from({ length: 40 }, () => ({ x: Math.random() * 100, y: Math.random() * 100, size: Math.random() * 22 + 8, dur: Math.random() * 15 + 15, delay: Math.random() * 8, hue: Math.floor(Math.random() * 360), })));
-  const [shooters] = useState(() => Array.from({ length: 8 }, () => ({ key: Math.random().toString(36).slice(2), delay: Math.random() * 8, top: Math.random() * 60 + 5, dur: Math.random() * 2 + 2.5, })));
+  // GPU layer helpers
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  useGPULayer(stageRef, { contain: "paint" });
+
+  // Also promote the cosmic cursor container to a GPU layer
+  useGPULayer<HTMLDivElement>(cosmicCursorRef as any, {
+    willChange: "transform, opacity",
+    contain: "layout paint style",
+  });
+
+  // Promote canvas to its own GPU layer once mounted
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    c.style.willChange = "transform, opacity";
+    c.style.transform = "translateZ(0)";
+    c.style.backfaceVisibility = "hidden";
+    c.style.contain = "paint style size";
+  }, [canvasRef]);
+
+  const { containerRef: stageCosmicCursorContainer } = { containerRef: stageRef }; // alias to keep TS happy in JSX below
+
+  const [stars] = useState(() => Array.from({ length: 200 }, () => ({
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    s: Math.random() * 1.8 + 0.2,
+    d: Math.random() * 6 + 4,
+    o: Math.random() * 0.6 + 0.2,
+    parallax: Math.random() * 0.4 + 0.1,
+  })));
+
+  const [particles] = useState(() => Array.from({ length: 40 }, () => ({
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 22 + 8,
+    dur: Math.random() * 15 + 15,
+    delay: Math.random() * 8,
+    hue: Math.floor(Math.random() * 360),
+  })));
+
+  const [shooters] = useState(() =>
+    Array.from({ length: 8 }, () => ({
+      key: Math.random().toString(36).slice(2),
+      delay: Math.random() * 8,
+      top: Math.random() * 60 + 5,
+      dur: Math.random() * 2 + 2.5,
+    }))
+  );
+
   const emojiRing = ["🔥", "🚀", "✨", "🌌", "💥", "🪐", "🦄", "👾", "💫", "🌟", "☄️", "👽"];
 
-  const message = useMemo(() => "This page hasn't just been lost; it has achieved glorious, explosive transcendence.", []);
+  const message = useMemo(() => "This page hasn't just been lost; it has achieved glorious, explosive transcendence.", []);  
   const [typed, setTyped] = useState("");
   useEffect(() => {
     let i = 0;
@@ -373,9 +432,9 @@ const NotFoundPage = () => {
 
 
   // Centralized Mouse Move Handler
-  const stageRef = useRef<HTMLDivElement | null>(null);
+  const stageRef2 = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const stage = stageRef.current;
+    const stage = stageRef2.current;
     // FIX: Check if stage is possibly null before trying to access its properties.
     // This logic ensures we only set styles if the stage element exists.
     if (!features.parallax) {
@@ -509,20 +568,21 @@ const NotFoundPage = () => {
       className={`relative isolate min-h-[calc(100vh-128px)] overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 ${isShaking ? "shake" : ""} ${vortex ? "vortex-active" : ""}`}
       style={{ 
         perspective: "1200px", 
-        transform: "translateZ(0) rotateX(var(--camY, 0deg)) rotateY(var(--camX, 0deg))", 
+        transform:
+          "translateZ(0) rotateX(var(--camY, 0deg)) rotateY(var(--camX, 0deg))", 
         transformStyle: "preserve-3d" 
       }}
     >
       
       {/* --- Cosmic Cursor Container --- */}
-      {features.cosmicCursor && <div ref={cosmicCursorRef} className="pointer-events-none fixed inset-0 z-50" />}
+      {features.cosmicCursor && <div ref={cosmicCursorRef} className="gpu pointer-events-none fixed inset-0 z-50" />}
 
       {/* --- Backgrounds --- */}
       {features.backgroundNebula && <>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 mix-blend-multiply opacity-20 dark:mix-blend-plus-lighter dark:opacity-80" style={{ background: "radial-gradient(120% 100% at 50% 0%, rgba(56,189,248,0.15), transparent 50%), radial-gradient(110% 100% at 80% 20%, rgba(192,132,252,0.12), transparent 50%), radial-gradient(100% 100% at 20% 60%, rgba(244,63,94,0.12), transparent 50%)", filter: "saturate(1.5) brightness(1.2)", animation: "nebulaWarp 60s linear infinite" }} />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: `repeating-conic-gradient(from 0deg, rgba(${theme === 'dark' ? '255,255,255' : '0,0,0'},0.02) 0deg 5deg, transparent 5deg 10deg)`, mixBlendMode: theme === 'dark' ? "soft-light" : "multiply", animation: "nebulaSpin 80s linear infinite" }} />
+        <div aria-hidden="true" className="gpu pointer-events-none absolute inset-0 mix-blend-multiply opacity-20 dark:mix-blend-plus-lighter dark:opacity-80" style={{ background: "radial-gradient(120% 100% at 50% 0%, rgba(56,189,248,0.15), transparent 50%), radial-gradient(110% 100% at 80% 20%, rgba(192,132,252,0.12), transparent 50%), radial-gradient(100% 100% at 20% 60%, rgba(244,63,94,0.12), transparent 50%)", filter: "saturate(1.5) brightness(1.2)", animation: "nebulaWarp 60s linear infinite" }} />
+        <div aria-hidden="true" className="gpu pointer-events-none absolute inset-0" style={{ background: `repeating-conic-gradient(from 0deg, rgba(${theme === 'dark' ? '255,255,255' : '0,0,0'},0.02) 0deg 5deg, transparent 5deg 10deg)`, mixBlendMode: theme === 'dark' ? "soft-light" : "multiply", animation: "nebulaSpin 80s linear infinite" }} />
       </>}
-      
+
       {/* --- Starfield --- */}
       {features.starfield &&
         <div className="absolute inset-0 transition-transform duration-300 ease-out" style={{ 
@@ -530,17 +590,17 @@ const NotFoundPage = () => {
           transformStyle: "preserve-3d" 
         }}>
           {stars.map((s, i) => (
-            <span key={i} className="absolute rounded-full bg-slate-700/80 shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:bg-slate-300/80 dark:shadow-[0_0_12px_rgba(255,255,255,0.8)]" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: s.o, animation: `twinkle ${s.d}s ease-in-out infinite`, animationDelay: `${(i % 10) * 0.2}s`, transform: `translateZ(${s.parallax * -200}px)` }} />
+            <span key={i} className="gpu absolute rounded-full bg-slate-700/80 shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:bg-slate-300/80 dark:shadow-[0_0_12px_rgba(255,255,255,0.8)]" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: s.o, animation: `twinkle ${s.d}s ease-in-out infinite`, animationDelay: `${(i % 10) * 0.2}s`, transform: `translateZ(${s.parallax * -200}px)` }} />
           ))}
         </div>
       }
 
       {/* --- Other Effects (Unchanged JSX) --- */}
       {features.shootingStars && <div className="absolute inset-0 overflow-hidden">{shooters.map((s, i) => (<span key={s.key} className="absolute h-0.5 w-48 -translate-x-full bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-0 dark:via-purple-300" style={{ top: `${s.top}%`, left: "-10%", filter: "drop-shadow(0 0 10px rgba(168,85,247,0.7)) drop-shadow(0 0 24px rgba(168,85,247,0.6))", animation: `shoot ${s.dur}s ease-in ${s.delay + i * 0.8}s infinite` }} />))}</div>}
-      {features.floatingDust && <div className="absolute inset-0 overflow-hidden">{particles.map((p, i) => (<span key={i} className="absolute rounded-full opacity-40 blur-lg mix-blend-multiply dark:mix-blend-screen" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, backgroundColor: `hsl(${p.hue}deg 100% ${theme === 'dark' ? '70%' : '60%'})`, animation: `floatY ${p.dur}s ease-in-out ${p.delay}s infinite alternate`, filter: "saturate(1.5) brightness(1.1)" }} />))}</div>}
-      {features.supernova && <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" />}
-      {features.gridFloor && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[60vh]"><div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent dark:from-slate-950 dark:via-slate-950/50" /><div className="absolute inset-0 opacity-80 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ backgroundImage: theme === 'dark' ? "linear-gradient(rgba(129,140,248,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,0.3) 1px, transparent 1px)" : "linear-gradient(rgba(148,163,184,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.3) 1px, transparent 1px)", backgroundSize: "40px 40px", backgroundPosition: "center center", animation: "gridPan 10s linear infinite", boxShadow: theme === 'dark' ? "inset 0 0 80px rgba(59,130,246,0.3), 0 0 100px rgba(59,130,246,0.25)" : "inset 0 0 80px rgba(148,163,184,0.2), 0 0 100px rgba(148,163,184,0.15)"}} /><div className="absolute inset-0 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ background: theme === 'dark' ? "radial-gradient(60% 80% at 50% 100%, rgba(129,140,248,0.2), transparent 70%)" : "radial-gradient(60% 80% at 50% 100%, rgba(100,116,139,0.15), transparent 70%)", animation: "pulse 4.5s ease-in-out infinite" }} /></div>}
-      {features.scanlines && <div className="pointer-events-none absolute inset-0 z-20 bg-[url('/scanlines.png')] opacity-[0.07] mix-blend-multiply dark:opacity-20 dark:mix-blend-overlay"></div>}
+      {features.floatingDust && <div className="absolute inset-0 overflow-hidden">{particles.map((p, i) => (<span key={i} className="gpu absolute rounded-full opacity-40 blur-lg mix-blend-multiply dark:mix-blend-screen" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, backgroundColor: `hsl(${p.hue}deg 100% ${theme === 'dark' ? '70%' : '60%'})`, animation: `floatY ${p.dur}s ease-in-out ${p.delay}s infinite alternate`, filter: "saturate(1.5) brightness(1.1)" }} />))}</div>}
+      {features.supernova && <canvas ref={canvasRef} className="gpu pointer-events-none absolute inset-0 h-full w-full" />}
+      {features.gridFloor && <div className="gpu pointer-events-none absolute inset-x-0 bottom-0 h-[60vh]"><div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent dark:from-slate-950 dark:via-slate-950/50" /><div className="absolute inset-0 opacity-80 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ backgroundImage: theme === 'dark' ? "linear-gradient(rgba(129,140,248,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,0.3) 1px, transparent 1px)" : "linear-gradient(rgba(148,163,184,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.3) 1px, transparent 1px)", backgroundSize: "40px 40px", backgroundPosition: "center center", animation: "gridPan 10s linear infinite", boxShadow: theme === 'dark' ? "inset 0 0 80px rgba(59,130,246,0.3), 0 0 100px rgba(59,130,246,0.25)" : "inset 0 0 80px rgba(148,163,184,0.2), 0 0 100px rgba(148,163,184,0.15)"}} /><div className="absolute inset-0 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ background: theme === 'dark' ? "radial-gradient(60% 80% at 50% 100%, rgba(129,140,248,0.2), transparent 70%)" : "radial-gradient(60% 80% at 50% 100%, rgba(100,116,139,0.15), transparent 70%)", animation: "pulse 4.5s ease-in-out infinite" }} /></div>}
+      {features.scanlines && <div className="gpu pointer-events-none absolute inset-0 z-20 bg-[url('/scanlines.png')] opacity-[0.07] mix-blend-multiply dark:opacity-20 dark:mix-blend-overlay"></div>}
 
       <section className="relative mx-auto flex max-w-6xl flex-col items-center px-4 py-16 text-center sm:py-20 md:py-28 z-10">
         <div className="inline-flex items-center gap-2 rounded-full border border-purple-300 bg-purple-100/70 px-3.5 py-1.5 text-xs font-semibold text-purple-700 ring-1 ring-black/5 backdrop-blur-sm dark:border-purple-400/40 dark:bg-purple-950/50 dark:text-purple-200 dark:ring-white/10">
@@ -570,7 +630,7 @@ const NotFoundPage = () => {
           {features.orbitalEmojis &&
             <div className="pointer-events-none absolute inset-0">
               {emojiRing.map((em, i) => (
-                <span key={i} className="absolute select-none text-2xl md:text-4xl" style={{ left: "50%", top: "50%", transformOrigin: "0 -160px", transform: `translate(-50%,-50%) rotate(${(360 / emojiRing.length) * i}deg)`, animation: `orbit 12s linear infinite`, animationDelay: `${i * -1.0}s`, filter: "drop-shadow(0 0 8px rgba(0,0,0,0.3)) dark:drop-shadow(0 0 8px rgba(255,255,255,0.7)) dark:drop-shadow(0 0 20px rgba(236,72,153,0.6))" }}>
+                <span key={i} className="absolute select-none text-2xl md:text-4xl" style={{ left: "50%", top: "50%", transformOrigin: "0 -160px", transform: `translate(-50%,-50%) rotate(${(360 / emojiRing.length) * i}deg)`, animation: `orbit 12s linear infinite`, animationDelay: `${i * -1.0}s`, filter: "drop-shadow(0 0 8px rgba(0,0,0,0.3)) dark:drop-shadow(0 0 8px rgba(255,255,255,0.7)) dark:drop-shadow(0 0 20px rgba(236,72,153,0.6))" }} >
                   <span style={{ display: "inline-block", transform: `rotate(${-((360 / emojiRing.length) * i)}deg) rotate(-90deg)` }}>{em}</span>
                 </span>
               ))}

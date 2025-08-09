@@ -126,8 +126,11 @@ const CouponFormPage: React.FC = () => {
         ? Math.round(data.minOrderAmount * 100)
         : null,
       maxUses: data.maxUses ?? null,
-      expiresAt: data.expiresAt
-        ? new Date(data.expiresAt).toISOString()
+      expiresAt: data.expiresAt && data.expiresAt !== ""
+        ? (() => {
+            const date = new Date(data.expiresAt);
+            return !isNaN(date.getTime()) ? date.toISOString() : null;
+          })()
         : null,
     };
 

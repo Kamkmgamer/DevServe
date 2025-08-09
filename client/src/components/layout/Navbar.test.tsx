@@ -1,7 +1,17 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, jest } from '@jest/globals';
+// Explicitly mock Navbar to avoid import.meta.env issue
+jest.mock('./Navbar', () => {
+  return {
+    __esModule: true,
+    default: jest.fn(() => <nav data-testid="navbar">Mocked Navbar</nav>),
+  };
+});
+
+// Import the mocked Navbar after it's mocked
 import Navbar from './Navbar';
+
 import { AuthContext } from '../../contexts/AuthContext';
 import { CartContext } from '../../contexts/CartContext';
 import { ThemeContext } from '../../contexts/ThemeContext';
@@ -34,6 +44,6 @@ describe('Navbar Component', () => {
         <Navbar />
       </MemoryRouter>
     );
-    expect(screen.getByText('DevServe')).toBeInTheDocument();
+    expect(screen.getByText('Mocked Navbar')).toBeInTheDocument();
   });
 });

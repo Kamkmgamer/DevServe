@@ -12,6 +12,11 @@ module.exports = {
     "ts-jest": {
       tsconfig: "tsconfig.json", // Point to your tsconfig.json
     },
+    "import.meta": {
+      env: {
+        VITE_PORTFOLIO_URL: "https://mock-portfolio.com",
+      },
+    },
   },
   transformIgnorePatterns: [
     "node_modules/(?!axios)" // Ensure axios is transformed if needed

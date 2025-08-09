@@ -36,9 +36,11 @@ export const register = async (req: Request, res: Response) => {
       },
     });
     
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
-      expiresIn: "1d",
-    });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, name: user.name, role: user.role },
+      process.env.JWT_SECRET!,
+      { expiresIn: "1d" }
+    );
 
     res.status(201).json({ token });
   } catch (error) {
@@ -54,9 +56,11 @@ export const login = async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
-    expiresIn: "1d",
-  });
+  const token = jwt.sign(
+    { userId: user.id, email: user.email, name: user.name, role: user.role },
+    process.env.JWT_SECRET!,
+    { expiresIn: "1d" }
+  );
 
   res.json({ token });
 };
