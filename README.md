@@ -45,11 +45,19 @@ DevServe is a comprehensive, responsive e-commerce solution designed to showcase
 - **Admin Dashboard:** 
   - Overview of metrics (users, services, orders)
   - Full CRUD capabilities for Services, Portfolio Items, and Blog Posts.
+- **Enhanced Admin Role Management:** Granular control over administrative access with dedicated middleware.
 - **Payment Gateway Integration:** Secure transactions with an initial Stripe setup.
 - **SEO-Ready:** Optimized meta tags, Open Graph data, and efficient asset loading.
 - **Enhanced Performance:** Lazy loading and optimized API calls for speed.
 - **Dark/Light Mode:** User-controlled theme switching.
 - **Modern Notifications:** Non-intrusive toast notifications for feedback.
+- **Advanced UI/UX:**
+  - Smooth animations powered by Framer Motion across key components.
+  - Refined styling and responsive layouts for a modern look and feel.
+  - Consistent section styling with the new `SectionWrapper` component.
+  - Interactive visual effects on contact page for an engaging user experience.
+  - Sophisticated 3D preview logic in hero section.
+- **Streamlined Context & Routing:** Improved context management and robust protected routing for enhanced application flow.
 
 --------------------------------------------------
 
