@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Hero } from '../components/home/Hero';
 import { TechMarquee } from '../components/home/TechMarquee';
 import { CTA } from '../components/home/CTA';
@@ -7,12 +7,29 @@ import { PricingTeaser } from '../components/home/PricingTeaser';
 import { FAQ } from '../components/home/FAQ';
 import { SectionSkeleton } from '../components/ui/SectionSkeleton';
 import SectionWrapper from '../components/layout/SectionWrapper';
-import Container from '../components/layout/Container'; 
+import Container from '../components/layout/Container';
+import api from '../api/axios';
 
 const CaseStudies = lazy(() => import('../components/home/CaseStudies').then(module => ({ default: module.CaseStudies })));
 const Testimonials = lazy(() => import('../components/home/Testimonials').then(module => ({ default: module.Testimonials })));
 
 const HomePage: React.FC = () => {
+  const [aiTip, setAiTip] = useState('');
+
+  useEffect(() => {
+    const fetchAiTip = async () => {
+      try {
+        const response = await api.get('/chatbot/daily-tip');
+        setAiTip(response.data.content);
+      } catch (error) {
+        console.error('Error fetching AI tip:', error);
+        setAiTip('Could not fetch an AI tip today. Please try again later.');
+      }
+    };
+
+    fetchAiTip();
+  }, []);
+
   return (
     <div className="bg-slate-50 dark:bg-slate-950">
       <a
@@ -23,6 +40,12 @@ const HomePage: React.FC = () => {
       </a>
 
       <Hero />
+
+      <SectionWrapper title="Daily AI Tip" center>
+        <p className="text-lg text-slate-700 dark:text-slate-300 max-w-2xl mx-auto">
+          {aiTip || 'Fetching your daily tip...'}
+        </p>
+      </SectionWrapper>
 
       <div id="main" />
 
