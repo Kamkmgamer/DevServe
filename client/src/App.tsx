@@ -16,6 +16,9 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 // Toaster
 import { Toaster } from "react-hot-toast";
 
+// Chatbot
+import ChatbotFAB from "./components/chatbot/ChatbotFAB";
+
 import LoadingSpinner from "./components/ui/LoadingSpinner";
 import OfflinePage from "./pages/OfflinePage";
 
@@ -75,6 +78,7 @@ function App() {
       </AnimatePresence>
 
       <Toaster position="bottom-right" reverseOrder={false} />
+      <ChatbotFAB />
     </div>
   );
 }

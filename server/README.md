@@ -15,10 +15,12 @@ This directory contains the backend services for the DevServe e-commerce platfor
     *   **Payment Processing:** Integration with Stripe and PayPal for secure online payments.
     *   **Referral System:** Logic for managing user referrals and calculating commissions.
     *   **Admin Panel:** Dedicated endpoints for administrative tasks.
+    *   **AI Chatbot:** GPT OSS 20B powered chatbot API endpoints for intelligent conversational AI.
 *   **Database Management:** Utilizes Prisma ORM for efficient, type-safe, and robust interactions with the database. Supports migrations and seeding.
 *   **Email Notifications:** Integration with Nodemailer for sending transactional emails (e.g., order confirmations, password resets).
 *   **Logging & Error Handling:** Centralized logging with Winston and a global error handling middleware for robust API responses.
 *   **Rate Limiting:** Implements rate limiting to protect against abuse and ensure API stability.
+*   **AI Integration:** OpenRouter API integration for GPT OSS 20B chatbot functionality with conversation context management.
 
 ## Technologies Used
 
@@ -35,6 +37,7 @@ This directory contains the backend services for the DevServe e-commerce platfor
 *   **Stripe & PayPal SDKs:** For integrating payment gateways.
 *   **Winston:** A versatile logging library.
 *   **CORS:** Middleware for enabling Cross-Origin Resource Sharing.
+*   **OpenAI SDK:** For OpenRouter API integration to power the GPT OSS 20B chatbot.
 
 ## Installation and Setup
 
@@ -59,7 +62,12 @@ To get the backend application up and running, follow these steps:
     ```
 
 3.  **Environment Configuration:**
-    Create a `.env` file in the `server` directory based on `.env.example` (if available, otherwise create one with necessary variables like `DATABASE_URL`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `EMAIL_USER`, `EMAIL_PASS`, etc.).
+    Create a `.env` file in the `server` directory based on `.env.example` (if available, otherwise create one with necessary variables like `DATABASE_URL`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `EMAIL_USER`, `EMAIL_PASS`, `OPENROUTER_API_KEY`, etc.).
+    
+    **Important:** For the AI chatbot to work, you must add your OpenRouter API key:
+    ```env
+    OPENROUTER_API_KEY=your_actual_api_key_here  # Get from https://openrouter.ai/keys
+    ```
 
 4.  **Database Setup (Prisma):**
     *   **Generate Prisma Client:**

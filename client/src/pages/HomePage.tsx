@@ -19,11 +19,21 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const fetchAiTip = async () => {
       try {
-        const response = await api.get('/chatbot/daily-tip');
-        setAiTip(response.data.content);
+        // Use a custom axios instance without the global error handler for this non-critical request
+        const response = await api.get('/chatbot/daily-tip', {
+          // Disable global error handling for this request
+          validateStatus: () => true
+        });
+        
+        if (response.status === 200 && response.data.content) {
+          setAiTip(response.data.content);
+        } else {
+          // Use the fallback message from the server if available
+          setAiTip(response.data.content || 'AI features coming soon! Configure your OpenRouter API key to enable.');
+        }
       } catch (error) {
-        console.error('Error fetching AI tip:', error);
-        setAiTip('Could not fetch an AI tip today. Please try again later.');
+        console.log('Daily AI tip not available');
+        setAiTip('AI features coming soon!');
       }
     };
 

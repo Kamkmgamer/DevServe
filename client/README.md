@@ -10,6 +10,8 @@ This directory contains the frontend application for DevServe, built with React 
 *   **Context-based State Management:** Utilizes React Context for efficient global state management, including authentication, shopping cart, and theme settings.
 *   **Protected Routes:** Implements secure routing to ensure that certain parts of the application are only accessible to authenticated users.
 *   **API Integration:** Seamlessly communicates with the DevServe backend API using Axios and React Query for data fetching and manipulation.
+*   **AI Chatbot Interface:** Integrated GPT OSS 20B powered chatbot with a beautiful floating UI, message history, and real-time responses.
+*   **Floating Action Button:** Animated chat button with notification indicator for easy access to AI assistance.
 
 ## Technologies Used
 

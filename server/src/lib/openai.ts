@@ -8,8 +8,8 @@ const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
   apiKey: process.env.OPENROUTER_API_KEY,
   defaultHeaders: {
-    'HTTP-Referer': 'http://localhost:5173', // Placeholder, will be the client URL
-    'X-Title': 'DevServe',
+    'HTTP-Referer': process.env.SITE_URL || 'http://localhost:5173',
+    'X-Title': process.env.SITE_NAME || 'DevServe',
   },
 });
 

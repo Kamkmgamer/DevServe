@@ -43,6 +43,8 @@ DevServe offers a rich set of features for both users and administrators:
 *   **Enhanced Performance:** Lazy loading and optimized API calls.
 *   **Dark/Light Mode:** User-controlled theme switching.
 *   **Modern Notifications:** Non-intrusive toast notifications.
+*   **AI Chatbot:** Integrated GPT OSS 20B powered chatbot with floating action button.
+*   **Real-time Chat Interface:** Beautiful chat UI with message history and timestamps.
 
 ### Backend Features
 
@@ -55,6 +57,8 @@ DevServe offers a rich set of features for both users and administrators:
 *   **Admin Dashboard:** Full CRUD capabilities for Services, Portfolio Items, and Blog Posts, with enhanced role management.
 *   **Logging & Error Handling:** Centralized logging and global error handling.
 *   **Rate Limiting:** Protects against abuse and ensures API stability.
+*   **AI Integration:** OpenRouter API integration for GPT OSS 20B chatbot functionality.
+*   **Chatbot API:** RESTful endpoints for chat completions and AI tips.
 
 ## Technology Stack
 
@@ -90,6 +94,7 @@ DevServe offers a rich set of features for both users and administrators:
 *   **Stripe & PayPal SDKs:** Payment gateway integration.
 *   **Winston:** Logging library.
 *   **CORS:** Cross-Origin Resource Sharing.
+*   **OpenAI SDK:** For OpenRouter API integration (GPT OSS 20B chatbot).
 
 ### Tools & Development
 
@@ -153,6 +158,11 @@ Follow these steps to set up your development environment:
     PAYPAL_CLIENT_ID=YOUR_PAYPAL_CLIENT_ID
     PAYPAL_CLIENT_SECRET=YOUR_PAYPAL_CLIENT_SECRET
     PAYPAL_ENVIRONMENT=sandbox # or live
+
+    # OpenRouter API Configuration (for AI Chatbot)
+    OPENROUTER_API_KEY=your_openrouter_api_key_here # Get from https://openrouter.ai/keys
+    SITE_URL=http://localhost:5173  # Frontend URL
+    SITE_NAME=DevServe  # Your application name
     ```
 
     **For the `client` (`client/.env`):**
@@ -270,6 +280,7 @@ DevServe/
 │   │   ├── assets/
 │   │   ├── components/       # Reusable UI and layout components
 │   │   │   ├── admin/        # Admin-specific components (AdminNavbar, AdminLayout)
+│   │   │   ├── chatbot/      # AI Chatbot components (Chatbot, ChatbotFAB)
 │   │   │   ├── form/         # Shared form components (ContactForm)
 │   │   │   ├── layout/
 │   │   │   └── ui/
