@@ -26,7 +26,14 @@ api.interceptors.response.use(
 
       switch (status) {
         case 400:
-          toast.error(`Bad Request: ${errorMessage}`);
+          if (data.code === "INVALID_TOKEN") {
+            toast.error(`Session expired or invalid token. Please log in again.`);
+            localStorage.removeItem("token");
+            // Optionally, trigger a logout action in AuthContext if available
+            // e.g., window.dispatchEvent(new Event('logout'));
+          } else {
+            toast.error(`Bad Request: ${errorMessage}`);
+          }
           break;
         case 401:
           toast.error(`Unauthorized: ${errorMessage}`);

@@ -1,6 +1,3 @@
-
---------------------------------------------------
-
 # DevServe: A Modern Web Services E-commerce Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,97 +5,102 @@
 
 DevServe is a comprehensive, responsive e-commerce solution designed to showcase and sell web design and development services. Built with a monorepo architecture, it cleanly separates the React frontend from the Node.js backend, ensuring a scalable and maintainable platform for your business.
 
---------------------------------------------------
-
 ## Table of Contents
 
 - [Features](#features)
-- [Technologies Used](#technologies-used)
+- [Technology Stack](#technology-stack)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Repository Setup](#repository-setup)
   - [Environment Setup](#environment-setup)
   - [Database Setup](#database-setup)
   - [Installing Dependencies](#installing-dependencies)
-  - [Prisma & Database Seeding](#prisma--database-seeding)
   - [Running Development Servers](#running-development-servers)
   - [Running Tests](#running-tests)
   - [Admin Access](#admin-access)
 - [Project Structure](#project-structure)
 - [Deployment](#deployment)
-- [Contributing](#contributing)
+- [Contribution Guidelines](#contribution-guidelines)
 - [License](#license)
-
---------------------------------------------------
+- [Credits](#credits)
 
 ## Features
 
-- **Responsive Design:** Adapts seamlessly to desktop, tablet, and mobile screens.
-- **Engaging Homepage:** Features a captivating hero section, service highlights, and clear calls-to-action.
-- **Services Catalog:** Detailed pages for a variety of web service offerings.
-- **Dynamic Portfolio:** Showcase completed projects with filtering options (note: public portfolio links externally).
-- **Transparent Pricing:** Clearly outlined pricing tiers with comprehensive feature descriptions.
-- **Shopping Cart:** Global cart functionality to add or remove services.
-- **Contact Form:** Integrated with robust validation and email support (using Nodemailer).
-- **Blog Section:** Articles, tutorials, and industry insights.
-- **User Authentication (Admin):** Secure JWT-based login/logout for administrative access.
-- **Admin Dashboard:** 
-  - Overview of metrics (users, services, orders)
-  - Full CRUD capabilities for Services, Portfolio Items, and Blog Posts.
-- **Enhanced Admin Role Management:** Granular control over administrative access with dedicated middleware.
-- **Payment Gateway Integration:** Secure transactions with an initial Stripe setup.
-- **SEO-Ready:** Optimized meta tags, Open Graph data, and efficient asset loading.
-- **Enhanced Performance:** Lazy loading and optimized API calls for speed.
-- **Dark/Light Mode:** User-controlled theme switching.
-- **Modern Notifications:** Non-intrusive toast notifications for feedback.
-- **Advanced UI/UX:**
-  - Smooth animations powered by Framer Motion across key components.
-  - Refined styling and responsive layouts for a modern look and feel.
-  - Consistent section styling with the new `SectionWrapper` component.
-  - Interactive visual effects on contact page for an engaging user experience.
-  - Sophisticated 3D preview logic in hero section.
-- **Streamlined Context & Routing:** Improved context management and robust protected routing for enhanced application flow.
+DevServe offers a rich set of features for both users and administrators:
 
---------------------------------------------------
+### Frontend Features
 
-## Technologies Used
+*   **Responsive Design:** Adapts seamlessly to desktop, tablet, and mobile screens.
+*   **Engaging User Interface:** Modern design with interactive elements and animations (Framer Motion).
+*   **Modular Component Architecture:** Reusable React components for maintainability.
+*   **Context-based State Management:** Efficient global state management for authentication, cart, and theme.
+*   **Protected Routes:** Secure navigation for authenticated users.
+*   **API Integration:** Seamless communication with the backend using Axios and React Query.
+*   **Dynamic Content:** Services Catalog, Portfolio, and Blog sections with detailed pages.
+*   **Shopping Cart:** Global cart functionality to add or remove services.
+*   **User-Friendly Forms:** Contact form with robust validation.
+*   **SEO-Ready:** Optimized meta tags and efficient asset loading.
+*   **Enhanced Performance:** Lazy loading and optimized API calls.
+*   **Dark/Light Mode:** User-controlled theme switching.
+*   **Modern Notifications:** Non-intrusive toast notifications.
+
+### Backend Features
+
+*   **User Authentication & Authorization:** Secure JWT-based authentication with role-based access control (User, Admin, SuperAdmin).
+*   **Comprehensive API Endpoints:** RESTful APIs for user management, services, portfolio, blog, shopping cart, orders, payments, and referral system.
+*   **Database Management:** Prisma ORM for type-safe interactions with PostgreSQL/SQLite, including migrations and seeding.
+*   **Email Notifications:** Integration with Nodemailer for transactional emails.
+*   **Payment Processing:** Secure transactions via Stripe and PayPal.
+*   **Referral System:** Logic for managing user referrals and calculating commissions.
+*   **Admin Dashboard:** Full CRUD capabilities for Services, Portfolio Items, and Blog Posts, with enhanced role management.
+*   **Logging & Error Handling:** Centralized logging and global error handling.
+*   **Rate Limiting:** Protects against abuse and ensures API stability.
+
+## Technology Stack
 
 ### Frontend
 
-- React.js – Building interactive UIs.
-- TypeScript – Statically typed JavaScript for improved maintainability.
-- Tailwind CSS (v3.4.4) – Rapid UI development with utility-first classes.
-- Framer Motion – Declarative animations and transitions.
-- React Router DOM – Seamless client-side routing.
-- Axios – HTTP client for API requests.
-- React Hook Form & Zod – Efficient form management and validation.
-- Lucide React – Customizable SVG icons.
-- React Hot Toast – Beautiful toast notifications.
-- Vite – Fast modern tooling.
+*   **React 19:** JavaScript library for building user interfaces.
+*   **TypeScript:** Typed superset of JavaScript.
+*   **Vite:** Fast build tool.
+*   **Tailwind CSS:** Utility-first CSS framework.
+*   **React Router DOM:** Declarative routing.
+*   **Axios:** HTTP client.
+*   **React Query (@tanstack/react-query):** Asynchronous state management.
+*   **Framer Motion:** Production-ready animations.
+*   **Zod & React Hook Form:** Form validation.
+*   **JWT Decode:** Decoding JSON Web Tokens.
+*   **React Hot Toast & React Toastify:** Notifications.
+*   **Lucide React & React Icons:** Icons.
+*   **Tiptap:** Headless editor framework.
+*   **@paypal/react-paypal-js:** PayPal integration.
 
 ### Backend
 
-- Node.js – Server-side JavaScript runtime.
-- Express.js – Minimalist web framework for Node.js.
-- TypeScript – Ensuring type safety and clean code.
-- Prisma ORM – Type-safe database access with next-generation ORM features.
-- PostgreSQL – Robust open-source relational database.
-- JSON Web Tokens (JWT) – Secure authentication tokens.
-- Bcrypt.js – Password hashing.
-- Zod – Data validation.
-- Nodemailer – For email sending (or external providers like SendGrid).
-- Stripe API – Payment processing integration.
+*   **Node.js:** Server-side JavaScript runtime.
+*   **Express.js:** Minimalist web framework.
+*   **TypeScript:** Type safety and clean code.
+*   **Prisma ORM:** Type-safe database access.
+*   **PostgreSQL:** Robust relational database (recommended for production).
+*   **SQLite:** File-based database (default for development).
+*   **JSON Web Tokens (JWT):** Secure authentication.
+*   **Bcrypt.js:** Password hashing.
+*   **Zod:** Data validation.
+*   **Nodemailer:** Email sending.
+*   **Stripe & PayPal SDKs:** Payment gateway integration.
+*   **Winston:** Logging library.
+*   **CORS:** Cross-Origin Resource Sharing.
 
 ### Tools & Development
 
-- Docker – Simplified containerized development (PostgreSQL).
-- .env – Environment variable management.
-- ESLint & Prettier – Code quality and formatting.
-- Husky & Lint-staged – Git hooks to enforce code integrity.
-- Jest & Supertest – Backend unit and integration testing.
-- React Testing Library – Frontend component tests.
-
---------------------------------------------------
+*   **Docker:** Containerized development (for PostgreSQL).
+*   **.env:** Environment variable management.
+*   **ESLint & Prettier:** Code quality and formatting.
+*   **Husky & Lint-staged:** Git hooks.
+*   **Jest & Supertest:** Backend testing.
+*   **React Testing Library:** Frontend component tests.
+*   **Nodemon:** For hot-reloading during development.
+*   **Concurrently:** For running multiple commands concurrently.
 
 ## Getting Started
 
@@ -106,143 +108,165 @@ Follow these steps to set up your development environment:
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (LTS recommended)
-- [npm](https://www.npmjs.com/get-npm) (bundled with Node.js)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) (for local PostgreSQL)
-- [Git](https://git-scm.com/downloads)
+*   [Node.js](https://nodejs.org/) (LTS recommended)
+*   [npm](https://www.npmjs.com/get-npm) (bundled with Node.js)
+*   [Docker Desktop](https://www.docker.com/products/docker-desktop) (for local PostgreSQL)
+*   [Git](https://git-scm.com/downloads)
 
 ### Repository Setup
 
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/Kamkmgamer/DevServe.git
-   cd DevServe
-   ```
-
-   (Replace the URL with your repository if necessary.)
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/Kamkmgamer/DevServe.git
+    cd DevServe
+    ```
+    (Replace the URL with your repository if necessary.)
 
 ### Environment Setup
 
-2. Create `.env` files in both the `client` and `server` directories.
+2.  **Create `.env` files:**
+    Create `.env` files in both the `client` and `server` directories.
 
-   **For the server (.env):**
-   ```env
-   PORT=8000
+    **For the `server` (`server/.env`):**
+    ```env
+    PORT=8000
 
-   # Database Connection (Docker-based)
-   DATABASE_URL="postgresql://myuser:mypassword@localhost:5432/mydatabase?schema=public"
+    # Database Connection (Docker-based)
+    DATABASE_URL="postgresql://devserveuser:9cf18f8c5f9bbd3ea6d645c8ffc917d2@localhost:5432/DevServeMainDB?schema=public"
 
-   JWT_SECRET=YOUR_VERY_STRONG_JWT_SECRET_HERE  # Change this!
+    JWT_SECRET=YOUR_VERY_STRONG_JWT_SECRET_HERE  # Change this!
 
-   # Admin password for seeding
-   ADMIN_PASSWORD=YourSecurePasswordHere # Add a secure password here
+    # Admin password for seeding
+    ADMIN_PASSWORD=YourSecurePasswordHere # Add a secure password here
 
-   # Email Sending Configuration
-   EMAIL_HOST=smtp.your-email-provider.com
-   EMAIL_PORT=587
-   EMAIL_USER=your_email@example.com
-   EMAIL_PASS=your_email_password
+    # Email Sending Configuration (Example with Mailtrap or similar)
+    EMAIL_HOST=smtp.mailtrap.io
+    EMAIL_PORT=2525
+    EMAIL_USER=your_mailtrap_username
+    EMAIL_PASS=your_mailtrap_password
 
-   # Stripe API Keys
-   STRIPE_SECRET_KEY=sk_test_...   # Get from Stripe Dashboard
-   ```
+    # Stripe API Keys
+    STRIPE_SECRET_KEY=sk_test_...   # Get from Stripe Dashboard
+    STRIPE_WEBHOOK_SECRET=whsec_... # Get from Stripe Dashboard
 
-   **For the client (.env):**
-   ```env
-   VITE_API_BASE_URL=http://localhost:8000
-   ```
+    # PayPal API Keys
+    PAYPAL_CLIENT_ID=YOUR_PAYPAL_CLIENT_ID
+    PAYPAL_CLIENT_SECRET=YOUR_PAYPAL_CLIENT_SECRET
+    PAYPAL_ENVIRONMENT=sandbox # or live
+    ```
 
-   Remember to add these `.env` files to your `.gitignore`.
+    **For the `client` (`client/.env`):**
+    ```env
+    VITE_API_BASE_URL=http://localhost:8000
+    # If using ngrok for HMR, uncomment and set:
+    # NGROK_HOST=your-ngrok-url.ngrok-free.app
+    ```
+
+    Remember to add these `.env` files to your `.gitignore`.
 
 ### Database Setup
 
-3. Start the PostgreSQL container from the project root:
+3.  **Start the PostgreSQL container:**
+    From the project root, start the database using Docker Compose:
+    ```bash
+    docker-compose up -d
+    ```
+    This will set up a PostgreSQL database, typically accessible on `localhost:5432`. If you encounter issues, ensure Docker Desktop is running.
 
-   ```bash
-   docker-compose up -d
-   ```
-
-   This will set up a PostgreSQL database, typically accessible on `localhost:5432`.
+4.  **Apply Prisma migrations and seed database:**
+    Navigate to the `server` directory, apply migrations, and seed the database:
+    ```bash
+    cd server
+    npx prisma migrate dev --name init
+    npm run seed
+    cd ..
+    ```
 
 ### Installing Dependencies
 
-4. Install dependencies across the monorepo:
+5.  **Install dependencies across the monorepo:**
+    From the root directory, run:
+    ```bash
+    npm install
+    ```
+    This will install dependencies for the root, client, and server.
 
-   - From the root directory:
-     ```bash
-     npm install
-     ```
-   - For the client:
-     ```bash
-     cd client
-     npm install
-     ```
-   - For the server:
-     ```bash
-     cd ../server
-     npm install
-     ```
-   - Return to the root:
-     ```bash
-     cd ..
-     ```
+## Running the Project
 
-### Prisma & Database Seeding
+### Development Mode
 
-5. Apply Prisma migrations and seed database:
+To start both the frontend and backend servers concurrently in development mode:
 
-   - Navigate to the server directory:
-     ```bash
-     cd server
-     npx prisma migrate dev --name init
-     npm run seed
-     cd ..
-     ```
+```bash
+npm run dev
+```
 
-### Running Development Servers
+*   The frontend will be available at: [http://localhost:5173](http://localhost:5173)
+*   The backend API will be available at: [http://localhost:8000](http://localhost:8000)
 
-6. Start both the frontend and backend servers concurrently from the root:
+### Production Build and Run
 
-   ```bash
-   npm run dev
-   ```
+To build and run the entire project for production:
 
-   - The frontend is available at: [http://localhost:5173](http://localhost:5173)
-   - The backend API is available at: [http://localhost:8000](http://localhost:8000)
+1.  **Build the frontend:**
+    ```bash
+    cd client
+    npm run build
+    cd ..
+    ```
+    This compiles the React app into static files in `server/public`.
 
-### Running Tests
+2.  **Build the backend:**
+    ```bash
+    cd server
+    npm run build
+    cd ..
+    ```
+    This compiles the TypeScript backend into JavaScript in `server/dist`.
 
-7. To run tests:
+3.  **Start the backend server:**
+    ```bash
+    cd server
+    npm run start
+    cd ..
+    ```
+    The backend will serve the frontend static files and its own API.
 
-   - For the client:
-     ```bash
-     cd client
-     npm test
-     cd ..
-     ```
-   - For the server:
-     ```bash
-     cd server
-     npm test
-     cd ..
-     ```
+4.  **Ensure database is running:**
+    If not already running, start your PostgreSQL container:
+    ```bash
+    docker-compose up -d
+    ```
 
-### Admin Access
+## Running Tests
 
-- Admin Login: [http://localhost:5173/login](http://localhost:5173/login)
-- Default credentials (from `prisma/seed.ts`): Refer to `server/prisma/seed.ts` for default admin credentials. **Please change these immediately in production!**
+To run tests for individual parts of the application:
 
---------------------------------------------------
+*   **For the client:**
+    ```bash
+    cd client
+    npm test
+    cd ..
+    ```
+*   **For the server:**
+    ```bash
+    cd server
+    npm test
+    cd ..
+    ```
+
+## Admin Access
+
+*   **Admin Login:** [http://localhost:5173/login](http://localhost:5173/login)
+*   **Default credentials (from `prisma/seed.ts`):** Refer to `server/prisma/seed.ts` for default admin credentials. **Please change these immediately in production!**
 
 ## Project Structure
-
-Below is a simplified view of the project structure:
 
 ```
 DevServe/
 ├── client/                   # React + TypeScript + Tailwind CSS frontend
 │   ├── public/
+│   │   └── assets/
 │   ├── src/
 │   │   ├── api/              # Axios instance and API service calls
 │   │   ├── assets/
@@ -255,8 +279,7 @@ DevServe/
 │   │   ├── hooks/            # Custom React hooks
 │   │   ├── pages/            # Application pages
 │   │   ├── App.tsx           # Main application routes
-│   │   ├── main.tsx          # Application entry point with context providers
-│   │   └── setupTests.ts     # Testing configuration
+│   │   └── main.tsx          # Application entry point
 │   ├── .env
 │   ├── package.json
 │   └── vite.config.ts
@@ -281,28 +304,33 @@ DevServe/
 └── README.md                 # Project documentation
 ```
 
---------------------------------------------------
-
 ## Deployment
 
-DevServe is designed for hassle-free deployment:
+DevServe is designed for flexible deployment:
 
-- **Frontend:** Deploy on [Vercel](https://vercel.com/), [Netlify](https://www.netlify.com/), or similar services.
-- **Backend:** Deploy via cloud platforms like [Render](https://render.com/), [DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform), or AWS-based solutions.
-- **Database:** Use managed PostgreSQL services like [Supabase](https://supabase.com/), [Aiven](https://aiven.io/), or [AWS RDS](https://aws.amazon.com/rds/postgresql/).
+*   **Frontend:** Can be deployed as static assets on platforms like [Vercel](https://vercel.com/), [Netlify](https://www.netlify.com/), or served directly by the backend.
+*   **Backend:** Deployable on cloud platforms such as [Render](https://render.com/), [DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform), or AWS-based solutions (e.g., EC2, Elastic Beanstalk).
+*   **Database:** Utilize managed PostgreSQL services like [Supabase](https://supabase.com/), [Aiven](https://aiven.io/), or [AWS RDS](https://aws.amazon.com/rds/postgresql/).
 
---------------------------------------------------
+## Contribution Guidelines
 
-## Contributing
+We welcome contributions to DevServe! If you'd like to contribute, please follow these steps:
 
-Contributions make DevServe even better! If you discover a bug or have ideas for enhancements, please open an issue or submit a pull request.
-
---------------------------------------------------
+1.  Fork the repository.
+2.  Create a new branch for your feature or bug fix.
+3.  Make your changes, ensuring they adhere to the project's coding style (ESLint and Prettier are configured).
+4.  Write tests for your changes if applicable.
+5.  Ensure all existing tests pass.
+6.  Submit a pull request with a clear description of your changes.
 
 ## License
 
 This project is licensed under the MIT License. For more details, see the [LICENSE](LICENSE) file.
 
---------------------------------------------------
+## Credits
+
+Developed by [Your Name/Organization Here]
+
+---
 
 Happy coding with DevServe!
