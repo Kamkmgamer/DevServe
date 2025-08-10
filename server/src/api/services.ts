@@ -3,8 +3,15 @@ import prisma from "../lib/prisma";
 
 // GET /api/services
 export const getAllServices = async (req: Request, res: Response) => {
-  const services = await prisma.service.findMany();
-  res.json(services);
+  console.log("Attempting to get all services");
+  try {
+    const services = await prisma.service.findMany();
+    console.log("Successfully fetched services");
+    res.json(services);
+  } catch (error) {
+    console.error("Error fetching services:", error);
+    res.status(500).json({ error: "Failed to fetch services" });
+  }
 };
 
 // GET /api/services/:id

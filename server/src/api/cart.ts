@@ -4,18 +4,25 @@ import { AuthRequest } from "../middleware/auth";
 
 // GET /api/cart - Get the current user's cart
 export const getCart = async (req: AuthRequest, res: Response) => {
-  const userId = req.userId!;
-  const cart = await prisma.cart.findUnique({
-    where: { userId },
-    include: {
-      items: {
-        include: {
-          service: true, // Include the full service details for each cart item
+  console.log("Attempting to get cart for user:", req.userId);
+  try {
+    const userId = req.userId!;
+    const cart = await prisma.cart.findUnique({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            service: true, // Include the full service details for each cart item
+          },
         },
       },
-    },
-  });
-  res.json(cart);
+    });
+    console.log("Successfully fetched cart for user:", req.userId);
+    res.json(cart);
+  } catch (error) {
+    console.error("Error fetching cart for user:", req.userId, error);
+    res.status(500).json({ error: "Failed to fetch cart" });
+  }
 };
 
 // POST /api/cart/items - Add an item to the cart
