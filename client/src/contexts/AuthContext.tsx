@@ -84,8 +84,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(data.token);
   }, []);
 
+  // Regex for strong password: at least one uppercase, one lowercase, one number, one special character, min 8 chars
+const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':"\\|,.<>/?]).{8,}$/;
+
   const register = useCallback(
     async (email: string, password: string, name?: string) => {
+      if (!strongPasswordRegex.test(password)) {
+        throw new Error("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.");
+      }
       const { data } = await api.post<{ token: string }>("/auth/register", {
         email,
         password,

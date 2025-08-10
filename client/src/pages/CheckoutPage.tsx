@@ -48,17 +48,20 @@ export default function CheckoutPage() {
 
   async function applyCoupon() {
     if (!couponCode.trim()) {
-      toast.error("Please enter a coupon code");
+      toast.error("Please enter a code");
       return;
     }
 
+    const code = couponCode.trim().toUpperCase();
+
     try {
-      const { data } = await api.get(`/coupons/code/${couponCode.trim().toUpperCase()}`);
+      // Try to apply as a coupon first
+      const { data } = await api.get(`/coupons/code/${code}`);
       const { value, type, minOrderAmount } = data;
 
       // Frontend check for min order amount for immediate feedback
       if (minOrderAmount && total * 100 < minOrderAmount) {
-        toast.error(`Minimum order amount is $${(minOrderAmount / 100).toFixed(2)}`);
+        toast.error(`Minimum order amount is ${(minOrderAmount / 100).toFixed(2)}`);
         return;
       }
 
@@ -67,11 +70,25 @@ export default function CheckoutPage() {
       setDiscount(discountAmount);
       setDiscountType(type);
       toast.success("Coupon applied successfully!");
-    } catch (err: any) {
-      setDiscount(0);
-      setDiscountType(null);
-      // Rely on the specific error message from the server
-      toast.error(err.response?.data?.message || "Failed to apply coupon");
+    } catch (couponErr: any) {
+      // If coupon application fails, try as a referral code
+      if (couponErr.response && couponErr.response.status === 404) {
+        try {
+          await api.get(`/referral/validate/${code}`);
+          // If referral code is valid, but no direct discount is applied
+          setDiscount(0);
+          setDiscountType(null);
+          toast.success("Referral code validated. No direct discount applied.");
+        } catch (referralErr: any) {
+          setDiscount(0);
+          setDiscountType(null);
+          toast.error(referralErr.response?.data?.message || "Invalid code.");
+        }
+      } else {
+        setDiscount(0);
+        setDiscountType(null);
+        toast.error(couponErr.response?.data?.message || "Failed to apply coupon.");
+      }
     }
   }
 

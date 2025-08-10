@@ -8,6 +8,7 @@ import { CartProvider } from "./contexts/CartContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import "./index.css";
 
 // IMPORTANT: Configure your PayPal client ID and other options here.
@@ -21,6 +22,8 @@ const initialPayPalOptions = {
   // Add other options as needed, e.g., 'data-sdk-integration-source': 'integrationbuilder'
 };
 
+const queryClient = new QueryClient();
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <BrowserRouter>
@@ -29,7 +32,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <ThemeProvider>
               <AuthProvider>
                 <CartProvider>
-                  <App />
+                  <QueryClientProvider client={queryClient}>
+                    <App />
+                  </QueryClientProvider>
                 </CartProvider>
               </AuthProvider>
             </ThemeProvider>

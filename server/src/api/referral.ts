@@ -148,3 +148,25 @@ export const getMyReferral = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+export const getReferralByCode = async (req: Request, res: Response) => {
+    const { code } = req.params;
+    console.log('Referral code received:', code);
+    try {
+        const referral = await prisma.referral.findUnique({
+            where: { code },
+            include: {
+                referredUsers: true,
+                orders: true,
+                commissions: true,
+            },
+        });
+        if (!referral) {
+            return res.status(404).json({ message: 'Referral not found' });
+        }
+        res.json(referral);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};

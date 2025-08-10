@@ -12,7 +12,8 @@
     "rootDir": ".",
     "baseUrl": ".",
     "outDir": "./dist",
-    "types": ["node"]
+    "types": ["node", "jest"], // Added "jest"
+    "isolatedModules": true // Added isolatedModules
   },
   "include": ["src", "prisma"],
   "exclude": ["node_modules", "dist"]

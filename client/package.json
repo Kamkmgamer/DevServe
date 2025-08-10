@@ -30,6 +30,7 @@
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.7.0",
     "react-toastify": "^11.0.5",
+    "@tanstack/react-query": "^5.51.1",
     "vite": "^7.1.0",
     "vitest": "^3.2.4",
     "zod": "^4.0.5"
@@ -66,7 +67,8 @@
     "preset": "ts-jest",
     "testEnvironment": "jsdom",
     "moduleNameMapper": {
-      "\\.(css|svg)$": "identity-obj-proxy"
+      "\\.(css|svg)$": "identity-obj-proxy",
+      "^@tanstack/react-query$": "<rootDir>/__mocks__/@tanstack/react-query.ts"
     },
     "setupFilesAfterEnv": [
       "<rootDir>/src/setupTests.ts"

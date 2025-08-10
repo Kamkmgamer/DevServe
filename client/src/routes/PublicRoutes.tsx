@@ -29,6 +29,9 @@ const DeployingGuide = React.lazy(() => import("../pages/DeployingGuide"));
 const AuthenticationGuide = React.lazy(() => import("../pages/AuthenticationGuide"));
 const NotFoundPage = React.lazy(() => import("../pages/NotFoundPage"));
 const PromoterPage = React.lazy(() => import("../pages/PromoterPage"));
+const ChangePasswordPage = React.lazy(() => import("../pages/ChangePasswordPage"));
+const ForgotPasswordPage = React.lazy(() => import("../pages/ForgotPasswordPage"));
+const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage")); 
 import { ProtectedRoute } from "../components/ProtectedRoute";
 
 const PublicRoutes = () => (
@@ -42,6 +45,8 @@ const PublicRoutes = () => (
     <Route path="/cart" element={<CartPage />} />
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} /> 
     <Route path="/blog" element={<BlogPage />} />
     <Route path="/blog/:id" element={<BlogDetailsPage />} />
     <Route path="/checkout" element={<CheckoutPage />} />

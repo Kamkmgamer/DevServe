@@ -9,7 +9,7 @@ async function main() {
   const adminPassword = "SuperSecret123"; // Change this in production!
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-  await prisma.user.upsert({
+  const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {},
     create: {
@@ -225,7 +225,7 @@ Inclusive design is not optional—it’s essential.
     await prisma.blogPost.upsert({
       where: { title: post.title },
       update: {},
-      create: post,
+      create: { ...post, userId: adminUser.id },
     });
   }
 

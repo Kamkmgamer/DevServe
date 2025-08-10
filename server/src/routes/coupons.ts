@@ -52,6 +52,7 @@ const formatZodError = (err: z.ZodError) =>
 router.get("/code/:code", async (req: AuthRequest, res: Response) => {
   try {
     const code = req.params.code.toUpperCase();
+    console.log('Coupon code received:', code);
     const coupon = await prisma.coupon.findUnique({ where: { code } });
 
     if (!coupon) {

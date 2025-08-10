@@ -127,8 +127,8 @@ const ReferralsPage: React.FC = () => {
       else if (sortKey === "referredUsers") cmp = a._count.referredUsers - b._count.referredUsers;
       else if (sortKey === "orders") cmp = a._count.orders - b._count.orders;
       else if (sortKey === "totalEarnings") {
-        const aEarnings = a.commissions.reduce((acc, c) => acc + c.amount, 0);
-        const bEarnings = b.commissions.reduce((acc, c) => acc + c.amount, 0);
+        const aEarnings = (a.commissions || []).reduce((acc, c) => acc + c.amount, 0);
+        const bEarnings = (b.commissions || []).reduce((acc, c) => acc + c.amount, 0);
         cmp = aEarnings - bEarnings;
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -330,7 +330,7 @@ const ReferralsPage: React.FC = () => {
                             </td>
                             <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                               $
-                              {referral.commissions
+                              {(referral.commissions || [])
                                 .reduce((acc, c) => acc + c.amount, 0) /
                                 100}
                             </td>
@@ -373,7 +373,7 @@ const ReferralsPage: React.FC = () => {
                           </div>
                           <div className="text-right text-xl font-bold text-gray-900 dark:text-gray-100">
                             $
-                            {referral.commissions
+                            {(referral.commissions || [])
                               .reduce((acc, c) => acc + c.amount, 0) /
                               100}
                           </div>
@@ -443,7 +443,7 @@ const ReferralsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedReferral.commissions.map((commission: any) => (
+                  {(selectedReferral.commissions || []).map((commission: any) => (
                     <tr key={commission.id}>
                       <td>{commission.orderId}</td>
                       <td>${commission.amount / 100}</td>
@@ -455,16 +455,18 @@ const ReferralsPage: React.FC = () => {
               <div className="mt-4 flex justify-end gap-2">
                 <Button
                   variant="primary"
-                  onClick={() =>
-                    createPayout(
-                      selectedReferral.id,
-                      selectedReferral.commissions.reduce(
-                        (acc: number, commission: any) =>
-                          commission.status === "UNPAID" ? acc + commission.amount : acc,
-                        0
-                      )
-                    )
-                  }
+                  onClick={() => {
+                    if (selectedReferral && selectedReferral.commissions) {
+                      createPayout(
+                        selectedReferral.id,
+                        selectedReferral.commissions.reduce(
+                          (acc: number, commission: any) =>
+                            commission.status === "UNPAID" ? acc + commission.amount : acc,
+                          0
+                        )
+                      );
+                    }
+                  }}
                 >
                   Create Payout
                 </Button>

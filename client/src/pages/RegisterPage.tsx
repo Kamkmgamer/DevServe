@@ -102,7 +102,11 @@ const RegisterPage = () => {
       localStorage.setItem("lastEmail", email.trim());
       navigate("/");
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Registration failed");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(err?.response?.data?.error || "Registration failed");
+      }
     } finally {
       setLoading(false);
     }
