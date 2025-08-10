@@ -22,7 +22,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { status, data } = error.response;
-      let errorMessage = data.error || data.message || "An unexpected error occurred.";
+      const errorMessage = data.error || data.message || "An unexpected error occurred.";
 
       switch (status) {
         case 400:

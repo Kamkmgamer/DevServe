@@ -481,7 +481,7 @@ const OfflinePage: React.FC = () => {
       ctx.save();
       ctx.globalAlpha = 1;
       ctx.fillStyle = pal.star;
-      for (let s of stars) {
+      for (const s of stars) {
         s.y += s.vy * (1 / 60); // render-time drift
         if (s.y > h + 2) {
           s.y = -2;
@@ -505,7 +505,7 @@ const OfflinePage: React.FC = () => {
       ctx.fillStyle = palette().block;
       ctx.strokeStyle = pal.outline;
       ctx.lineWidth = 1;
-      for (let b of blocks) {
+      for (const b of blocks) {
         roundRect(ctx, b.x, b.y, b.w, b.h, 6);
         ctx.fill();
         ctx.stroke();
@@ -523,7 +523,7 @@ const OfflinePage: React.FC = () => {
       ctx.restore();
 
       // Particles
-      for (let p of particles) {
+      for (const p of particles) {
         const t = p.life / p.maxLife;
         ctx.globalAlpha = clamp(1 - t, 0, 1);
         ctx.fillStyle = p.color;
