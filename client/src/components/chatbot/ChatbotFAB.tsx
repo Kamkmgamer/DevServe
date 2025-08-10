@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { MessageCircle, X } from 'lucide-react';
-import Chatbot from './Chatbot';
+import { MessageCircle } from 'lucide-react';
+import EnhancedChatbot from './EnhancedChatbot';
 
 const ChatbotFAB: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -19,8 +19,8 @@ const ChatbotFAB: React.FC = () => {
         </button>
       )}
 
-      {/* Chatbot Component */}
-      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      {/* Enhanced Chatbot Component */}
+      <EnhancedChatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </>
   );
 };
