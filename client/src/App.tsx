@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 
 // Layouts
 import PublicLayout from "./components/layout/PublicLayout";
@@ -17,9 +17,28 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
 
 import LoadingSpinner from "./components/ui/LoadingSpinner";
+import OfflinePage from "./pages/OfflinePage";
 
 function App() {
   const location = useLocation();
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOffline = () => setIsOffline(true);
+    const handleOnline = () => setIsOffline(false);
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
+
+  if (isOffline) {
+    return <OfflinePage />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200">
