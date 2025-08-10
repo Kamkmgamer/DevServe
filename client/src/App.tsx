@@ -16,6 +16,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 // Toaster
 import { Toaster } from "react-hot-toast";
 
+import LoadingSpinner from "./components/ui/LoadingSpinner";
+
 function App() {
   const location = useLocation();
 
@@ -28,7 +30,7 @@ function App() {
             <Route
               path="/*"
               element={
-                <Suspense fallback={<div>Loading...</div>}>
+                <Suspense fallback={<LoadingSpinner />}>
                   <PublicRoutes />
                 </Suspense>
               }
@@ -41,7 +43,7 @@ function App() {
               <Route
                 path="/admin/*"
                 element={
-                  <Suspense fallback={<div>Loading...</div>}>
+                  <Suspense fallback={<LoadingSpinner />}>
                     <AdminRoutes />
                   </Suspense>
                 }
