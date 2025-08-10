@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Hero } from '../components/home/Hero';
 import { TechMarquee } from '../components/home/TechMarquee';
 import { CTA } from '../components/home/CTA';
@@ -8,37 +8,12 @@ import { FAQ } from '../components/home/FAQ';
 import { SectionSkeleton } from '../components/ui/SectionSkeleton';
 import SectionWrapper from '../components/layout/SectionWrapper';
 import Container from '../components/layout/Container';
-import api from '../api/axios';
+import SecretDailyTips from '../components/secret/SecretDailyTips';
 
 const CaseStudies = lazy(() => import('../components/home/CaseStudies').then(module => ({ default: module.CaseStudies })));
 const Testimonials = lazy(() => import('../components/home/Testimonials').then(module => ({ default: module.Testimonials })));
 
 const HomePage: React.FC = () => {
-  const [aiTip, setAiTip] = useState('');
-
-  useEffect(() => {
-    const fetchAiTip = async () => {
-      try {
-        // Use a custom axios instance without the global error handler for this non-critical request
-        const response = await api.get('/chatbot/daily-tip', {
-          // Disable global error handling for this request
-          validateStatus: () => true
-        });
-        
-        if (response.status === 200 && response.data.content) {
-          setAiTip(response.data.content);
-        } else {
-          // Use the fallback message from the server if available
-          setAiTip(response.data.content || 'AI features coming soon! Configure your OpenRouter API key to enable.');
-        }
-      } catch (error) {
-        console.log('Daily AI tip not available');
-        setAiTip('AI features coming soon!');
-      }
-    };
-
-    fetchAiTip();
-  }, []);
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950">
@@ -51,10 +26,8 @@ const HomePage: React.FC = () => {
 
       <Hero />
 
-      <SectionWrapper title="Daily AI Tip" center>
-        <p className="text-lg text-slate-700 dark:text-slate-300 max-w-2xl mx-auto">
-          {aiTip || 'Fetching your daily tip...'}
-        </p>
+      <SectionWrapper>
+        <SecretDailyTips className="py-12" />
       </SectionWrapper>
 
       <div id="main" />
