@@ -13,10 +13,12 @@ import paymentsRoutes from "./payments";
 import referralRoutes from "./referral";
 import commissionRoutes from "./commissions";
 import payoutRoutes from "./payouts";
+import chatbotRoutes from "./chatbot";
 
 const router = Router();
 
 router.use("/auth", authRoutes);
+router.use("/chatbot", chatbotRoutes);
 router.use("/admin", adminRoutes);
 router.use("/services", serviceRoutes);
 router.use("/portfolio", portfolioRoutes);
