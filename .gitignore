@@ -20,6 +20,18 @@
 server/combined.log
 server/error.log
 server/public/
+*.log
 
 # Temporary files
 commit_message.txt
+
+# Prisma
+server/prisma/dev.db
+server/prisma/*.sqlite
+server/prisma/migrations/migration_lock.toml
+
+# TypeScript build info
+client/tsconfig.tsbuildinfo
+
+# Test coverage
+coverage/
