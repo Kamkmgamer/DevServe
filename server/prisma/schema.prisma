@@ -36,7 +36,7 @@ model PortfolioItem {
   title        String
   description  String
   thumbnailUrl String?
-  imageUrls    String // Store as JSON string
+  imageUrls    String 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -58,10 +58,10 @@ model Service {
   name           String          @unique
   description    String
   price          Float
-  features       String // Store as JSON string
+  features       String 
   category       String
   thumbnailUrl   String?
-  imageUrls      String // Store as JSON string
+  imageUrls      String 
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   cartItems      CartItem[]
@@ -97,12 +97,12 @@ model Order {
   coupon       Coupon?         @relation(fields: [couponId], references: [id])
   status       OrderStatus     @default(PENDING)
   currency     String          @default("USD")
-  totalAmount  Int // in cents
+  totalAmount  Int 
   requirements String
   suggestions  String?
   preferences  String?
   questions    String?
-  metadata     String? // Store as JSON string
+  metadata     String? 
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   lineItems    OrderLineItem[]
@@ -117,7 +117,7 @@ model OrderLineItem {
   order      Order   @relation(fields: [orderId], references: [id])
   serviceId  String
   service    Service @relation(fields: [serviceId], references: [id])
-  unitPrice  Int // in cents
+  unitPrice  Int 
   quantity   Int     @default(1)
   totalPrice Int
 }
@@ -125,9 +125,9 @@ model OrderLineItem {
 model Coupon {
   id             String    @id @default(cuid())
   code           String    @unique
-  type           String // "percentage" | "fixed"
-  value          Int // store as integer: percent OR cents
-  minOrderAmount Int? // cents
+  type           String 
+  value          Int 
+  minOrderAmount Int? 
   maxUses        Int?
   currentUses    Int       @default(0)
   active         Boolean   @default(true)
@@ -142,8 +142,8 @@ model Referral {
   userId         String       @unique
   user           User         @relation("Promoter", fields: [userId], references: [id], onDelete: Cascade) // Named relation
   code           String       @unique
-  commissionRate Float        @default(0.10) // 10% commission rate
-  referredUsers  User[]       @relation("ReferredUsers") // Named relation
+  commissionRate Float        @default(0.10) 
+  referredUsers  User[]       @relation("ReferredUsers") 
   orders         Order[]
   commissions    Commission[]
   createdAt      DateTime     @default(now())

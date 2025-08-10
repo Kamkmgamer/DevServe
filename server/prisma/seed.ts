@@ -41,7 +41,8 @@ async function main() {
         "SEO optimization for better visibility",
       ]),
       category: "Web Design",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Portfolio+Website+1", "https://via.placeholder.com/600x400?text=Portfolio+Website+2", "https://via.placeholder.com/600x400?text=Portfolio+Website+3"]),
+      thumbnailUrl:"https://ik.imagekit.io/gtnmxyt2d/servises%20store/Portfolio%20Website/image%206.png",
+      imageUrls: JSON.stringify(["https://ik.imagekit.io/gtnmxyt2d/servises%20store/Portfolio%20Website/image%205.png", "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Portfolio%20Website/image%204.png", "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Portfolio%20Website/image%203.png", "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Portfolio%20Website/image%207.png", "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Portfolio%20Website/thumpnail.png", "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Portfolio%20Website/image%201.png"]),
     },
     {
       name: "Landing Page",
@@ -54,7 +55,8 @@ async function main() {
         "Lightning-fast loading speed",
       ]),
       category: "Web Design",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Landing+Page+1", "https://via.placeholder.com/600x400?text=Landing+Page+2", "https://via.placeholder.com/600x400?text=Landing+Page+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Landing%20Page/thumpnail.png",
+      imageUrls: JSON.stringify([""]),
     },
     {
       name: "E-commerce Website",
@@ -68,7 +70,8 @@ async function main() {
         "Multi-vendor and dropshipping ready",
       ]),
       category: "E-commerce",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=E-commerce+Website+1", "https://via.placeholder.com/600x400?text=E-commerce+Website+2", "https://via.placeholder.com/600x400?text=E-commerce+Website+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/E-commerce%20Website/thubnail.png",
+      imageUrls: JSON.stringify([""]),
     },
     {
       name: "Business/Corporate Website",
@@ -81,7 +84,8 @@ async function main() {
         "Custom branding and design",
       ]),
       category: "Web Design",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Business+Website+1", "https://via.placeholder.com/600x400?text=Business+Website+2", "https://via.placeholder.com/600x400?text=Business+Website+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Business%20Corporate%20Website/thumbnail.png",
+      imageUrls: JSON.stringify([""]),
     },
     {
       name: "Blog/Personal Website",
@@ -94,7 +98,8 @@ async function main() {
         "SEO optimized for writers",
       ]),
       category: "Web Design",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Blog+Website+1", "https://via.placeholder.com/600x400?text=Blog+Website+2", "https://via.placeholder.com/600x400?text=Blog+Website+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Blog%20Personal%20Website/tumbnail.png",
+      imageUrls: JSON.stringify([""]),
     },
     {
       name: "Odoo Custom Development",
@@ -107,7 +112,8 @@ async function main() {
         "Third-party API integrations",
       ]),
       category: "Odoo",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Odoo+Development+1", "https://via.placeholder.com/600x400?text=Odoo+Development+2", "https://via.placeholder.com/600x400?text=Odoo+Development+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Odoo%20Custom%20Development/thumbnail.png",
+      imageUrls: JSON.stringify([""]),
     },
     {
       name: "Website Maintenance & Optimization",
@@ -120,7 +126,8 @@ async function main() {
         "SEO audits and improvements",
       ]),
       category: "Support",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Website+Maintenance+1", "https://via.placeholder.com/600x400?text=Website+Maintenance+2", "https://via.placeholder.com/600x400?text=Website+Maintenance+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Website%20Maintenance%20&%20Optimization/thumbnail.png",
+      imageUrls: JSON.stringify([""]),
     },
     {
       name: "AI Integration for Websites",
@@ -133,7 +140,8 @@ async function main() {
         "Data dashboards with AI analytics",
       ]),
       category: "AI",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=AI+Integration+1", "https://via.placeholder.com/600x400?text=AI+Integration+2", "https://via.placeholder.com/600x400?text=AI+Integration+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/AI%20Website%20Integration/thumbnail.png",
+      imageUrls: JSON.stringify([""]),
     },
     {
       name: "Tech Consultation & Digital Strategy",
@@ -146,7 +154,8 @@ async function main() {
         "Scalable tech stack planning",
       ]),
       category: "Consulting",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=Tech+Consultation+1", "https://via.placeholder.com/600x400?text=Tech+Consultation+2", "https://via.placeholder.com/600x400?text=Tech+Consultation+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/Tech%20Consultation%20&%20Digital%20Strategy/thumbnail.png",
+      imageUrls: JSON.stringify([""]),
     },
     {
       name: "UI/UX Design",
@@ -159,7 +168,8 @@ async function main() {
         "Focus on usability and conversion",
       ]),
       category: "Design",
-      imageUrls: JSON.stringify(["https://via.placeholder.com/600x400?text=UI/UX+Design+1", "https://via.placeholder.com/600x400?text=UI/UX+Design+2", "https://via.placeholder.com/600x400?text=UI/UX+Design+3"]),
+      thumbnailUrl: "https://ik.imagekit.io/gtnmxyt2d/servises%20store/UIUX%20Design/image%202.png",
+      imageUrls: JSON.stringify(["https://ik.imagekit.io/gtnmxyt2d/servises%20store/UIUX%20Design/image%201.png", "https://ik.imagekit.io/gtnmxyt2d/servises%20store/UIUX%20Design/thumpnail.png"]),
     },
   ];
 
