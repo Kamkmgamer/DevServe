@@ -265,8 +265,6 @@ To run tests for individual parts of the application:
 ```
 DevServe/
 ├── client/                   # React + TypeScript + Tailwind CSS frontend
-│   ├── public/
-│   │   └── assets/
 │   ├── src/
 │   │   ├── api/              # Axios instance and API service calls
 │   │   ├── assets/
@@ -329,7 +327,7 @@ This project is licensed under the MIT License. For more details, see the [LICEN
 
 ## Credits
 
-Developed by [Your Name/Organization Here]
+Developed by KAMKM
 
 ---
 
