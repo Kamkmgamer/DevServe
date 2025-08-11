@@ -315,19 +315,21 @@ type Props = {
 };
 
 const SESSION_KEY = "secret-daily-tip-v2";
-const DEFAULT_TIP =
-  "### Your Daily AI Tip\n**AI features are now live!** This is a demo of the rich text capabilities.\n\n*Enjoy seamless integration with your AI backend.*
+const DEFAULT_TIP = `### Your Daily AI Tip
+**AI features are now live!** This is a demo of the rich text capabilities.
+
+*Enjoy seamless integration with your AI backend.*
 
 Here is a code block example:
-```javascript
+\`\`\`javascript
 // Modern asynchronous function
 async function fetchData(url) {
   const response = await fetch(url);
   return response.json();
 }
-```
+\`\`\`
 
-And here is some `inline code` for you to see. Visit our [documentation](https://example.com) for more info.";
+And here is some \`inline code\` for you to see. Visit our [documentation](https://example.com) for more info.`;
 
 function formatDateShort(date = new Date()) {
   try {
