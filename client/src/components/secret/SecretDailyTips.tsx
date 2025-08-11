@@ -1,23 +1,108 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/axios";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import {
   RefreshCw,
   Share2,
   Copy,
   Check,
   Sparkles,
+  Clock,
+  Zap,
 } from "lucide-react";
 
 /**
- * SecretDailyTips - Modern, polished Daily AI Tip card with typing animation
+ * SecretDailyTips - Modern, polished Daily AI Tip card with server-side caching
  *
  * Features:
- * - Auto-typing animation with blinking cursor
+ * - Server-side daily caching with automatic midnight refresh
+ * - Client-side fresh tip option (bypasses cache)
+ * - Animated countdown timer to next daily refresh
+ * - Auto-typing animation with rich text support
  * - Modern, clean design with smooth animations
  * - Accessible and responsive
  * - Touch gestures for mobile interaction
  */
+
+// Countdown timer component
+const CountdownTimer: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [isVisible, setIsVisible] = useState(false);
+  const reduced = useReducedMotion();
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      
+      const diff = tomorrow.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        onComplete?.();
+        return { hours: 0, minutes: 0, seconds: 0 };
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      return { hours, minutes, seconds };
+    };
+
+    setTimeLeft(calculateTimeLeft());
+    setIsVisible(true);
+    
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [onComplete]);
+
+  const formatTime = (value: number) => value.toString().padStart(2, '0');
+
+  if (!isVisible) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.6, duration: reduced ? 0 : 0.4 }}
+      className="flex items-center justify-center gap-4 mt-6 p-4 bg-gradient-to-r from-indigo-50 to-pink-50 dark:from-indigo-950/30 dark:to-pink-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-800/50"
+    >
+      <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+        <Clock className="w-4 h-4" />
+        <span className="text-sm font-medium">Next refresh in:</span>
+      </div>
+      
+      <div className="flex items-center gap-2">
+        {[{ label: 'H', value: timeLeft.hours }, { label: 'M', value: timeLeft.minutes }, { label: 'S', value: timeLeft.seconds }].map((unit, index) => (
+          <React.Fragment key={unit.label}>
+            <motion.div 
+              className="flex flex-col items-center"
+              animate={{ scale: unit.label === 'S' ? [1, 1.05, 1] : 1 }}
+              transition={{ duration: 0.6, repeat: unit.label === 'S' ? Infinity : 0 }}
+            >
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 min-w-[2.5rem] text-center shadow-sm">
+                <span className="text-lg font-mono font-bold text-slate-900 dark:text-slate-100">
+                  {formatTime(unit.value)}
+                </span>
+              </div>
+              <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                {unit.label}
+              </span>
+            </motion.div>
+            {index < 2 && (
+              <span className="text-slate-400 dark:text-slate-500 font-bold mb-4">:</span>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
 
 // Rich text parsing and rendering utilities
 interface RichTextToken {
@@ -239,9 +324,43 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
   }, []);
 
   const fetchTip = useCallback(
-    async (opts?: { force?: boolean }) => {
-      const { force = false } = opts || {};
-      if (!force) {
+    async (opts?: { force?: boolean; fresh?: boolean }) => {
+      const { force = false, fresh = false } = opts || {};
+      
+      // For fresh tips, skip cache entirely and use special endpoint
+      if (fresh) {
+        if (controllerRef.current) {
+          try {
+            controllerRef.current.abort();
+          } catch {
+            // noop
+          }
+        }
+        const controller = new AbortController();
+        controllerRef.current = controller;
+        const signal = controller.signal;
+
+        try {
+          const res = await api.get("/chatbot/daily-tip/fresh", {
+            signal,
+            validateStatus: () => true,
+          });
+
+          const content =
+            res?.data?.content || res?.data?.tip || (typeof res?.data === "string" ? res.data : undefined);
+
+          if (res.status === 200 && content) {
+            return { content: String(content), fetchedAt: Date.now(), isFresh: true };
+          }
+        } catch (err: any) {
+          if (!signal.aborted) {
+            console.warn("Fresh tip fetch failed, falling back to cached", err);
+          }
+        }
+      }
+
+      // Regular cached tip logic
+      if (!force && !fresh) {
         const cached = readCache();
         if (cached) {
           return { content: String(cached.content), fetchedAt: cached.fetchedAt };
@@ -266,7 +385,9 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
       const doRequest = async (): Promise<string> => {
         attempt++;
         try {
-          const res = await api.get("/chatbot/daily-tip", {
+          // Use cached endpoint for daily tips (server-side caching)
+          const endpoint = fresh ? "/chatbot/daily-tip/fresh" : "/chatbot/daily-tip/cached";
+          const res = await api.get(endpoint, {
             signal,
             validateStatus: () => true,
           });
@@ -298,7 +419,9 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
 
       try {
         const content = await doRequest();
-        writeCache(content);
+        if (!fresh) {
+          writeCache(content);
+        }
         return { content, fetchedAt: Date.now() };
       } finally {
         // no-op
@@ -336,7 +459,7 @@ export const SecretDailyTips: React.FC<Props> = ({
   }, [lastFetchedAt]);
 
   const load = useCallback(
-    async (opts?: { force?: boolean }) => {
+    async (opts?: { force?: boolean; fresh?: boolean }) => {
       setLoading(true);
       setError(null);
       try {
@@ -344,6 +467,11 @@ export const SecretDailyTips: React.FC<Props> = ({
         setTip(res.content);
         setLastFetchedAt(res.fetchedAt);
         setError(null);
+        
+        if (opts?.fresh) {
+          setToast("Fresh tip generated!");
+          setTimeout(() => setToast(null), 2000);
+        }
       } catch (err: any) {
         console.warn("SecretDailyTips - fetch failed", err);
         setTip(DEFAULT_TIP);
@@ -371,6 +499,10 @@ export const SecretDailyTips: React.FC<Props> = ({
       if (e.key === "r") {
         e.preventDefault();
         load({ force: true });
+      }
+      if (e.key === "f") {
+        e.preventDefault();
+        load({ fresh: true });
       }
       if (e.key === "c") {
         e.preventDefault();
@@ -558,14 +690,26 @@ export const SecretDailyTips: React.FC<Props> = ({
               <div className="flex items-center gap-3">
                 <motion.button
                   onClick={() => load({ force: true })}
-                  title="Refresh tip"
-                  aria-label="Refresh tip"
+                  title="Refresh cached tip"
+                  aria-label="Refresh cached tip"
                   whileTap={reduced ? undefined : { scale: 0.95 }}
                   whileHover={reduced ? undefined : { scale: 1.05 }}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md"
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Refresh</span>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => load({ fresh: true })}
+                  title="Get fresh tip (bypass cache)"
+                  aria-label="Get fresh tip"
+                  whileTap={reduced ? undefined : { scale: 0.95 }}
+                  whileHover={reduced ? undefined : { scale: 1.05 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-amber-200 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/50 dark:hover:to-orange-900/50 text-amber-700 dark:text-amber-300 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 shadow-sm hover:shadow-md"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span>Fresh</span>
                 </motion.button>
 
                 <motion.button
@@ -635,13 +779,16 @@ export const SecretDailyTips: React.FC<Props> = ({
             )}
           </motion.section>
 
+          {/* Countdown Timer */}
+          <CountdownTimer onComplete={() => load({ force: true })} />
+
           <motion.div 
             className="text-center mt-6 text-xs text-slate-400 dark:text-slate-500"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: reduced ? 0 : 0.5 }}
           >
-            Keyboard shortcuts: R (refresh) • C (copy) • S (share)
+            Keyboard shortcuts: R (refresh) • C (copy) • S (share) • F (fresh)
           </motion.div>
         </motion.div>
       </div>

@@ -1,0 +1,286 @@
+import fs from 'fs/promises';
+import path from 'path';
+import openai from './openai';
+import logger from './logger';
+
+export interface DailyTip {
+  content: string;
+  timestamp: number;
+  expiresAt: number;
+}
+
+interface CacheData {
+  currentTip: DailyTip | null;
+  lastGenerated: number;
+}
+
+class DailyTipsCache {
+  private cache: CacheData;
+  private readonly cacheFilePath: string;
+  private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  private isGenerating = false;
+  private generationPromise: Promise<string> | null = null;
+
+  constructor() {
+    this.cache = {
+      currentTip: null,
+      lastGenerated: 0,
+    };
+    
+    // Store cache file in server root directory
+    this.cacheFilePath = path.join(__dirname, '../../daily-tips-cache.json');
+    
+    // Load cache on initialization
+    this.loadCache().catch(err => {
+      logger.error('Failed to load daily tips cache on initialization:', err);
+    });
+
+    // Set up automatic daily refresh at midnight
+    this.scheduleNextRefresh();
+  }
+
+  /**
+   * Load cache from persistent storage
+   */
+  private async loadCache(): Promise<void> {
+    try {
+      const data = await fs.readFile(this.cacheFilePath, 'utf-8');
+      const parsed = JSON.parse(data) as CacheData;
+      
+      // Validate the cached data
+      if (parsed.currentTip && parsed.currentTip.content && parsed.currentTip.timestamp) {
+        this.cache = parsed;
+        logger.info('Daily tips cache loaded from disk');
+      } else {
+        logger.warn('Invalid cache data found, will generate fresh tip');
+      }
+    } catch (error) {
+      // File doesn't exist or is corrupted - this is fine for first run
+      logger.info('No existing daily tips cache found, will generate fresh tip');
+    }
+  }
+
+  /**
+   * Save cache to persistent storage
+   */
+  private async saveCache(): Promise<void> {
+    try {
+      await fs.writeFile(this.cacheFilePath, JSON.stringify(this.cache, null, 2));
+      logger.debug('Daily tips cache saved to disk');
+    } catch (error) {
+      logger.error('Failed to save daily tips cache:', error);
+    }
+  }
+
+  /**
+   * Check if the current cached tip is still valid
+   */
+  private isCacheValid(): boolean {
+    if (!this.cache.currentTip) return false;
+    
+    const now = Date.now();
+    return now < this.cache.currentTip.expiresAt;
+  }
+
+  /**
+   * Calculate seconds until next midnight (UTC)
+   */
+  private getSecondsUntilMidnight(): number {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setUTCDate(now.getUTCDate() + 1);
+    tomorrow.setUTCHours(0, 0, 0, 0);
+    
+    return Math.floor((tomorrow.getTime() - now.getTime()) / 1000);
+  }
+
+  /**
+   * Generate a fresh tip using OpenAI
+   */
+  private async generateFreshTip(): Promise<string> {
+    // Check if API key is configured
+    if (!process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY === 'your_open_router_api_key_here') {
+      throw new Error('OpenRouter API key is not configured');
+    }
+
+    const prompts = [
+      'Give me a practical, actionable AI tip that developers can implement today. Include specific tools or techniques where relevant. Keep it concise but informative.',
+      'Share an interesting AI development technique or best practice that could improve productivity. Focus on real-world applications.',
+      'Provide a useful AI-related coding tip or workflow optimization that software developers should know about.',
+      'Give me an innovative AI tool or technique recommendation that could enhance a developer\'s toolkit.',
+      'Share a lesser-known AI feature, library, or approach that could benefit developers in their daily work.',
+    ];
+
+    const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: 'openai/gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an AI expert providing daily tips for developers. Your tips should be practical, actionable, and valuable. Format your response with markdown for emphasis (bold, italic, code blocks, links) when appropriate. Keep responses between 100-300 words.',
+          },
+          {
+            role: 'user',
+            content: randomPrompt,
+          },
+        ],
+        max_tokens: 400,
+        temperature: 0.8,
+      });
+
+      const content = completion.choices[0].message?.content;
+      if (!content) {
+        throw new Error('No content received from OpenAI API');
+      }
+
+      logger.info('Successfully generated fresh daily tip');
+      return content.trim();
+    } catch (error: any) {
+      logger.error('Error generating fresh tip:', error.response?.data || error.message || error);
+      
+      // Re-throw with more specific error message
+      if (error.response?.status === 401) {
+        throw new Error('Invalid OpenRouter API key. Please check your configuration.');
+      } else if (error.response?.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      } else {
+        throw new Error('Failed to generate fresh tip from OpenRouter API');
+      }
+    }
+  }
+
+  /**
+   * Update the daily cache with a fresh tip
+   */
+  private async updateDailyCache(): Promise<void> {
+    if (this.isGenerating) {
+      // If we're already generating, wait for the existing promise
+      if (this.generationPromise) {
+        await this.generationPromise;
+      }
+      return;
+    }
+
+    this.isGenerating = true;
+    
+    try {
+      this.generationPromise = this.generateFreshTip();
+      const content = await this.generationPromise;
+      
+      const now = Date.now();
+      const tomorrow = new Date();
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      tomorrow.setUTCHours(0, 0, 0, 0);
+
+      this.cache.currentTip = {
+        content,
+        timestamp: now,
+        expiresAt: tomorrow.getTime(),
+      };
+      this.cache.lastGenerated = now;
+
+      await this.saveCache();
+      logger.info('Daily tip cache updated successfully');
+    } finally {
+      this.isGenerating = false;
+      this.generationPromise = null;
+    }
+  }
+
+  /**
+   * Schedule the next automatic refresh at midnight UTC
+   */
+  private scheduleNextRefresh(): void {
+    const msUntilMidnight = this.getSecondsUntilMidnight() * 1000;
+    
+    setTimeout(() => {
+      this.updateDailyCache().catch(err => {
+        logger.error('Failed to auto-refresh daily tip at midnight:', err);
+      });
+      
+      // Schedule the next refresh (24 hours later)
+      this.scheduleNextRefresh();
+    }, msUntilMidnight);
+
+    logger.info(`Next daily tip refresh scheduled in ${Math.floor(msUntilMidnight / 1000 / 60)} minutes`);
+  }
+
+  /**
+   * Get the current cached daily tip
+   * If no valid cache exists, generate a new one
+   */
+  public async getCachedTip(): Promise<{ content: string; expiresIn: number }> {
+    // If cache is invalid, update it
+    if (!this.isCacheValid()) {
+      await this.updateDailyCache();
+    }
+
+    if (!this.cache.currentTip) {
+      throw new Error('Failed to generate daily tip');
+    }
+
+    const expiresIn = this.getSecondsUntilMidnight();
+    
+    return {
+      content: this.cache.currentTip.content,
+      expiresIn,
+    };
+  }
+
+  /**
+   * Generate and return a fresh tip (bypassing cache)
+   * This does NOT update the daily cache
+   */
+  public async getFreshTip(): Promise<{ content: string; expiresIn: number }> {
+    const content = await this.generateFreshTip();
+    const expiresIn = this.getSecondsUntilMidnight();
+    
+    return {
+      content,
+      expiresIn,
+    };
+  }
+
+  /**
+   * Force refresh the daily cache
+   * This updates the cached tip for all users
+   */
+  public async forceRefreshCache(): Promise<{ content: string; expiresIn: number }> {
+    await this.updateDailyCache();
+    return this.getCachedTip();
+  }
+
+  /**
+   * Get cache statistics for debugging/monitoring
+   */
+  public getCacheStats(): {
+    hasCache: boolean;
+    lastGenerated: number;
+    expiresAt: number | null;
+    isValid: boolean;
+    expiresIn: number;
+  } {
+    return {
+      hasCache: !!this.cache.currentTip,
+      lastGenerated: this.cache.lastGenerated,
+      expiresAt: this.cache.currentTip?.expiresAt || null,
+      isValid: this.isCacheValid(),
+      expiresIn: this.getSecondsUntilMidnight(),
+    };
+  }
+
+  /**
+   * Get the last cached tip (for fallback purposes)
+   * Returns null if no cache exists
+   */
+  public getLastCachedTip(): string | null {
+    return this.cache.currentTip?.content || null;
+  }
+}
+
+// Create singleton instance
+const dailyTipsCache = new DailyTipsCache();
+
+export default dailyTipsCache;
