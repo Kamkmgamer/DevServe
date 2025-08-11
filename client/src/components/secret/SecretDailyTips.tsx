@@ -6,26 +6,74 @@ import {
   Share2,
   Copy,
   Check,
-  AlertCircle,
   Sparkles,
-  Play,
-  Pause,
-  ArrowLeft,
-  ArrowRight,
 } from "lucide-react";
 
 /**
- * SecretDailyTips - polished, accessible, and resilient Daily AI Tip card
+ * SecretDailyTips - Modern, polished Daily AI Tip card with typing animation
  *
- * New interactions added:
- * - hover micro animations on card and controls
- * - paragraph level highlight on scroll and keyboard navigation
- * - touch support: swipe left/right to refresh or share, long press to copy
- * - reading mode: auto scroll through paragraphs with play and pause
- * - reading progress bar and paragraph focus indicators
- *
- * Drop this file into src/components/secret/ and import or default export remains the same.
+ * Features:
+ * - Auto-typing animation with blinking cursor
+ * - Modern, clean design with smooth animations
+ * - Accessible and responsive
+ * - Touch gestures for mobile interaction
  */
+
+// Typing animation component
+const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 50 }) => {
+  const [displayText, setDisplayText] = useState('');
+  const [showCursor, setShowCursor] = useState(true);
+  const [isTyping, setIsTyping] = useState(true);
+
+  useEffect(() => {
+    if (!text) {
+      setDisplayText('');
+      setIsTyping(false);
+      return;
+    }
+
+    setDisplayText('');
+    setIsTyping(true);
+    let currentIndex = 0;
+    
+    const typeWriter = () => {
+      if (currentIndex < text.length) {
+        setDisplayText(text.slice(0, currentIndex + 1));
+        currentIndex++;
+        setTimeout(typeWriter, speed + Math.random() * 30); // Add slight randomness
+      } else {
+        setIsTyping(false);
+      }
+    };
+
+    const timer = setTimeout(typeWriter, 300); // Initial delay
+    return () => clearTimeout(timer);
+  }, [text, speed]);
+
+  // Cursor blinking effect
+  useEffect(() => {
+    const cursorTimer = setInterval(() => {
+      setShowCursor(prev => !prev);
+    }, 530);
+    return () => clearInterval(cursorTimer);
+  }, []);
+
+  return (
+    <span className="inline">
+      {displayText.split('\n').map((line, i) => (
+        <span key={i}>
+          {line}
+          {i < displayText.split('\n').length - 1 && <br />}
+        </span>
+      ))}
+      {(isTyping || showCursor) && (
+        <span className={`inline-block w-0.5 h-5 ml-0.5 bg-indigo-500 dark:bg-indigo-400 ${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-100`}>
+          |
+        </span>
+      )}
+    </span>
+  );
+};
 
 type Props = {
   className?: string;
@@ -171,14 +219,7 @@ export const SecretDailyTips: React.FC<Props> = ({
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const articleRef = useRef<HTMLElement | null>(null);
-  const paraRefs = useRef<Array<HTMLElement | null>>([]);
   const reduced = useReducedMotion();
-
-  // reading mode state
-  const [isReading, setIsReading] = useState(false);
-  const [currentPara, setCurrentPara] = useState(0);
-  const readingTimer = useRef<number | null>(null);
 
   const lastFetchedLabel = useMemo(() => {
     return lastFetchedAt ? `Fetched ${formatDateShort(new Date(lastFetchedAt))}` : "";
@@ -193,9 +234,6 @@ export const SecretDailyTips: React.FC<Props> = ({
         setTip(res.content);
         setLastFetchedAt(res.fetchedAt);
         setError(null);
-        // reset reading state when new tip arrives
-        setCurrentPara(0);
-        setIsReading(false);
       } catch (err: any) {
         console.warn("SecretDailyTips - fetch failed", err);
         setTip(DEFAULT_TIP);
@@ -217,33 +255,7 @@ export const SecretDailyTips: React.FC<Props> = ({
     return () => clearInterval(id);
   }, [refreshInterval, load]);
 
-  // paragraph intersection observer to update current paragraph on scroll
-  useEffect(() => {
-    const el = articleRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // choose the paragraph with largest intersection
-        let bestIndex = -1;
-        let bestRatio = 0;
-        entries.forEach((en) => {
-          const idx = Number((en.target as HTMLElement).dataset.idx || -1);
-          if (en.intersectionRatio > bestRatio) {
-            bestRatio = en.intersectionRatio;
-            bestIndex = idx;
-          }
-        });
-        if (bestIndex >= 0) setCurrentPara(bestIndex);
-      },
-      { root: el, threshold: [0.15, 0.4, 0.7] }
-    );
-
-    paraRefs.current.forEach((p) => p && observer.observe(p));
-    return () => observer.disconnect();
-  }, [tip]);
-
-  // keyboard shortcuts for paragraph navigation and actions
+  // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "r") {
@@ -258,25 +270,12 @@ export const SecretDailyTips: React.FC<Props> = ({
         e.preventDefault();
         shareTip();
       }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        goToPara(currentPara + 1);
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        goToPara(currentPara - 1);
-      }
-      if (e.key === " ") {
-        e.preventDefault();
-        toggleReading();
-      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPara, tip]);
+  }, []);
 
-  // touch gestures: swipe left to refresh, swipe right to share, long press to copy
+  // Touch gestures: swipe left to refresh, swipe right to share, long press to copy
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -340,48 +339,6 @@ export const SecretDailyTips: React.FC<Props> = ({
       el.removeEventListener("touchmove", onTouchMove as EventListener);
       el.removeEventListener("touchend", onTouchEnd as EventListener);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tip]);
-
-  // reading mode: auto scroll paragraphs at an interval
-  useEffect(() => {
-    if (!isReading) {
-      if (readingTimer.current) {
-        window.clearTimeout(readingTimer.current);
-        readingTimer.current = null;
-      }
-      return;
-    }
-
-    const advance = () => {
-      const next = Math.min((paraRefs.current.length || 1) - 1, currentPara + 1);
-      if (next === currentPara) {
-        // reached the end
-        setIsReading(false);
-        return;
-      }
-      goToPara(next, { smooth: true });
-      readingTimer.current = window.setTimeout(advance, 2200);
-    };
-
-    // small initial delay then start
-    readingTimer.current = window.setTimeout(advance, 700);
-
-    return () => {
-      if (readingTimer.current) {
-        window.clearTimeout(readingTimer.current);
-        readingTimer.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReading, currentPara, tip]);
-
-  const goToPara = useCallback((index: number, opts?: { smooth?: boolean }) => {
-    const clamped = Math.max(0, Math.min((paraRefs.current.length || 1) - 1, index));
-    const el = paraRefs.current[clamped];
-    if (!el || !articleRef.current) return;
-    setCurrentPara(clamped);
-    el.scrollIntoView({ behavior: opts?.smooth ? "smooth" : "auto", block: "center" });
   }, []);
 
   // copy with feedback
@@ -425,90 +382,77 @@ export const SecretDailyTips: React.FC<Props> = ({
     }
   }, [tip, copyTip]);
 
-  const toggleReading = useCallback(() => {
-    setIsReading((v) => !v);
-  }, []);
-
-  // small helper to build paragraph refs
-  const renderParagraphs = useCallback(() => {
-    const parts = tip ? tip.split("\n\n") : [DEFAULT_TIP];
-    paraRefs.current = new Array(parts.length).fill(null);
-    return parts.map((p, i) => (
-      <p
-        key={i}
-        ref={(el) => {
-          paraRefs.current[i] = el;
-        }}
-        data-idx={i}
-        className={`mb-4 leading-7 text-slate-800 dark:text-slate-100 transition-colors p-2 rounded-md ${
-          i === currentPara ? "bg-indigo-50 dark:bg-indigo-900/30 shadow-inner" : "bg-transparent"
-        }`}
-        style={{ whiteSpace: "pre-line" }}
-      >
-        {p}
-      </p>
-    ));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tip, currentPara]);
-
-  // reading progress percent
-  const progressPct = useMemo(() => {
-    const total = paraRefs.current.length || 1;
-    return Math.round(((currentPara + 1) / total) * 100);
-  }, [currentPara]);
+  // Copy and share functions (keeping these for functionality)
 
   return (
     <div ref={containerRef} className={className} aria-live="polite" aria-atomic>
       <div className="relative">
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-12 -top-12 w-80 h-80 rounded-full bg-gradient-to-br from-indigo-400/20 to-pink-300/10 blur-3xl" />
-          <div className="absolute right-0 top-1/3 w-64 h-64 rounded-full bg-gradient-to-bl from-cyan-300/10 to-indigo-400/10 blur-3xl" />
+          <div className="absolute -left-12 -top-12 w-80 h-80 rounded-full bg-gradient-to-br from-indigo-400/15 to-pink-300/10 blur-3xl" />
+          <div className="absolute right-0 top-1/3 w-64 h-64 rounded-full bg-gradient-to-bl from-cyan-300/10 to-indigo-400/15 blur-3xl" />
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduced ? 0 : 0.45 }}
-          className="max-w-3xl mx-auto"
+          transition={{ duration: reduced ? 0 : 0.6, ease: "easeOut" }}
+          className="max-w-4xl mx-auto"
         >
-          <header className="text-center mb-6">
-            <div className="inline-flex items-center gap-3">
-              <div className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 shadow" aria-hidden />
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100">Daily AI Tip</h2>
-              <div className="flex items-center" aria-hidden>
-                <Sparkles className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-              </div>
-            </div>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Short, actionable tip powered by your AI backend</p>
+          <header className="text-center mb-8">
+            <motion.div 
+              className="inline-flex items-center gap-4 mb-3"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: reduced ? 0 : 0.5 }}
+            >
+              <div className="flex items-center justify-center w-4 h-4 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 shadow-md" aria-hidden />
+              <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
+                Daily AI Tip
+              </h2>
+              <Sparkles className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
+            </motion.div>
+            <motion.p 
+              className="text-slate-600 dark:text-slate-400 text-lg"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: reduced ? 0 : 0.5 }}
+            >
+              Smart insights powered by AI
+            </motion.p>
           </header>
 
           <motion.section
             role="region"
             aria-label="Daily AI tip"
-            whileHover={reduced ? undefined : { scale: 1.01 }}
-            className="relative bg-white/80 dark:bg-slate-900/70 backdrop-blur-sm border border-slate-200/40 dark:border-slate-700/40 rounded-2xl p-5 sm:p-6 shadow-md transition-shadow hover:shadow-lg"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: reduced ? 0 : 0.6 }}
+            whileHover={reduced ? undefined : { y: -4 }}
+            className="relative bg-white/90 dark:bg-slate-900/80 backdrop-blur-lg border border-slate-200/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-pink-500 text-white shadow">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path d="M7 11a5 5 0 0110 0c0 4-5 7-5 7s-5-3-5-7z" fill="currentColor" />
-                    <path d="M11 7h2v2h-2z" fill="rgba(255,255,255,0.9)" />
+            <div className="flex items-start justify-between gap-6 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-pink-500 text-white shadow-lg">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" fill="currentColor" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">{loading ? "Fetching tip..." : "Tip"}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{lastFetchedLabel}</p>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                    {loading ? "Generating..." : "Today's Insight"}
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{lastFetchedLabel}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <motion.button
                   onClick={() => load({ force: true })}
                   title="Refresh tip"
                   aria-label="Refresh tip"
-                  whileTap={reduced ? undefined : { scale: 0.96 }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  whileTap={reduced ? undefined : { scale: 0.95 }}
+                  whileHover={reduced ? undefined : { scale: 1.05 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md"
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Refresh</span>
@@ -518,8 +462,9 @@ export const SecretDailyTips: React.FC<Props> = ({
                   onClick={shareTip}
                   title="Share tip"
                   aria-label="Share tip"
-                  whileTap={reduced ? undefined : { scale: 0.96 }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  whileTap={reduced ? undefined : { scale: 0.95 }}
+                  whileHover={reduced ? undefined : { scale: 1.05 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md"
                 >
                   <Share2 className="w-4 h-4" />
                   <span>Share</span>
@@ -527,97 +472,67 @@ export const SecretDailyTips: React.FC<Props> = ({
               </div>
             </div>
 
-            <div className="mt-4 relative">
-              {/* reading controls and progress */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => goToPara(currentPara - 1)}
-                    aria-label="Previous paragraph"
-                    className="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/60 focus:outline-none"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={toggleReading}
-                    aria-pressed={isReading}
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800/80 transition focus:outline-none"
-                  >
-                    {isReading ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    <span>{isReading ? "Pause" : "Read"}</span>
-                  </button>
-
-                  <button
-                    onClick={() => goToPara(currentPara + 1)}
-                    aria-label="Next paragraph"
-                    className="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/60 focus:outline-none"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="text-xs font-mono text-slate-400 dark:text-slate-500">{progressPct}%</div>
-                  <div className="w-36 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full transition-all"
-                      style={{ width: `${progressPct}%` }}
-                    />
+            <div className="relative">
+              {loading ? (
+                <div className="space-y-4">
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-5 bg-slate-200 rounded-lg w-3/4 dark:bg-slate-700" />
+                    <div className="h-5 bg-slate-200 rounded-lg w-full dark:bg-slate-700" />
+                    <div className="h-5 bg-slate-200 rounded-lg w-5/6 dark:bg-slate-700" />
                   </div>
                 </div>
-              </div>
-
-              {loading ? (
-                <div className="animate-pulse space-y-3">
-                  <div className="h-4 bg-slate-200 rounded w-3/4 dark:bg-slate-700" />
-                  <div className="h-4 bg-slate-200 rounded w-5/6 dark:bg-slate-700" />
-                  <div className="h-4 bg-slate-200 rounded w-2/3 dark:bg-slate-700" />
-                </div>
               ) : (
-                <article
-                  ref={articleRef as any}
-                  className="prose prose-sm max-w-none dark:prose-invert text-slate-800 dark:text-slate-100 overflow-auto max-h-64 p-2 rounded-md"
-                >
-                  {renderParagraphs()}
-                </article>
+                <div className="prose prose-lg max-w-none dark:prose-invert">
+                  <div className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-lg">
+                    <TypingText text={tip || DEFAULT_TIP} speed={45} />
+                  </div>
+                </div>
               )}
             </div>
 
-            <footer className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
+            <footer className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className={`w-2.5 h-2.5 rounded-full ${error ? "bg-red-400" : loading ? "bg-yellow-400" : "bg-green-400"}`} aria-hidden />
-                <span className="text-sm text-slate-600 dark:text-slate-400">{error ? error : loading ? "Loading..." : "Powered by AI"}</span>
+                <span className={`w-3 h-3 rounded-full ${error ? "bg-red-400" : loading ? "bg-yellow-400" : "bg-green-400"} shadow-sm`} aria-hidden />
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  {error ? error : loading ? "Loading..." : "Powered by AI"}
+                </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <motion.button
-                  onClick={copyTip}
-                  title="Copy tip"
-                  aria-label="Copy tip"
-                  whileTap={reduced ? undefined : { scale: 0.96 }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border border-slate-200/50 dark:border-slate-700/50 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
-                >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span>{copied ? "Copied" : "Copy"}</span>
-                </motion.button>
-
-                <span className="text-xs font-mono text-slate-400 dark:text-slate-500">{lastFetchedLabel}</span>
-              </div>
+              <motion.button
+                onClick={copyTip}
+                title="Copy tip"
+                aria-label="Copy tip"
+                whileTap={reduced ? undefined : { scale: 0.95 }}
+                whileHover={reduced ? undefined : { scale: 1.05 }}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{copied ? "Copied!" : "Copy"}</span>
+              </motion.button>
             </footer>
 
             {toast && (
               <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ duration: reduced ? 0 : 0.2 }}
-                className="absolute right-4 bottom-4 bg-slate-900/90 text-white text-sm px-3 py-1.5 rounded-md shadow"
+                className="absolute right-6 bottom-6 bg-slate-900/95 dark:bg-slate-800/95 text-white text-sm px-4 py-2 rounded-xl shadow-lg backdrop-blur-sm border border-slate-700/50"
                 role="status"
               >
                 {toast}
               </motion.div>
             )}
           </motion.section>
+
+          <motion.div 
+            className="text-center mt-6 text-xs text-slate-400 dark:text-slate-500"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: reduced ? 0 : 0.5 }}
+          >
+            Keyboard shortcuts: R (refresh) • C (copy) • S (share)
+          </motion.div>
         </motion.div>
       </div>
     </div>
