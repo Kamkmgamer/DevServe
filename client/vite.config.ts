@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
       } : undefined,
     },
     build: {
-      outDir: path.resolve(__dirname, '../server/public'),
+      outDir: 'dist',
       emptyOutDir: true,
       rollupOptions: {
         external: ['react-markdown'],
