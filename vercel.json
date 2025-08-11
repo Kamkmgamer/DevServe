@@ -1,6 +1,4 @@
 {
-  "build": {
-    "buildCommand": "npm run build --prefix client",
-    "outputDirectory": "client/dist"
-  }
+  "outputDirectory": "dist",
+  "rootDirectory": "client"
 }
