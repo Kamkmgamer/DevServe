@@ -106,9 +106,10 @@ const CountdownTimer: React.FC<{ onComplete?: () => void }> = ({ onComplete }) =
 
 // Rich text parsing and rendering utilities
 interface RichTextToken {
-  type: 'text' | 'bold' | 'italic' | 'code' | 'link' | 'linebreak';
+  type: 'text' | 'bold' | 'italic' | 'code' | 'codeblock' | 'heading3' | 'link' | 'linebreak';
   content: string;
   url?: string;
+  language?: string;
 }
 
 const parseRichText = (text: string): RichTextToken[] => {
@@ -116,6 +117,8 @@ const parseRichText = (text: string): RichTextToken[] => {
   let currentIndex = 0;
   
   const patterns = [
+    { regex: /^### (.+)$/gm, type: 'heading3' as const },
+    { regex: /```([a-zA-Z]*)?\n?([\s\S]*?)```/g, type: 'codeblock' as const },
     { regex: /\*\*(.*?)\*\*/g, type: 'bold' as const },
     { regex: /\*(.*?)\*/g, type: 'italic' as const },
     { regex: /`(.*?)`/g, type: 'code' as const },
@@ -123,8 +126,8 @@ const parseRichText = (text: string): RichTextToken[] => {
   ];
 
   while (currentIndex < text.length) {
-    let earliestMatch = null;
-    let earliestType = null;
+    let earliestMatch: RegExpExecArray | null = null;
+    let earliestType: 'bold' | 'italic' | 'code' | 'codeblock' | 'heading3' | 'link' | null = null;
     let earliestPattern = null;
 
     // Find the earliest pattern match
@@ -138,7 +141,7 @@ const parseRichText = (text: string): RichTextToken[] => {
       }
     }
 
-    if (earliestMatch) {
+    if (earliestMatch && earliestType) {
       // Add text before the match
       if (earliestMatch.index > currentIndex) {
         const beforeText = text.slice(currentIndex, earliestMatch.index);
@@ -155,6 +158,17 @@ const parseRichText = (text: string): RichTextToken[] => {
           type: 'link', 
           content: earliestMatch[1], 
           url: earliestMatch[2] 
+        });
+      } else if (earliestType === 'codeblock') {
+        tokens.push({ 
+          type: 'codeblock', 
+          content: earliestMatch[2] || '', 
+          language: earliestMatch[1] || '' 
+        });
+      } else if (earliestType === 'heading3') {
+        tokens.push({ 
+          type: 'heading3', 
+          content: earliestMatch[1] 
         });
       } else {
         tokens.push({ 
@@ -184,13 +198,37 @@ const parseRichText = (text: string): RichTextToken[] => {
 
 const renderRichTextToken = (token: RichTextToken, key: string) => {
   switch (token.type) {
+    case 'heading3':
+      return (
+        <h3 
+          key={key} 
+          className="text-xl font-bold text-slate-900 dark:text-slate-50 mt-6 mb-4 first:mt-0 border-b border-slate-200 dark:border-slate-700 pb-2"
+        >
+          {token.content}
+        </h3>
+      );
+    case 'codeblock':
+      return (
+        <div key={key} className="my-4 first:mt-0 last:mb-0">
+          <pre className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 overflow-x-auto shadow-sm">
+            <code className="text-sm font-mono text-slate-800 dark:text-slate-200 leading-relaxed">
+              {token.content}
+            </code>
+          </pre>
+          {token.language && (
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 pl-2">
+              {token.language}
+            </div>
+          )}
+        </div>
+      );
     case 'bold':
       return <strong key={key} className="font-bold text-slate-900 dark:text-slate-50">{token.content}</strong>;
     case 'italic':
       return <em key={key} className="italic text-slate-700 dark:text-slate-300">{token.content}</em>;
     case 'code':
       return (
-        <code key={key} className="px-2 py-0.5 text-sm bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-md font-mono">
+        <code key={key} className="px-2 py-1 text-sm bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-md font-mono border border-slate-200 dark:border-slate-700">
           {token.content}
         </code>
       );
@@ -214,7 +252,7 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
 };
 
 // Enhanced typing animation component with rich text support
-const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 50 }) => {
+const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 35 }) => {
   const [displayText, setDisplayText] = useState('');
   const [showCursor, setShowCursor] = useState(true);
   const [isTyping, setIsTyping] = useState(true);
@@ -278,7 +316,18 @@ type Props = {
 
 const SESSION_KEY = "secret-daily-tip-v2";
 const DEFAULT_TIP =
-  "**AI features coming soon!** Configure your *AI backend* to enable daily tips with rich text support including `code snippets` and [links](https://example.com).";
+  "### Your Daily AI Tip\n**AI features are now live!** This is a demo of the rich text capabilities.\n\n*Enjoy seamless integration with your AI backend.*
+
+Here is a code block example:
+```javascript
+// Modern asynchronous function
+async function fetchData(url) {
+  const response = await fetch(url);
+  return response.json();
+}
+```
+
+And here is some `inline code` for you to see. Visit our [documentation](https://example.com) for more info.";
 
 function formatDateShort(date = new Date()) {
   try {
@@ -738,7 +787,7 @@ export const SecretDailyTips: React.FC<Props> = ({
               ) : (
                 <div className="prose prose-lg max-w-none dark:prose-invert">
                   <div className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-lg">
-                    <TypingText text={tip || DEFAULT_TIP} speed={45} />
+                    <TypingText text={tip || DEFAULT_TIP} speed={30} />
                   </div>
                 </div>
               )}
