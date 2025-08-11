@@ -19,7 +19,116 @@ import {
  * - Touch gestures for mobile interaction
  */
 
-// Typing animation component
+// Rich text parsing and rendering utilities
+interface RichTextToken {
+  type: 'text' | 'bold' | 'italic' | 'code' | 'link' | 'linebreak';
+  content: string;
+  url?: string;
+}
+
+const parseRichText = (text: string): RichTextToken[] => {
+  const tokens: RichTextToken[] = [];
+  let currentIndex = 0;
+  
+  const patterns = [
+    { regex: /\*\*(.*?)\*\*/g, type: 'bold' as const },
+    { regex: /\*(.*?)\*/g, type: 'italic' as const },
+    { regex: /`(.*?)`/g, type: 'code' as const },
+    { regex: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'link' as const },
+  ];
+
+  while (currentIndex < text.length) {
+    let earliestMatch = null;
+    let earliestType = null;
+    let earliestPattern = null;
+
+    // Find the earliest pattern match
+    for (const pattern of patterns) {
+      pattern.regex.lastIndex = currentIndex;
+      const match = pattern.regex.exec(text);
+      if (match && (earliestMatch === null || match.index < earliestMatch.index)) {
+        earliestMatch = match;
+        earliestType = pattern.type;
+        earliestPattern = pattern.regex;
+      }
+    }
+
+    if (earliestMatch) {
+      // Add text before the match
+      if (earliestMatch.index > currentIndex) {
+        const beforeText = text.slice(currentIndex, earliestMatch.index);
+        const lines = beforeText.split('\n');
+        lines.forEach((line, i) => {
+          if (i > 0) tokens.push({ type: 'linebreak', content: '' });
+          if (line) tokens.push({ type: 'text', content: line });
+        });
+      }
+
+      // Add the formatted token
+      if (earliestType === 'link') {
+        tokens.push({ 
+          type: 'link', 
+          content: earliestMatch[1], 
+          url: earliestMatch[2] 
+        });
+      } else {
+        tokens.push({ 
+          type: earliestType, 
+          content: earliestMatch[1] 
+        });
+      }
+
+      currentIndex = earliestMatch.index + earliestMatch[0].length;
+      
+      // Reset all regex lastIndex
+      patterns.forEach(p => p.regex.lastIndex = 0);
+    } else {
+      // No more patterns, add remaining text
+      const remainingText = text.slice(currentIndex);
+      const lines = remainingText.split('\n');
+      lines.forEach((line, i) => {
+        if (i > 0) tokens.push({ type: 'linebreak', content: '' });
+        if (line) tokens.push({ type: 'text', content: line });
+      });
+      break;
+    }
+  }
+
+  return tokens;
+};
+
+const renderRichTextToken = (token: RichTextToken, key: string) => {
+  switch (token.type) {
+    case 'bold':
+      return <strong key={key} className="font-bold text-slate-900 dark:text-slate-50">{token.content}</strong>;
+    case 'italic':
+      return <em key={key} className="italic text-slate-700 dark:text-slate-300">{token.content}</em>;
+    case 'code':
+      return (
+        <code key={key} className="px-2 py-0.5 text-sm bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-md font-mono">
+          {token.content}
+        </code>
+      );
+    case 'link':
+      return (
+        <a 
+          key={key} 
+          href={token.url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline decoration-dotted underline-offset-2 transition-colors"
+        >
+          {token.content}
+        </a>
+      );
+    case 'linebreak':
+      return <br key={key} />;
+    default:
+      return <span key={key}>{token.content}</span>;
+  }
+};
+
+// Enhanced typing animation component with rich text support
 const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 50 }) => {
   const [displayText, setDisplayText] = useState('');
   const [showCursor, setShowCursor] = useState(true);
@@ -58,14 +167,15 @@ const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 
     return () => clearInterval(cursorTimer);
   }, []);
 
+  // Parse and render the current display text with rich formatting
+  const renderRichText = (text: string) => {
+    const tokens = parseRichText(text);
+    return tokens.map((token, index) => renderRichTextToken(token, `token-${index}`));
+  };
+
   return (
     <span className="inline">
-      {displayText.split('\n').map((line, i) => (
-        <span key={i}>
-          {line}
-          {i < displayText.split('\n').length - 1 && <br />}
-        </span>
-      ))}
+      {renderRichText(displayText)}
       {(isTyping || showCursor) && (
         <span className={`inline-block w-0.5 h-5 ml-0.5 bg-indigo-500 dark:bg-indigo-400 ${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-100`}>
           |
@@ -83,7 +193,7 @@ type Props = {
 
 const SESSION_KEY = "secret-daily-tip-v2";
 const DEFAULT_TIP =
-  "AI features coming soon. Configure your AI backend to enable daily tips.";
+  "**AI features coming soon!** Configure your *AI backend* to enable daily tips with rich text support including `code snippets` and [links](https://example.com).";
 
 function formatDateShort(date = new Date()) {
   try {
