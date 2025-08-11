@@ -252,7 +252,7 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
 };
 
 // Enhanced typing animation component with rich text support
-const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 35 }) => {
+const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 14 }) => {
   const [displayText, setDisplayText] = useState('');
   const [showCursor, setShowCursor] = useState(true);
   const [isTyping, setIsTyping] = useState(true);
@@ -789,7 +789,7 @@ export const SecretDailyTips: React.FC<Props> = ({
               ) : (
                 <div className="prose prose-lg max-w-none dark:prose-invert">
                   <div className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-lg">
-                    <TypingText text={tip || DEFAULT_TIP} speed={30} />
+                    <TypingText text={tip || DEFAULT_TIP} speed={12} />
                   </div>
                 </div>
               )}
