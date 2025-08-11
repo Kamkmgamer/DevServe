@@ -7,7 +7,7 @@ export const QueryClientProvider = ({ children, client }: { children: React.Reac
 export const mockMutate = jest.fn();
 
 export const useMutation = jest.fn((options) => ({
-  mutate: async (variables) => {
+  mutate: async (variables: any) => {
     try {
       // Simulate an asynchronous operation
       const result = await mockMutate(variables);

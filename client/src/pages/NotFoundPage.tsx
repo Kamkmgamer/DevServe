@@ -22,7 +22,7 @@ import {
 import { useSEO } from "../utils/useSEO";
 
 function useGPULayer<T extends HTMLElement>(
-  ref: React.RefObject<T>,
+  ref: React.RefObject<T | null>,
   props?: {
     willChange?: string;
     contain?: string;
