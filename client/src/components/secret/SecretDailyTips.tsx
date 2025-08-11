@@ -106,10 +106,16 @@ const CountdownTimer: React.FC<{ onComplete?: () => void }> = ({ onComplete }) =
 
 // Rich text parsing and rendering utilities
 interface RichTextToken {
-  type: 'text' | 'bold' | 'italic' | 'code' | 'codeblock' | 'heading3' | 'link' | 'linebreak';
+  type: 'text' | 'bold' | 'italic' | 'underline' | 'strikethrough' | 'code' | 'codeblock' | 
+        'heading1' | 'heading2' | 'heading3' | 'heading4' | 'heading5' | 'heading6' |
+        'blockquote' | 'unorderedlist' | 'orderedlist' | 'listitem' | 'horizontalrule' |
+        'link' | 'image' | 'table' | 'tablerow' | 'tablecell' | 'linebreak';
   content: string;
   url?: string;
   language?: string;
+  level?: number;
+  alt?: string;
+  isHeader?: boolean;
 }
 
 const parseRichText = (text: string): RichTextToken[] => {
@@ -117,17 +123,51 @@ const parseRichText = (text: string): RichTextToken[] => {
   let currentIndex = 0;
   
   const patterns = [
+    // Headings (must come first to avoid conflicts)
+    { regex: /^# (.+)$/gm, type: 'heading1' as const },
+    { regex: /^## (.+)$/gm, type: 'heading2' as const },
     { regex: /^### (.+)$/gm, type: 'heading3' as const },
+    { regex: /^#### (.+)$/gm, type: 'heading4' as const },
+    { regex: /^##### (.+)$/gm, type: 'heading5' as const },
+    { regex: /^###### (.+)$/gm, type: 'heading6' as const },
+    
+    // Horizontal rule
+    { regex: /^---$/gm, type: 'horizontalrule' as const },
+    
+    // Code blocks (must come before inline code)
     { regex: /```([a-zA-Z]*)?\n?([\s\S]*?)```/g, type: 'codeblock' as const },
+    
+    // Blockquotes
+    { regex: /^> (.+)$/gm, type: 'blockquote' as const },
+    
+    // Lists (unordered)
+    { regex: /^[*-+] (.+)$/gm, type: 'listitem' as const },
+    
+    // Lists (ordered)
+    { regex: /^\d+\. (.+)$/gm, type: 'listitem' as const },
+    
+    // Images
+    { regex: /!\[([^\]]*)\]\(([^)]+)\)/g, type: 'image' as const },
+    
+    // Links
+    { regex: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'link' as const },
+    
+    // Text formatting (order matters for proper nesting)
+    { regex: /~~(.*?)~~/g, type: 'strikethrough' as const },
+    { regex: /__(.*?)__/g, type: 'underline' as const },
     { regex: /\*\*(.*?)\*\*/g, type: 'bold' as const },
     { regex: /\*(.*?)\*/g, type: 'italic' as const },
+    
+    // Inline code (must come after bold/italic to avoid conflicts)
     { regex: /`(.*?)`/g, type: 'code' as const },
-    { regex: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'link' as const },
   ];
 
   while (currentIndex < text.length) {
     let earliestMatch: RegExpExecArray | null = null;
-    let earliestType: 'bold' | 'italic' | 'code' | 'codeblock' | 'heading3' | 'link' | null = null;
+    let earliestType: 'text' | 'bold' | 'italic' | 'underline' | 'strikethrough' | 'code' | 'codeblock' | 
+                      'heading1' | 'heading2' | 'heading3' | 'heading4' | 'heading5' | 'heading6' |
+                      'blockquote' | 'unorderedlist' | 'orderedlist' | 'listitem' | 'horizontalrule' |
+                      'link' | 'image' | 'table' | 'tablerow' | 'tablecell' | 'linebreak' | null = null;
     let earliestPattern = null;
 
     // Find the earliest pattern match
@@ -159,21 +199,33 @@ const parseRichText = (text: string): RichTextToken[] => {
           content: earliestMatch[1], 
           url: earliestMatch[2] 
         });
+      } else if (earliestType === 'image') {
+        tokens.push({ 
+          type: 'image', 
+          content: earliestMatch[1], 
+          url: earliestMatch[2],
+          alt: earliestMatch[1] 
+        });
       } else if (earliestType === 'codeblock') {
         tokens.push({ 
           type: 'codeblock', 
           content: earliestMatch[2] || '', 
           language: earliestMatch[1] || '' 
         });
-      } else if (earliestType === 'heading3') {
+      } else if (earliestType.startsWith('heading')) {
         tokens.push({ 
-          type: 'heading3', 
+          type: earliestType, 
           content: earliestMatch[1] 
+        });
+      } else if (earliestType === 'horizontalrule') {
+        tokens.push({ 
+          type: 'horizontalrule', 
+          content: '' 
         });
       } else {
         tokens.push({ 
           type: earliestType, 
-          content: earliestMatch[1] 
+          content: earliestMatch[1] || earliestMatch[0] 
         });
       }
 
@@ -198,6 +250,25 @@ const parseRichText = (text: string): RichTextToken[] => {
 
 const renderRichTextToken = (token: RichTextToken, key: string) => {
   switch (token.type) {
+    // All heading levels
+    case 'heading1':
+      return (
+        <h1 
+          key={key} 
+          className="text-3xl font-bold text-slate-900 dark:text-slate-50 mt-8 mb-6 first:mt-0 border-b-2 border-indigo-200 dark:border-indigo-800 pb-3"
+        >
+          {token.content}
+        </h1>
+      );
+    case 'heading2':
+      return (
+        <h2 
+          key={key} 
+          className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-7 mb-5 first:mt-0 border-b border-slate-200 dark:border-slate-700 pb-2"
+        >
+          {token.content}
+        </h2>
+      );
     case 'heading3':
       return (
         <h3 
@@ -207,6 +278,35 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           {token.content}
         </h3>
       );
+    case 'heading4':
+      return (
+        <h4 
+          key={key} 
+          className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-5 mb-3 first:mt-0"
+        >
+          {token.content}
+        </h4>
+      );
+    case 'heading5':
+      return (
+        <h5 
+          key={key} 
+          className="text-base font-bold text-slate-900 dark:text-slate-50 mt-4 mb-2 first:mt-0"
+        >
+          {token.content}
+        </h5>
+      );
+    case 'heading6':
+      return (
+        <h6 
+          key={key} 
+          className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-4 mb-2 first:mt-0 uppercase tracking-wide"
+        >
+          {token.content}
+        </h6>
+      );
+    
+    // Code blocks
     case 'codeblock':
       return (
         <div key={key} className="my-4 first:mt-0 last:mb-0">
@@ -222,16 +322,24 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           )}
         </div>
       );
+    
+    // Text formatting
     case 'bold':
-      return <strong key={key} className="font-bold text-slate-900 dark:text-slate-50">{token.content}</strong>;
+      return <strong key={key} className="font-black !text-slate-950 dark:!text-white">{token.content}</strong>;
     case 'italic':
       return <em key={key} className="italic text-slate-700 dark:text-slate-300">{token.content}</em>;
+    case 'underline':
+      return <u key={key} className="underline decoration-slate-400 dark:decoration-slate-500 underline-offset-2">{token.content}</u>;
+    case 'strikethrough':
+      return <del key={key} className="line-through text-slate-500 dark:text-slate-400">{token.content}</del>;
     case 'code':
       return (
         <code key={key} className="px-2 py-1 text-sm bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-md font-mono border border-slate-200 dark:border-slate-700">
           {token.content}
         </code>
       );
+    
+    // Links and images
     case 'link':
       return (
         <a 
@@ -244,10 +352,61 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           {token.content}
         </a>
       );
+    case 'image':
+      return (
+        <div key={key} className="my-4 first:mt-0 last:mb-0">
+          <img 
+            src={token.url} 
+            alt={token.alt || token.content} 
+            className="max-w-full h-auto rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"
+            loading="lazy"
+          />
+          {token.content && (
+            <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 text-center italic">
+              {token.content}
+            </div>
+          )}
+        </div>
+      );
+    
+    // Blockquotes
+    case 'blockquote':
+      return (
+        <blockquote 
+          key={key} 
+          className="my-4 first:mt-0 last:mb-0 pl-4 py-2 border-l-4 border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 italic text-slate-700 dark:text-slate-300 rounded-r-lg"
+        >
+          {parseRichText(token.content).map((t, i) => renderRichTextToken(t, `${key}-bq-${i}`))}
+        </blockquote>
+      );
+    
+    // List items
+    case 'listitem':
+      return (
+        <div key={key} className="flex items-start gap-3 my-2 first:mt-0 last:mb-0">
+          <span className="text-indigo-500 dark:text-indigo-400 font-bold mt-0.5">•</span>
+          <span className="text-slate-700 dark:text-slate-300">
+            {parseRichText(token.content).map((t, i) => renderRichTextToken(t, `${key}-li-${i}`))}
+          </span>
+        </div>
+      );
+    
+    // Horizontal rule
+    case 'horizontalrule':
+      return (
+        <hr 
+          key={key} 
+          className="my-6 first:mt-0 last:mb-0 border-0 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent"
+        />
+      );
+    
+    // Line breaks
     case 'linebreak':
       return <br key={key} />;
+    
+    // Default text
     default:
-      return <span key={key}>{token.content}</span>;
+      return <span key={key} className="text-slate-700 dark:text-slate-300">{token.content}</span>;
   }
 };
 
@@ -290,9 +449,38 @@ const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 
     return () => clearInterval(cursorTimer);
   }, []);
 
+  // Sanitize partially-typed markdown to avoid showing raw markers (e.g., a single trailing **)
+  const sanitizeForTyping = (input: string) => {
+    if (!input) return input;
+
+    // Temporarily protect fenced code blocks so we don't alter markers inside them
+    const codeBlocks: string[] = [];
+    const protectedText = input.replace(/```[\s\S]*?```/g, (m) => {
+      codeBlocks.push(m);
+      return `\uE000${codeBlocks.length - 1}\uE001`;
+    });
+
+    let text = protectedText;
+
+    // Fix unmatched bold markers (**)
+    const boldMatches = text.match(/\*\*/g) || [];
+    if (boldMatches.length % 2 === 1) {
+      const lastIdx = text.lastIndexOf("**");
+      if (lastIdx !== -1) {
+        text = text.slice(0, lastIdx) + text.slice(lastIdx + 2);
+      }
+    }
+
+    // Restore fenced code blocks
+    text = text.replace(/\uE000(\d+)\uE001/g, (_m, idx) => codeBlocks[Number(idx)]);
+
+    return text;
+  };
+
   // Parse and render the current display text with rich formatting
   const renderRichText = (text: string) => {
-    const tokens = parseRichText(text);
+    const sanitized = sanitizeForTyping(text);
+    const tokens = parseRichText(sanitized);
     return tokens.map((token, index) => renderRichTextToken(token, `token-${index}`));
   };
 
@@ -789,7 +977,7 @@ export const SecretDailyTips: React.FC<Props> = ({
               ) : (
                 <div className="prose prose-lg max-w-none dark:prose-invert">
                   <div className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-lg">
-                    <TypingText text={tip || DEFAULT_TIP} speed={12} />
+                    <TypingText text={tip || DEFAULT_TIP} speed={1} />
                   </div>
                 </div>
               )}

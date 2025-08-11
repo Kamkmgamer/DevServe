@@ -104,12 +104,18 @@ class DailyTipsCache {
     }
 
     const prompts = [
-      'Give me a practical, actionable AI tip that developers can implement today. Include specific tools or techniques where relevant. Keep it concise but informative.',
-      'Share an interesting AI development technique or best practice that could improve productivity. Focus on real-world applications.',
-      'Provide a useful AI-related coding tip or workflow optimization that software developers should know about.',
-      'Give me an innovative AI tool or technique recommendation that could enhance a developer\'s toolkit.',
-      'Share a lesser-known AI feature, library, or approach that could benefit developers in their daily work.',
+      'Suggest a quick AI-powered code optimization technique that can be applied in under 10 minutes, with a specific example.',
+      'Share a real-world AI integration tip for web or mobile apps that can improve user experience or performance.',
+      'Give a short, developer-focused AI tip for debugging or troubleshooting machine learning models more effectively.',
+      'Recommend a time-saving AI-powered developer tool that works well with modern frameworks like React, Vue, or Next.js.',
+      'Provide a tip on using AI to automate repetitive coding or data processing tasks, with a practical example.',
+      'Share a simple AI-driven productivity hack for developers that requires minimal setup.',
+      'Suggest a quick AI experiment developers can try today to learn a new concept or tool hands-on.',
+      'Explain a small but powerful AI technique that can enhance application security or reliability.',
+      'Give a one-minute AI learning exercise that can expand a developer’s skillset in a fun way.',
+      'Recommend an underrated AI library or API that can be integrated into a project within an hour.',
     ];
+
 
     const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
 
