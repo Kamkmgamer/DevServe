@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["@types/node", "@testing-library/jest-dom"],
+    "types": ["@types/node", "jest", "@testing-library/jest-dom"],
     "target": "esnext",
     "module": "esnext",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -22,5 +22,5 @@
     }
   },
   "include": ["src"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }
