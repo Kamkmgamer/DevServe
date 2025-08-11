@@ -1,5 +1,6 @@
 {
   "build": {
+    "buildCommand": "npm run build --prefix client",
     "outputDirectory": "server/public"
   }
 }
