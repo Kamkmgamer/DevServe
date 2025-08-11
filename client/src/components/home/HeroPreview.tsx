@@ -3,11 +3,12 @@ import React, {
   useEffect,
   useRef,
   useState,
-  Fragment,
+  useId,
 } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Settings2, X } from 'lucide-react';
 import { TOKENS, useReducedMotionPref, useIsTouch } from '../../utils/tokens';
+import { cn } from '../../utils/cn';
 
 /**
  * HeroPreview.tsx
@@ -30,12 +31,20 @@ type Settings = {
   sensitivity: number; // global multiplier
   depth: number; // how much translateZ is used
   mode: 'subtle' | 'eye-catching';
+  paused: boolean; // allow user to pause all motion
+  accent: 'blue' | 'violet' | 'amber'; // premium accent
+  gloss: boolean; // specular glare layer
+  borderGlow: boolean; // animated gradient border
 };
 
 const defaultSettings: Settings = {
   sensitivity: 1,
   depth: 28,
   mode: 'subtle',
+  paused: false,
+  accent: 'violet',
+  gloss: true,
+  borderGlow: true,
 };
 
 export const HeroPreview: React.FC = () => {
@@ -49,6 +58,8 @@ export const HeroPreview: React.FC = () => {
   );
   const rippleLayerRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const spotRef = useRef<HTMLDivElement | null>(null);
+  const borderGlowRef = useRef<HTMLDivElement | null>(null);
 
   // physics state in refs to avoid rerenders
   const targetRef = useRef({ x: 0, y: 0 });
@@ -106,8 +117,10 @@ export const HeroPreview: React.FC = () => {
     }
   }, []);
 
-  // small UI for settings
+// small UI for settings
   const [openSettings, setOpenSettings] = useState(false);
+  const settingsBtnRef = useRef<HTMLButtonElement | null>(null);
+  const settingsPanelRef = useRef<HTMLDivElement | null>(null);
 
   // tap ripple
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -144,10 +157,10 @@ export const HeroPreview: React.FC = () => {
     setTimeout(() => el.remove(), 600);
   }, []);
 
-  // desktop pointer move
+// desktop pointer move
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!containerRef.current || reduce || isTouch) return;
+      if (!containerRef.current || reduce || isTouch || settings.paused) return;
       const rect = containerRef.current.getBoundingClientRect();
       const nx = (e.clientX - rect.left) / rect.width - 0.5;
       const ny = (e.clientY - rect.top) / rect.height - 0.5;
@@ -155,16 +168,37 @@ export const HeroPreview: React.FC = () => {
       targetRef.current.x = nx * 10 * settings.sensitivity;
       targetRef.current.y = ny * -8 * settings.sensitivity;
     },
-    [reduce, isTouch, settings.sensitivity]
+    [reduce, isTouch, settings.sensitivity, settings.paused]
   );
   const handlePointerLeave = useCallback(() => {
     targetRef.current.x = 0;
     targetRef.current.y = 0;
   }, []);
 
+  // keyboard support for accessibility
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (reduce || settings.paused) return;
+    const step = 2 * settings.sensitivity;
+    if (e.key === 'ArrowLeft') {
+      targetRef.current.x -= step;
+      e.preventDefault();
+    } else if (e.key === 'ArrowRight') {
+      targetRef.current.x += step;
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      targetRef.current.y -= step;
+      e.preventDefault();
+    } else if (e.key === 'ArrowDown') {
+      targetRef.current.y += step;
+      e.preventDefault();
+    } else if (e.key === 'Home') {
+      targetRef.current.x = 0; targetRef.current.y = 0; e.preventDefault();
+    }
+  }, [reduce, settings.paused, settings.sensitivity]);
+
   // mobile: deviceorientation handler with gentle sensitivity
-  useEffect(() => {
-    if (!isTouch || reduce || permissionGranted === false) return;
+useEffect(() => {
+    if (!isTouch || reduce || permissionGranted === false || settings.paused) return;
 
     let last = 0;
     const hasOrientation = 'DeviceOrientationEvent' in window;
@@ -240,12 +274,36 @@ export const HeroPreview: React.FC = () => {
     }
   }, []);
 
-  // main physics loop
+// main physics loop with visibility/viewport pause
   useEffect(() => {
     const stiffness = settings.mode === 'eye-catching' ? 0.14 : 0.10;
     const damping = settings.mode === 'eye-catching' ? 0.80 : 0.86;
 
+    let inViewport = true;
+    let pageVisible = typeof document !== 'undefined' ? document.visibilityState !== 'hidden' : true;
+
+    // Observe viewport visibility
+    let observer: IntersectionObserver | null = null;
+    if (containerRef.current && 'IntersectionObserver' in window) {
+      observer = new IntersectionObserver((entries) => {
+        inViewport = entries[0]?.isIntersecting ?? true;
+      }, { threshold: 0.05 });
+      observer.observe(containerRef.current);
+    }
+
+    const handleVisibility = () => {
+      pageVisible = typeof document !== 'undefined' ? document.visibilityState !== 'hidden' : true;
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+
     const loop = () => {
+      if (settings.paused || !inViewport || !pageVisible || reduce) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
       // spring X
       const dx = targetRef.current.x - currentRef.current.x;
       velocityRef.current.x = velocityRef.current.x * damping + dx * stiffness;
@@ -272,6 +330,16 @@ export const HeroPreview: React.FC = () => {
       // haptic on stronger motion
       tryHaptic(Math.abs(cx) + Math.abs(cy));
 
+      // update dynamic spotlight based on current tilt
+      if (spotRef.current) {
+        // Map tilt to percentage within container
+        const px = 50 + Math.max(Math.min(cx, 20), -20) * 1.5; // ~20deg maps to +/-30%
+        const py = 50 - Math.max(Math.min(cy, 20), -20) * 1.5;
+        spotRef.current.style.setProperty('--spot-x', `${px}%`);
+        spotRef.current.style.setProperty('--spot-y', `${py}%`);
+        spotRef.current.style.opacity = settings.paused || reduce ? '0.35' : '1';
+      }
+
       // floating blocks follow slower for nice parallax
       for (let i = 0; i < BLOCK_COUNT; i++) {
         const ft = floatTargetsRef.current[i] ?? 0;
@@ -297,22 +365,58 @@ export const HeroPreview: React.FC = () => {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      if (observer) observer.disconnect();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
     };
-  }, [settings, tryHaptic]);
+  }, [settings.mode, settings.depth, settings.paused, reduce, tryHaptic]);
 
-  // cleanup ripple on unmount
+// cleanup ripple on unmount
   useEffect(() => {
     return () => {
       if (rippleLayerRef.current) rippleLayerRef.current.innerHTML = '';
     };
   }, []);
 
+  // close settings on outside click or Esc
+  useEffect(() => {
+    if (!openSettings) return;
+    const onDown = (e: MouseEvent) => {
+      const panel = settingsPanelRef.current;
+      const btn = settingsBtnRef.current;
+      const target = e.target as Node | null;
+      if (panel && !panel.contains(target) && btn && !btn.contains(target)) {
+        setOpenSettings(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenSettings(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openSettings]);
+
   // small helpers to update settings
   const updateSetting = (patch: Partial<Settings>) =>
     setSettings((s) => ({ ...s, ...patch }));
 
-  // accessible label for screen readers
+// accessible label for screen readers
   const srText = 'Live preview surface. Move mouse or tilt device to interact.';
+  const settingsPanelId = useId();
+
+  const resetSettings = () => setSettings({ ...defaultSettings });
+
+  // compute accent gradient classes
+  const accentGrad = settings.accent === 'amber'
+    ? 'from-amber-400/30 via-orange-500/20 to-pink-500/20'
+    : settings.accent === 'blue'
+      ? 'from-sky-400/30 via-blue-500/20 to-fuchsia-500/20'
+      : 'from-violet-400/30 via-fuchsia-500/20 to-cyan-400/20';
 
   return (
     <div
@@ -323,14 +427,52 @@ export const HeroPreview: React.FC = () => {
       role="region"
     >
       <motion.div
-        className={`${TOKENS.surfaceGlass} ${TOKENS.radius.xl} p-4 ${TOKENS.shadow} relative overflow-hidden`}
+        className={cn(
+          TOKENS.surfaceGlass,
+          TOKENS.radius.xl,
+          'p-4',
+          TOKENS.shadow,
+          'relative overflow-hidden'
+        )}
         style={{ perspective: 950 }}
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-        {/* ambient glow */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/6 to-fuchsia-500/6 pointer-events-none" />
+      {/* ambient glow */}
+        <div className={cn('absolute inset-0 bg-gradient-to-br pointer-events-none', accentGrad)} />
+        {/* soft noise texture */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 opacity-[0.08] mix-blend-overlay pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 10% 10%, rgba(0,0,0,0.8) 0.5px, transparent 0.6px), radial-gradient(circle at 50% 30%, rgba(0,0,0,0.8) 0.5px, transparent 0.6px), radial-gradient(circle at 80% 70%, rgba(0,0,0,0.8) 0.5px, transparent 0.6px)',
+            backgroundSize: '3px 3px, 4px 4px, 5px 5px',
+          }}
+        />
+
+        {/* animated border glow */}
+        {settings.borderGlow && (
+          <div
+            ref={(el) => { borderGlowRef.current = el; }}
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-[1px] rounded-[inherit]"
+            style={{
+              background: 'conic-gradient(from 90deg at 50% 50%, rgba(255,255,255,0.2), rgba(0,0,0,0) 35%, rgba(255,255,255,0.2) 70%, rgba(0,0,0,0))',
+              filter: 'blur(6px) saturate(120%)',
+              opacity: reduce || settings.paused ? 0.25 : 0.55,
+              transition: 'opacity 200ms ease',
+              maskImage: 'linear-gradient(#000, #000)',
+              WebkitMaskImage: 'linear-gradient(#000, #000)',
+              mixBlendMode: 'screen',
+              animation: reduce || settings.paused ? 'none' : 'spin 12s linear infinite',
+            }}
+          />
+        )}
+
+        {/* keyframes for spin */}
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
         {/* iOS permission UI */}
         {needsPermission && permissionGranted === false && (
@@ -360,10 +502,14 @@ export const HeroPreview: React.FC = () => {
         )}
 
         {/* settings toggle */}
-        <div className="absolute top-3 right-3 z-40">
+<div className="absolute top-3 right-3 z-40">
           <button
             aria-label="Open preview settings"
+            aria-haspopup="dialog"
+            aria-expanded={openSettings}
+            aria-controls={settingsPanelId}
             onClick={() => setOpenSettings((v) => !v)}
+            ref={(el) => { settingsBtnRef.current = el; }}
             className="inline-flex items-center justify-center rounded-full p-2 bg-white/90 dark:bg-slate-900/90 border border-slate-200/60 dark:border-slate-700/60 shadow-sm"
             type="button"
           >
@@ -372,12 +518,27 @@ export const HeroPreview: React.FC = () => {
         </div>
 
         {/* settings panel */}
-        {openSettings && (
+{openSettings && (
           <div className="absolute top-12 right-3 z-40">
-            <div className="w-64 bg-white/96 dark:bg-slate-900/96 border border-slate-200/60 dark:border-slate-700/60 rounded-lg p-3 shadow-lg">
+            <div
+              id={settingsPanelId}
+              ref={(el) => { settingsPanelRef.current = el; }}
+              role="dialog"
+              aria-label="Preview settings"
+              className="w-72 bg-white/96 dark:bg-slate-900/96 border border-slate-200/60 dark:border-slate-700/60 rounded-lg p-3 shadow-lg"
+            >
               <div className="flex items-center justify-between mb-2">
                 <strong className="text-sm">Preview settings</strong>
-                <span className="text-xs text-slate-500">saved</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={resetSettings}
+                    className="text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-700"
+                  >
+                    Reset
+                  </button>
+                  <span className="text-xs text-slate-500">saved</span>
+                </div>
               </div>
 
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">
@@ -408,7 +569,7 @@ export const HeroPreview: React.FC = () => {
                 />
               </label>
 
-              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 mb-2">
                 Mode
                 <select
                   aria-label="Mode"
@@ -420,20 +581,72 @@ export const HeroPreview: React.FC = () => {
                   <option value="eye-catching">Eye catching</option>
                 </select>
               </label>
+
+              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 mb-2">
+                Accent
+                <select
+                  aria-label="Accent"
+                  value={settings.accent}
+                  onChange={(e) => updateSetting({ accent: e.target.value as Settings['accent'] })}
+                  className="ml-auto text-sm bg-transparent"
+                >
+                  <option value="violet">Violet</option>
+                  <option value="blue">Blue</option>
+                  <option value="amber">Amber</option>
+                </select>
+              </label>
+
+              <label className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Gloss glare
+                <input
+                  aria-label="Gloss glare"
+                  type="checkbox"
+                  checked={settings.gloss}
+                  onChange={(e) => updateSetting({ gloss: e.target.checked })}
+                />
+              </label>
+
+              <label className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Border glow
+                <input
+                  aria-label="Border glow"
+                  type="checkbox"
+                  checked={settings.borderGlow}
+                  onChange={(e) => updateSetting({ borderGlow: e.target.checked })}
+                />
+              </label>
+
+              <label className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Pause motion
+                <input
+                  aria-label="Pause motion"
+                  type="checkbox"
+                  checked={settings.paused || reduce}
+                  onChange={(e) => updateSetting({ paused: e.target.checked })}
+                  disabled={reduce}
+                />
+              </label>
             </div>
           </div>
         )}
 
         {/* rotating container */}
-        <div
+<div
           ref={(el) => { containerRef.current = el; }}
-          className={`${TOKENS.radius.lg} overflow-hidden border border-slate-200/70 dark:border-slate-800/70 relative`}
+          className={cn(
+            TOKENS.radius.lg,
+            'overflow-hidden border border-slate-200/70 dark:border-slate-800/70 relative bg-white/60 dark:bg-slate-900/40 backdrop-blur'
+          )}
           style={{
             transformStyle: 'preserve-3d',
             transition: reduce ? 'none' : 'transform 150ms linear',
             willChange: 'transform',
           }}
           onTouchStart={handleTouchStart}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          aria-live="polite"
+          aria-describedby={openSettings ? settingsPanelId : undefined}
         >
           {/* ripple layer */}
           <div
@@ -447,19 +660,46 @@ export const HeroPreview: React.FC = () => {
             className="aspect-[16/10] relative bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900"
             style={{ transform: `translateZ(${settings.depth}px)` }}
           >
+            {/* specular glare */}
+            {settings.gloss && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    'radial-gradient(120px 80px at 20% 10%, rgba(255,255,255,0.6), rgba(255,255,255,0) 60%), linear-gradient(120deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 30%)',
+                  mixBlendMode: 'screen',
+                  transform: 'translateZ(1px)'
+                }}
+              />
+            )}
+            {/* top shade */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/6 to-transparent pointer-events-none" />
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center space-y-1">
-                <div className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="tracking-wide">Lighthouse 98-100</span>
+            {/* dynamic spotlight */}
+            <div
+              ref={(el) => { spotRef.current = el; }}
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(240px 240px at var(--spot-x,50%) var(--spot-y,50%), rgba(255,255,255,0.16), rgba(255,255,255,0) 60%)',
+                transition: 'opacity 180ms ease-out',
+              }}
+            />
+            <div className="flex h-full items-start justify-center pt-4 md:pt-6">
+              <div className="relative z-10">
+                <div className="mx-auto inline-flex flex-col items-center rounded-md px-3 py-2 bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-sm">
+                <div className="flex items-center justify-center gap-2 text-sm text-white/85">
+                    <CheckCircle2 className="h-4 w-4 text-green-400" />
+                    <span className="tracking-wide">Lighthouse 98-100</span>
+                  </div>
+                  <h3 className="mt-1 text-lg font-semibold text-white drop-shadow">
+                    Live Preview Surface
+                  </h3>
+                  <p className="text-xs text-white/85 drop-shadow-sm">
+                    Move your mouse, tilt your phone, or tap to interact
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-                  Live Preview Surface
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Move your mouse, tilt your phone, or tap to interact
-                </p>
                 <span className="sr-only">{srText}</span>
               </div>
             </div>
@@ -471,16 +711,32 @@ export const HeroPreview: React.FC = () => {
               <motion.div
                 key={i}
                 ref={(el) => { floatingRefs.current[i] = el; }}
-                className="h-14 rounded-lg bg-gradient-to-br from-blue-500/10 to-fuchsia-500/10 shadow-sm transform-gpu"
+                className={cn(
+                  'group h-14 rounded-lg bg-gradient-to-br shadow-sm transform-gpu relative overflow-hidden',
+                  accentGrad
+                )}
                 whileHover={reduce ? {} : { scale: 1.025 }}
                 transition={{ duration: 0.22 }}
                 style={{
                   transition: 'transform 220ms linear',
                   transform: `translate3d(0px, ${Math.sin(i) * 1.2}px, ${settings.depth / 2 + i * 3}px)`,
                 }}
-              />
+              >
+                {/* inner shimmer */}
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{
+                    background:
+                      'linear-gradient(120deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 60%)',
+                    transform: 'translateX(-100%)',
+                    animation: reduce || settings.paused ? 'none' : 'shimmer 2.8s ease-in-out infinite',
+                  }}
+                />
+              </motion.div>
             ))}
           </div>
+          <style>{`@keyframes shimmer{0%{transform:translateX(-120%)}50%{transform:translateX(50%)}100%{transform:translateX(120%)}}`}</style>
         </div>
       </motion.div>
     </div>

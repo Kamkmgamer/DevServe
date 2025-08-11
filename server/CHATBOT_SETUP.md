@@ -115,7 +115,7 @@ Currently configured to use `openai/gpt-4o-mini` through OpenRouter. To use GPT 
 2. Find the exact model ID for GPT OSS 20B
 3. Update the model in `server/src/api/chatbot.ts`:
 ```typescript
-model: 'gpt-oss/gpt-4o-20b', // Replace with actual model ID
+model: 'openai/gpt-oss-20b:free',
 ```
 
 ## Troubleshooting

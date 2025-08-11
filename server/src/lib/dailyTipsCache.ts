@@ -121,7 +121,7 @@ class DailyTipsCache {
 
     try {
       const completion = await openai.chat.completions.create({
-        model: 'openai/gpt-4o-mini',
+        model: 'openai/gpt-oss-20b:free',
         messages: [
           {
             role: 'system',
