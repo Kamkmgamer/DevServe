@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/axios";
-import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   RefreshCw,
   Share2,
   Copy,
-  Check,
   Sparkles,
   Clock,
   Zap,
@@ -25,45 +24,80 @@ import {
  */
 
 // Countdown timer component
-const CountdownTimer: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
-  const [isVisible, setIsVisible] = useState(false);
+const TimeUnit: React.FC<{ label: 'H' | 'M' | 'S'; value: number; pulse?: boolean }> = React.memo(({ label, value, pulse = false }) => {
   const reduced = useReducedMotion();
+  const formatTime = (v: number) => v.toString().padStart(2, '0');
+  return (
+    <div className="flex items-center">
+      <motion.div
+        className="flex flex-col items-center"
+        animate={pulse && !reduced ? { scale: [1, 1.05, 1] } : undefined}
+        transition={{ duration: 0.6, repeat: pulse ? Infinity : 0 }}
+      >
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 min-w-[2.5rem] text-center shadow-sm">
+          <span className="text-lg font-mono font-bold text-slate-900 dark:text-slate-100">
+            {formatTime(value)}
+          </span>
+        </div>
+        <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+          {label}
+        </span>
+      </motion.div>
+    </div>
+  );
+});
+
+// compute next midnight once
+const getNextMidnight = () => {
+  const now = new Date();
+  const next = new Date(now);
+  next.setDate(now.getDate() + 1);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const getTimeParts = (deadline: Date) => {
+  const now = Date.now();
+  const diff = deadline.getTime() - now;
+  const clamped = Math.max(0, diff);
+  const hours = Math.floor(clamped / (1000 * 60 * 60));
+  const minutes = Math.floor((clamped % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((clamped % (1000 * 60)) / 1000);
+  return { hours, minutes, seconds, remainingMs: clamped };
+};
+
+const TimeUnitTicker: React.FC<{
+  label: 'H' | 'M' | 'S';
+  deadline: Date;
+  pulse?: boolean;
+  onComplete?: () => void; // used only on seconds
+}> = React.memo(({ label, deadline, pulse, onComplete }) => {
+  const [value, setValue] = useState(() => getTimeParts(deadline)[label === 'H' ? 'hours' : label === 'M' ? 'minutes' : 'seconds']);
+  const completedRef = useRef(false);
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setDate(now.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      
-      const diff = tomorrow.getTime() - now.getTime();
-      
-      if (diff <= 0) {
+    const tick = () => {
+      const parts = getTimeParts(deadline);
+      const nextVal = label === 'H' ? parts.hours : label === 'M' ? parts.minutes : parts.seconds;
+      setValue((prev) => (prev !== nextVal ? nextVal : prev));
+      if (!completedRef.current && parts.remainingMs === 0 && label === 'S') {
+        completedRef.current = true;
         onComplete?.();
-        return { hours: 0, minutes: 0, seconds: 0 };
       }
-      
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      
-      return { hours, minutes, seconds };
     };
+    const id = window.setInterval(tick, 1000);
+    // run once immediately so UI updates quickly
+    tick();
+    return () => window.clearInterval(id);
+  }, [deadline, label, onComplete]);
 
-    setTimeLeft(calculateTimeLeft());
-    setIsVisible(true);
-    
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 1000);
+  return <TimeUnit label={label} value={value} pulse={pulse} />;
+});
 
-    return () => clearInterval(timer);
-  }, [onComplete]);
-
-  const formatTime = (value: number) => value.toString().padStart(2, '0');
-
-  if (!isVisible) return null;
+const CountdownTimerComponent: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
+  const reduced = useReducedMotion();
+  // compute deadline once so parent stays static
+  const deadline = useMemo(() => getNextMidnight(), []);
 
   return (
     <motion.div
@@ -76,33 +110,17 @@ const CountdownTimer: React.FC<{ onComplete?: () => void }> = ({ onComplete }) =
         <Clock className="w-4 h-4" />
         <span className="text-sm font-medium">Next refresh in:</span>
       </div>
-      
       <div className="flex items-center gap-2">
-        {[{ label: 'H', value: timeLeft.hours }, { label: 'M', value: timeLeft.minutes }, { label: 'S', value: timeLeft.seconds }].map((unit, index) => (
-          <React.Fragment key={unit.label}>
-            <motion.div 
-              className="flex flex-col items-center"
-              animate={{ scale: unit.label === 'S' ? [1, 1.05, 1] : 1 }}
-              transition={{ duration: 0.6, repeat: unit.label === 'S' ? Infinity : 0 }}
-            >
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 min-w-[2.5rem] text-center shadow-sm">
-                <span className="text-lg font-mono font-bold text-slate-900 dark:text-slate-100">
-                  {formatTime(unit.value)}
-                </span>
-              </div>
-              <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                {unit.label}
-              </span>
-            </motion.div>
-            {index < 2 && (
-              <span className="text-slate-400 dark:text-slate-500 font-bold mb-4">:</span>
-            )}
-          </React.Fragment>
-        ))}
+        <TimeUnitTicker label="H" deadline={deadline} />
+        <span className="text-slate-400 dark:text-slate-500 font-bold mb-4">:</span>
+        <TimeUnitTicker label="M" deadline={deadline} />
+        <span className="text-slate-400 dark:text-slate-500 font-bold mb-4">:</span>
+        <TimeUnitTicker label="S" deadline={deadline} pulse={!reduced} onComplete={onComplete} />
       </div>
     </motion.div>
   );
 };
+const CountdownTimer = React.memo(CountdownTimerComponent);
 
 // Rich text parsing and rendering utilities
 interface RichTextToken {
@@ -123,43 +141,42 @@ const parseRichText = (text: string): RichTextToken[] => {
   let currentIndex = 0;
   
   const patterns = [
-    // Headings (must come first to avoid conflicts)
+    // Code tokens FIRST so they don't get parsed as headings/lists
+    { regex: /```([\w+-]*)?\n?([\s\S]*?)(?:```|$)/g, type: 'codeblock' as const },
+    // Inline code: non-empty content between single backticks
+    { regex: /`([^`]+?)`/g, type: 'code' as const },
+
+    // Headings
     { regex: /^# (.+)$/gm, type: 'heading1' as const },
     { regex: /^## (.+)$/gm, type: 'heading2' as const },
     { regex: /^### (.+)$/gm, type: 'heading3' as const },
     { regex: /^#### (.+)$/gm, type: 'heading4' as const },
     { regex: /^##### (.+)$/gm, type: 'heading5' as const },
     { regex: /^###### (.+)$/gm, type: 'heading6' as const },
-    
+
     // Horizontal rule
     { regex: /^---$/gm, type: 'horizontalrule' as const },
-    
-    // Code blocks (must come before inline code)
-    { regex: /```([a-zA-Z]*)?\n?([\s\S]*?)```/g, type: 'codeblock' as const },
-    
+
     // Blockquotes
     { regex: /^> (.+)$/gm, type: 'blockquote' as const },
-    
+
     // Lists (unordered)
     { regex: /^[*-+] (.+)$/gm, type: 'listitem' as const },
-    
+
     // Lists (ordered)
     { regex: /^\d+\. (.+)$/gm, type: 'listitem' as const },
-    
+
     // Images
     { regex: /!\[([^\]]*)\]\(([^)]+)\)/g, type: 'image' as const },
-    
+
     // Links
     { regex: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'link' as const },
-    
-    // Text formatting (order matters for proper nesting)
+
+    // Text formatting
     { regex: /~~(.*?)~~/g, type: 'strikethrough' as const },
     { regex: /__(.*?)__/g, type: 'underline' as const },
     { regex: /\*\*(.*?)\*\*/g, type: 'bold' as const },
     { regex: /\*(.*?)\*/g, type: 'italic' as const },
-    
-    // Inline code (must come after bold/italic to avoid conflicts)
-    { regex: /`(.*?)`/g, type: 'code' as const },
   ];
 
   while (currentIndex < text.length) {
@@ -257,7 +274,7 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           key={key} 
           className="text-3xl font-bold text-slate-900 dark:text-slate-50 mt-8 mb-6 first:mt-0 border-b-2 border-indigo-200 dark:border-indigo-800 pb-3"
         >
-          {token.content}
+          {parseRichText(token.content).map((t, i) => renderRichTextToken(t, `${key}-h1-${i}`))}
         </h1>
       );
     case 'heading2':
@@ -266,7 +283,7 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           key={key} 
           className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-7 mb-5 first:mt-0 border-b border-slate-200 dark:border-slate-700 pb-2"
         >
-          {token.content}
+          {parseRichText(token.content).map((t, i) => renderRichTextToken(t, `${key}-h2-${i}`))}
         </h2>
       );
     case 'heading3':
@@ -275,7 +292,7 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           key={key} 
           className="text-xl font-bold text-slate-900 dark:text-slate-50 mt-6 mb-4 first:mt-0 border-b border-slate-200 dark:border-slate-700 pb-2"
         >
-          {token.content}
+          {parseRichText(token.content).map((t, i) => renderRichTextToken(t, `${key}-h3-${i}`))}
         </h3>
       );
     case 'heading4':
@@ -284,7 +301,7 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           key={key} 
           className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-5 mb-3 first:mt-0"
         >
-          {token.content}
+          {parseRichText(token.content).map((t, i) => renderRichTextToken(t, `${key}-h4-${i}`))}
         </h4>
       );
     case 'heading5':
@@ -293,7 +310,7 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           key={key} 
           className="text-base font-bold text-slate-900 dark:text-slate-50 mt-4 mb-2 first:mt-0"
         >
-          {token.content}
+          {parseRichText(token.content).map((t, i) => renderRichTextToken(t, `${key}-h5-${i}`))}
         </h5>
       );
     case 'heading6':
@@ -302,7 +319,7 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
           key={key} 
           className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-4 mb-2 first:mt-0 uppercase tracking-wide"
         >
-          {token.content}
+          {parseRichText(token.content).map((t, i) => renderRichTextToken(t, `${key}-h6-${i}`))}
         </h6>
       );
     
@@ -334,7 +351,10 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
       return <del key={key} className="line-through text-slate-500 dark:text-slate-400">{token.content}</del>;
     case 'code':
       return (
-        <code key={key} className="px-2 py-1 text-sm bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-md font-mono border border-slate-200 dark:border-slate-700">
+        <code
+          key={key}
+          className="px-1.5 py-0.5 text-[0.9em] leading-normal whitespace-pre-wrap bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 rounded border border-slate-200 dark:border-slate-700 font-mono align-baseline"
+        >
           {token.content}
         </code>
       );
@@ -412,29 +432,41 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
   }
 };
 
-// Enhanced typing animation component with rich text support
-const TypingText: React.FC<{ text: string; speed?: number; active?: boolean }> = ({ text, speed = 14, active = true }) => {
+// Enhanced typing animation component with rich text support (optimized)
+const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boolean }> = ({ text, speed = 14, active = true }) => {
   const [displayText, setDisplayText] = useState('');
-  const [showCursor, setShowCursor] = useState(true);
   const [isTyping, setIsTyping] = useState(true);
   const reduced = useReducedMotion();
+  const timeoutRef = useRef<number | null>(null);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
+    cancelledRef.current = false;
+
+    const clear = () => {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+
     if (!active) {
-      // pause typing when not active to save CPU
-      return;
+      clear();
+      return () => clear();
     }
     if (!text) {
       setDisplayText('');
       setIsTyping(false);
-      return;
+      clear();
+      return () => clear();
     }
 
     if (reduced) {
       // Instantly render full text when reduced motion is preferred
       setDisplayText(text);
       setIsTyping(false);
-      return;
+      clear();
+      return () => clear();
     }
 
     setDisplayText('');
@@ -444,30 +476,27 @@ const TypingText: React.FC<{ text: string; speed?: number; active?: boolean }> =
     const effectiveDelay = Math.max(8, speed); // clamp to avoid too many timers
 
     const typeWriter = () => {
+      if (cancelledRef.current) return;
       if (currentIndex < text.length) {
+        // Guard against state updates after unmount
         setDisplayText(text.slice(0, currentIndex + 1));
         currentIndex++;
-        setTimeout(typeWriter, effectiveDelay);
+        timeoutRef.current = window.setTimeout(typeWriter, effectiveDelay);
       } else {
         setIsTyping(false);
+        clear();
       }
     };
 
-    const timer = setTimeout(typeWriter, 200); // Initial delay
-    return () => clearTimeout(timer);
+    timeoutRef.current = window.setTimeout(typeWriter, 200); // Initial delay
+
+    return () => {
+      cancelledRef.current = true;
+      clear();
+    };
   }, [text, speed, reduced, active]);
 
-  // Cursor blinking effect
-  useEffect(() => {
-    if (reduced) {
-      setShowCursor(false);
-      return;
-    }
-    const cursorTimer = setInterval(() => {
-      setShowCursor(prev => !prev);
-    }, 530);
-    return () => clearInterval(cursorTimer);
-  }, [reduced]);
+  // Cursor uses CSS animation to avoid state-driven re-renders
 
   // Sanitize partially-typed markdown to avoid showing raw markers (e.g., a single trailing **)
   const sanitizeForTyping = (input: string) => {
@@ -481,6 +510,20 @@ const TypingText: React.FC<{ text: string; speed?: number; active?: boolean }> =
     });
 
     let text = protectedText;
+
+    // If there's an unterminated fenced code block (odd number of ```), temporarily close it
+    const fenceMatches = text.match(/```/g) || [];
+    if (fenceMatches.length % 2 === 1) {
+      // add a closing fence so parser treats it as a complete block
+      text += "\n```";
+    }
+
+    // For inline code, if there's an odd number of backticks, add a trailing backtick to close
+    // This improves inline code rendering while typing
+    const inlineBackticks = (text.match(/`/g) || []).length;
+    if (inlineBackticks % 2 === 1) {
+      text += "`";
+    }
 
     // Fix unmatched bold markers (**)
     const boldMatches = text.match(/\*\*/g) || [];
@@ -497,24 +540,38 @@ const TypingText: React.FC<{ text: string; speed?: number; active?: boolean }> =
     return text;
   };
 
-  // Parse and render the current display text with rich formatting
-  const renderRichText = (text: string) => {
-    const sanitized = sanitizeForTyping(text);
-    const tokens = parseRichText(sanitized);
+  // Parse and render FULL text with rich formatting (only when typing completes)
+  const fullRich = useMemo(() => {
+    const tokens = parseRichText(text || '');
     return tokens.map((token, index) => renderRichTextToken(token, `token-${index}`));
-  };
+  }, [text]);
+
+  // While typing, render a sanitized, partially-formatted version for good UX
+  const partialRich = useMemo(() => {
+    const sanitized = sanitizeForTyping(displayText);
+    const tokens = parseRichText(sanitized || '');
+    return tokens.map((token, index) => renderRichTextToken(token, `partial-${index}`));
+  }, [displayText]);
 
   return (
-    <span className="inline">
-      {renderRichText(displayText)}
-      {(!reduced && (isTyping || showCursor)) && (
-        <span className={`inline-block w-0.5 h-5 ml-0.5 bg-indigo-500 dark:bg-indigo-400 ${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-100`}>
-          |
-        </span>
+    <div className="inline-block align-middle w-full">
+      {isTyping ? (
+        <>
+          {partialRich}
+          {!reduced && (
+            <span
+              className="inline-block w-0.5 h-5 ml-0.5 bg-indigo-500 dark:bg-indigo-400 animate-pulse"
+              aria-hidden
+            />
+          )}
+        </>
+      ) : (
+        <>{fullRich}</>
       )}
-    </span>
+    </div>
   );
 };
+const TypingText = React.memo(TypingTextComponent);
 
 type Props = {
   className?: string;
@@ -578,7 +635,6 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         JSON.stringify({ content, fetchedAt: Date.now() })
       );
     } catch {
-      // ignore storage errors
     }
   }, []);
 
@@ -592,7 +648,6 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
           try {
             controllerRef.current.abort();
           } catch {
-            // noop
           }
         }
         const controller = new AbortController();
@@ -630,7 +685,6 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         try {
           controllerRef.current.abort();
         } catch {
-          // noop
         }
       }
       const controller = new AbortController();
@@ -683,7 +737,6 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         }
         return { content, fetchedAt: Date.now() };
       } finally {
-        // no-op
       }
     },
     [readCache, writeCache]
@@ -708,12 +761,11 @@ export const SecretDailyTips: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const reduced = useReducedMotion();
   const [inView, setInView] = useState(false);
+  const [everInView, setEverInView] = useState(false);
 
   const lastFetchedLabel = useMemo(() => {
     return lastFetchedAt ? `Fetched ${formatDateShort(new Date(lastFetchedAt))}` : "";
@@ -721,7 +773,7 @@ export const SecretDailyTips: React.FC<Props> = ({
 
   const load = useCallback(
     async (opts?: { force?: boolean; fresh?: boolean }) => {
-      if (loading) return; // avoid overlapping requests
+      if (loading) return;
       setLoading(true);
       setError(null);
       try {
@@ -729,11 +781,6 @@ export const SecretDailyTips: React.FC<Props> = ({
         setTip(res.content);
         setLastFetchedAt(res.fetchedAt);
         setError(null);
-        
-        if (opts?.fresh) {
-          setToast("Fresh tip generated!");
-          setTimeout(() => setToast(null), 2000);
-        }
       } catch (err: any) {
         console.warn("SecretDailyTips - fetch failed", err);
         setTip(DEFAULT_TIP);
@@ -755,6 +802,10 @@ export const SecretDailyTips: React.FC<Props> = ({
     return () => clearInterval(id);
   }, [refreshInterval, load]);
 
+  const handleCountdownComplete = useCallback(() => {
+    load({ force: true });
+  }, [load]);
+
   // Defer typing until content is in view to reduce CPU
   useEffect(() => {
     const el = contentRef.current ?? containerRef.current;
@@ -766,6 +817,7 @@ export const SecretDailyTips: React.FC<Props> = ({
       (entries) => {
         const entry = entries[0];
         setInView(entry.isIntersecting);
+        if (entry.isIntersecting) setEverInView(true);
       },
       { root: null, rootMargin: '0px 0px -25% 0px', threshold: 0 }
     );
@@ -786,11 +838,11 @@ export const SecretDailyTips: React.FC<Props> = ({
       }
       if (e.key === "c") {
         e.preventDefault();
-        if (!loading) copyTip();
+        if (!loading) copyRaw(tip);
       }
       if (e.key === "s") {
         e.preventDefault();
-        if (!loading) shareTip();
+        if (!loading) shareRaw(tip);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -814,10 +866,8 @@ export const SecretDailyTips: React.FC<Props> = ({
       startY = t.clientY;
       startTime = Date.now();
       longPressTimer = window.setTimeout(() => {
-        // long press: copy tip
-        copyTip();
-        setToast("Copied via long press");
-        setTimeout(() => setToast(null), 1500);
+        // long press: copy tip (stateless)
+        void copyRaw(tip);
       }, 650) as unknown as number;
     };
 
@@ -844,11 +894,9 @@ export const SecretDailyTips: React.FC<Props> = ({
         if (dx < 0) {
           // swipe left: refresh
           load({ force: true });
-          setToast("Refreshed");
-          setTimeout(() => setToast(null), 1200);
         } else {
           // swipe right: share
-          shareTip();
+          void shareRaw(tip);
         }
       }
     };
@@ -865,14 +913,14 @@ export const SecretDailyTips: React.FC<Props> = ({
   }, []);
 
   // copy with feedback
-  const copyTip = useCallback(async () => {
+  const copyRaw = useCallback(async (text: string) => {
+    if (!text) return false;
     try {
-      if (!tip) return;
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(tip);
+        await navigator.clipboard.writeText(text);
       } else {
         const ta = document.createElement("textarea");
-        ta.value = tip;
+        ta.value = text;
         ta.style.position = "fixed";
         ta.style.left = "-9999px";
         document.body.appendChild(ta);
@@ -880,30 +928,25 @@ export const SecretDailyTips: React.FC<Props> = ({
         document.execCommand("copy");
         document.body.removeChild(ta);
       }
-      setCopied(true);
-      setToast("Copied to clipboard");
-      setTimeout(() => setCopied(false), 1800);
-      setTimeout(() => setToast(null), 2100);
+      return true;
     } catch {
-      setToast("Could not copy");
-      setTimeout(() => setToast(null), 2000);
+      return false;
     }
-  }, [tip]);
+  }, []);
 
-  const shareTip = useCallback(async () => {
-    if (!tip) return;
+  const shareRaw = useCallback(async (text: string) => {
+    if (!text) return false;
     if ((navigator as any).share) {
       try {
-        await (navigator as any).share({ title: "Daily AI Tip", text: tip });
-        setToast("Shared");
-        setTimeout(() => setToast(null), 1500);
+        await (navigator as any).share({ title: "Daily AI Tip", text });
+        return true;
       } catch {
-        // ignore
+        return false;
       }
     } else {
-      await copyTip();
+      return await copyRaw(text);
     }
-  }, [tip, copyTip]);
+  }, [copyRaw]);
 
   // Copy and share functions (keeping these for functionality)
 
@@ -996,7 +1039,7 @@ export const SecretDailyTips: React.FC<Props> = ({
                 </motion.button>
 
                 <motion.button
-                  onClick={shareTip}
+                  onClick={() => shareRaw(tip)}
                   title="Share tip"
                   aria-label="Share tip"
                   disabled={loading || !tip}
@@ -1022,7 +1065,7 @@ export const SecretDailyTips: React.FC<Props> = ({
               ) : (
                 <div className="prose prose-lg max-w-none dark:prose-invert">
                   <div ref={contentRef} className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-lg">
-                    <TypingText text={tip || DEFAULT_TIP} speed={12} active={inView} />
+                    <TypingText text={tip || DEFAULT_TIP} speed={12} active={inView || everInView} />
                   </div>
                 </div>
               )}
@@ -1037,7 +1080,7 @@ export const SecretDailyTips: React.FC<Props> = ({
               </div>
 
               <motion.button
-                onClick={copyTip}
+                onClick={() => copyRaw(tip)}
                 title="Copy tip"
                 aria-label="Copy tip"
                 disabled={loading || !tip}
@@ -1045,27 +1088,15 @@ export const SecretDailyTips: React.FC<Props> = ({
                 whileHover={reduced ? undefined : { scale: 1.05 }}
                 className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${(loading || !tip) ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span>{copied ? "Copied!" : "Copy"}</span>
+                <Copy className="w-4 h-4" />
+                <span>Copy</span>
               </motion.button>
             </footer>
 
-            {toast && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                transition={{ duration: reduced ? 0 : 0.2 }}
-                className="absolute right-6 bottom-6 bg-slate-900/95 dark:bg-slate-800/95 text-white text-sm px-4 py-2 rounded-xl shadow-lg backdrop-blur-sm border border-slate-700/50"
-                role="status"
-              >
-                {toast}
-              </motion.div>
-            )}
           </motion.section>
 
           {/* Countdown Timer */}
-          <CountdownTimer onComplete={() => load({ force: true })} />
+          <CountdownTimer onComplete={handleCountdownComplete} />
 
           <motion.div 
             className="text-center mt-6 text-xs text-slate-400 dark:text-slate-500"
@@ -1081,4 +1112,4 @@ export const SecretDailyTips: React.FC<Props> = ({
   );
 };
 
-export default SecretDailyTips;
+export default React.memo(SecretDailyTips);
