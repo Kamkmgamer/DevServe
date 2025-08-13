@@ -90,7 +90,7 @@ const Navbar = () => {
     const active =
       "text-blue-700 dark:text-blue-300 bg-blue-50/60 dark:bg-slate-800/70";
 
-    const uniqueKey = link.href || `link-${link.label}-${Math.random().toString(36).substring(7)}`;
+    const uniqueKey = link.href || `link-${link.label}`;
 
     if ((link as any).isExternal) {
       return (
@@ -160,11 +160,7 @@ const Navbar = () => {
                        bg-white/70 dark:bg-slate-900/60 dark:border-slate-800
                        px-1 py-1 shadow-sm backdrop-blur"
           >
-            {navLinks.map((l, idx) => (
-              <React.Fragment key={idx}>
-                {renderLink(l)}
-              </React.Fragment>
-            ))}
+            {navLinks.map((l) => renderLink(l))}
           </div>
         </nav>
 
@@ -277,12 +273,12 @@ const Navbar = () => {
                   }}
                 />
                 <div className="flex flex-col items-stretch gap-2">
-                  {navLinks.map((link, idx) => (
+                  {navLinks.map((link) => (
                     <motion.div
-                      key={idx}
+                      key={link.href || link.label}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.03 * idx }}
+                      transition={{ duration: 0.18 }}
                     >
                       {renderLink(link, {
                         isMobile: true,

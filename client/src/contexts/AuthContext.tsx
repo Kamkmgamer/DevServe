@@ -5,6 +5,7 @@ import {
   useEffect,
   ReactNode,
   useCallback,
+  useMemo,
 } from "react";
 import api from "../api/axios";
 import { jwtDecode } from "jwt-decode"; // Corrected import
@@ -107,14 +108,14 @@ const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\
     setUser(null); // Clear user on logout
   }, []);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     token,
     isAuthenticated: !!token,
     user, // Provide user object
     login,
     register,
     logout,
-  };
+  }), [token, user, login, register, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   Github,
   Linkedin,
@@ -14,10 +14,10 @@ type SocialLink = {
   icon: React.ReactNode;
 };
 
-const Footer = () => {
+const Footer = React.memo(() => {
   const year = useMemo(() => new Date().getFullYear(), []);
 
-  const socialLinks: SocialLink[] = [
+  const socialLinks: SocialLink[] = useMemo(() => [
     {
       name: "Twitter (X)",
       href: "https://x.com/kamkmgamer",
@@ -33,28 +33,33 @@ const Footer = () => {
       href: "https://www.linkedin.com/in/kamkm-gamer/",
       icon: <Linkedin className="h-5 w-5" aria-hidden="true" />,
     },
-  ];
+  ], []);
 
-  const productLinks = [
+  const productLinks = useMemo(() => [
     { label: "Features", href: "/#features" },
     { label: "Pricing", href: "/pricing" },
     { label: "Roadmap", href: "/roadmap" },
     { label: "Changelog", href: "/changelog" },
-  ];
+  ], []);
 
-  const companyLinks = [
+  const companyLinks = useMemo(() => [
     { label: "About", href: "/about" },
     { label: "Blog", href: "/blog" },
     { label: "Careers", href: "/careers" },
     { label: "Contact", href: "/contact" },
-  ];
+  ], []);
 
-  const resourcesLinks = [
+  const resourcesLinks = useMemo(() => [
     { label: "Docs", href: "/docs" },
     { label: "Guides", href: "/guides" },
     { label: "API", href: "/ApplicationProgrammingInterface" },
     { label: "Community", href: "/community" },
-  ];
+  ], []);
+
+  const scrollToTop = useCallback(() => {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: prefersReduced ? 'auto' : 'smooth' });
+  }, []);
 
   return (
     <footer
@@ -81,7 +86,9 @@ const Footer = () => {
                   src="https://ik.imagekit.io/gtnmxyt2d/kmakm%20store/favicon.svg"
                   alt="DevServe"
                   className="h-full w-full object-contain"
-                  loading="eager"
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
                 />
               </div>
               <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
@@ -230,7 +237,7 @@ const Footer = () => {
 
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            © {year} DevServe. All rights reserved.
+            {year} DevServe. All rights reserved.
           </p>
 
           <div className="flex items-center gap-4">
@@ -250,8 +257,10 @@ const Footer = () => {
             >
               Terms
             </a>
-            <a
-              href="#top"
+            <button
+              type="button"
+              onClick={scrollToTop}
+              aria-label="Back to top"
               className="inline-flex items-center gap-2 rounded-md border border-slate-200 
                          px-3 py-1.5 text-sm text-slate-600 transition hover:border-blue-300 
                          hover:text-blue-600 focus:outline-none focus:ring-2 
@@ -260,7 +269,7 @@ const Footer = () => {
             >
               <ArrowUp className="h-4 w-4" aria-hidden="true" />
               Back to top
-            </a>
+            </button>
           </div>
         </div>
 
@@ -270,6 +279,6 @@ const Footer = () => {
       </Container>
     </footer>
   );
-};
+});
 
 export default Footer;

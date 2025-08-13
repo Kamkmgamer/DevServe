@@ -155,16 +155,30 @@ export const Hero = () => {
           transition={{ delay: 1 }}
           className="mt-10 flex flex-col items-center"
         >
-          <p className={`mb-2 text-sm ${TOKENS.textMuted}`}>Scroll to explore</p>
-          {!reduce && (
-            <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="animate-pulse"
-            >
-              <ChevronDown className="h-6 w-6 text-slate-400" />
-            </motion.div>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              const distance = Math.min(
+                window.innerHeight,
+                Math.max(0, document.documentElement.scrollHeight - window.scrollY - 1)
+              );
+              const behavior = reduce ? 'auto' : 'smooth';
+              window.scrollBy({ top: distance, behavior: behavior as ScrollBehavior });
+            }}
+            aria-label="Scroll to explore"
+            className="group flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+          >
+            <p className={`mb-2 text-sm ${TOKENS.textMuted}`}>Scroll to explore</p>
+            {!reduce && (
+              <motion.div
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="animate-pulse"
+              >
+                <ChevronDown className="h-6 w-6 text-slate-400" />
+              </motion.div>
+            )}
+          </button>
         </motion.div>
       </Container>
     </motion.section>

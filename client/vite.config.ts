@@ -46,9 +46,12 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
-      rollupOptions: {
-        external: ['react-markdown'],
-      },
+      // Do not externalize app dependencies used in the browser unless you provide them at runtime.
+      // Remove incorrect 'external' settings that could break imports like react-markdown.
+      rollupOptions: {},
+      // Reduce production bundle size by removing debug statements
+      minify: 'esbuild',
+      target: 'es2020',
     }
   };
 });
