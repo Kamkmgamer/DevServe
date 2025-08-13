@@ -360,6 +360,8 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
             alt={token.alt || token.content} 
             className="max-w-full h-auto rounded-lg shadow-sm border border-slate-200 dark:border-slate-700"
             loading="lazy"
+            decoding="async"
+            fetchPriority="low"
           />
           {token.content && (
             <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 text-center italic">
@@ -411,14 +413,26 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
 };
 
 // Enhanced typing animation component with rich text support
-const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 14 }) => {
+const TypingText: React.FC<{ text: string; speed?: number; active?: boolean }> = ({ text, speed = 14, active = true }) => {
   const [displayText, setDisplayText] = useState('');
   const [showCursor, setShowCursor] = useState(true);
   const [isTyping, setIsTyping] = useState(true);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    if (!active) {
+      // pause typing when not active to save CPU
+      return;
+    }
     if (!text) {
       setDisplayText('');
+      setIsTyping(false);
+      return;
+    }
+
+    if (reduced) {
+      // Instantly render full text when reduced motion is preferred
+      setDisplayText(text);
       setIsTyping(false);
       return;
     }
@@ -426,28 +440,34 @@ const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 
     setDisplayText('');
     setIsTyping(true);
     let currentIndex = 0;
-    
+
+    const effectiveDelay = Math.max(8, speed); // clamp to avoid too many timers
+
     const typeWriter = () => {
       if (currentIndex < text.length) {
         setDisplayText(text.slice(0, currentIndex + 1));
         currentIndex++;
-        setTimeout(typeWriter, speed + Math.random() * 30); // Add slight randomness
+        setTimeout(typeWriter, effectiveDelay);
       } else {
         setIsTyping(false);
       }
     };
 
-    const timer = setTimeout(typeWriter, 300); // Initial delay
+    const timer = setTimeout(typeWriter, 200); // Initial delay
     return () => clearTimeout(timer);
-  }, [text, speed]);
+  }, [text, speed, reduced, active]);
 
   // Cursor blinking effect
   useEffect(() => {
+    if (reduced) {
+      setShowCursor(false);
+      return;
+    }
     const cursorTimer = setInterval(() => {
       setShowCursor(prev => !prev);
     }, 530);
     return () => clearInterval(cursorTimer);
-  }, []);
+  }, [reduced]);
 
   // Sanitize partially-typed markdown to avoid showing raw markers (e.g., a single trailing **)
   const sanitizeForTyping = (input: string) => {
@@ -487,7 +507,7 @@ const TypingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 
   return (
     <span className="inline">
       {renderRichText(displayText)}
-      {(isTyping || showCursor) && (
+      {(!reduced && (isTyping || showCursor)) && (
         <span className={`inline-block w-0.5 h-5 ml-0.5 bg-indigo-500 dark:bg-indigo-400 ${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-100`}>
           |
         </span>
@@ -691,7 +711,9 @@ export const SecretDailyTips: React.FC<Props> = ({
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const reduced = useReducedMotion();
+  const [inView, setInView] = useState(false);
 
   const lastFetchedLabel = useMemo(() => {
     return lastFetchedAt ? `Fetched ${formatDateShort(new Date(lastFetchedAt))}` : "";
@@ -699,6 +721,7 @@ export const SecretDailyTips: React.FC<Props> = ({
 
   const load = useCallback(
     async (opts?: { force?: boolean; fresh?: boolean }) => {
+      if (loading) return; // avoid overlapping requests
       setLoading(true);
       setError(null);
       try {
@@ -732,24 +755,42 @@ export const SecretDailyTips: React.FC<Props> = ({
     return () => clearInterval(id);
   }, [refreshInterval, load]);
 
+  // Defer typing until content is in view to reduce CPU
+  useEffect(() => {
+    const el = contentRef.current ?? containerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setInView(entry.isIntersecting);
+      },
+      { root: null, rootMargin: '0px 0px -25% 0px', threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "r") {
         e.preventDefault();
-        load({ force: true });
+        if (!loading) load({ force: true });
       }
       if (e.key === "f") {
         e.preventDefault();
-        load({ fresh: true });
+        if (!loading) load({ fresh: true });
       }
       if (e.key === "c") {
         e.preventDefault();
-        copyTip();
+        if (!loading) copyTip();
       }
       if (e.key === "s") {
         e.preventDefault();
-        shareTip();
+        if (!loading) shareTip();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -788,6 +829,7 @@ export const SecretDailyTips: React.FC<Props> = ({
     };
 
     const onTouchEnd = (ev: TouchEvent) => {
+      if (loading) return;
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;
@@ -931,9 +973,10 @@ export const SecretDailyTips: React.FC<Props> = ({
                   onClick={() => load({ force: true })}
                   title="Refresh cached tip"
                   aria-label="Refresh cached tip"
+                  disabled={loading}
                   whileTap={reduced ? undefined : { scale: 0.95 }}
                   whileHover={reduced ? undefined : { scale: 1.05 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md"
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Refresh</span>
@@ -943,9 +986,10 @@ export const SecretDailyTips: React.FC<Props> = ({
                   onClick={() => load({ fresh: true })}
                   title="Get fresh tip (bypass cache)"
                   aria-label="Get fresh tip"
+                  disabled={loading}
                   whileTap={reduced ? undefined : { scale: 0.95 }}
                   whileHover={reduced ? undefined : { scale: 1.05 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-amber-200 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/50 dark:hover:to-orange-900/50 text-amber-700 dark:text-amber-300 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 shadow-sm hover:shadow-md"
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-amber-200 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/50 dark:hover:to-orange-900/50 text-amber-700 dark:text-amber-300 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 shadow-sm hover:shadow-md ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Zap className="w-4 h-4" />
                   <span>Fresh</span>
@@ -955,9 +999,10 @@ export const SecretDailyTips: React.FC<Props> = ({
                   onClick={shareTip}
                   title="Share tip"
                   aria-label="Share tip"
+                  disabled={loading || !tip}
                   whileTap={reduced ? undefined : { scale: 0.95 }}
                   whileHover={reduced ? undefined : { scale: 1.05 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md"
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${(loading || !tip) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Share2 className="w-4 h-4" />
                   <span>Share</span>
@@ -976,8 +1021,8 @@ export const SecretDailyTips: React.FC<Props> = ({
                 </div>
               ) : (
                 <div className="prose prose-lg max-w-none dark:prose-invert">
-                  <div className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-lg">
-                    <TypingText text={tip || DEFAULT_TIP} speed={1} />
+                  <div ref={contentRef} className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-lg">
+                    <TypingText text={tip || DEFAULT_TIP} speed={12} active={inView} />
                   </div>
                 </div>
               )}
@@ -995,9 +1040,10 @@ export const SecretDailyTips: React.FC<Props> = ({
                 onClick={copyTip}
                 title="Copy tip"
                 aria-label="Copy tip"
+                disabled={loading || !tip}
                 whileTap={reduced ? undefined : { scale: 0.95 }}
                 whileHover={reduced ? undefined : { scale: 1.05 }}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md"
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${(loading || !tip) ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 <span>{copied ? "Copied!" : "Copy"}</span>
