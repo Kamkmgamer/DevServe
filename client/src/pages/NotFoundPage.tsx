@@ -5,7 +5,9 @@ import {
   useRef,
   useState,
   MouseEvent as ReactMouseEvent,
+  memo,
 } from "react";
+import ReactDOM from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles,
@@ -20,6 +22,24 @@ import {
   Keyboard,
 } from "lucide-react";
 import { useSEO } from "../utils/useSEO";
+
+// Feature toggles used across the page and FX controls
+type Features = {
+  supernova: boolean;
+  cosmicCursor: boolean;
+  parallax: boolean;
+  starfield: boolean;
+  shootingStars: boolean;
+  floatingDust: boolean;
+  gridFloor: boolean;
+  backgroundNebula: boolean;
+  scanlines: boolean;
+  blackHole: boolean;
+  glitchText: boolean;
+  orbitalEmojis: boolean;
+  magneticButton: boolean;
+  typewriter: boolean;
+};
 
 function useGPULayer<T extends HTMLElement>(
   ref: React.RefObject<T | null>,
@@ -37,6 +57,78 @@ function useGPULayer<T extends HTMLElement>(
     el.style.contain = props?.contain ?? "layout paint style size";
   }, [ref, props?.willChange, props?.contain]);
 }
+
+// Memoized FX Controls rendered via a portal; manages its own open state and 'K' hotkey
+const FXControlsHub = memo(function FXControlsHub({
+  features,
+  setFeatures,
+}: {
+  features: Features;
+  setFeatures: React.Dispatch<React.SetStateAction<Features>>;
+}) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        setOpen(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const toggle = useCallback((key: keyof Features) => {
+    setFeatures(prev => ({ ...prev, [key]: !prev[key] }));
+  }, [setFeatures]);
+
+  if (!open) return null;
+
+  // Local feature hotkey map to display key labels
+  const featureKeyMap: Record<string, keyof Features> = {
+    '1': 'supernova', '2': 'cosmicCursor', '3': 'parallax',
+    '4': 'starfield', '5': 'shootingStars', '6': 'floatingDust',
+    '7': 'gridFloor', '8': 'glitchText', '9': 'orbitalEmojis',
+    '0': 'magneticButton', '-': 'typewriter', '=': 'backgroundNebula',
+  };
+
+  return ReactDOM.createPortal(
+    <div className="fixed bottom-4 right-4 z-[1000]">
+      <div className="rounded-xl border border-slate-300/80 bg-white/60 p-4 text-slate-700 shadow-2xl backdrop-blur-lg animate-fadeIn dark:border-slate-500/50 dark:bg-slate-800/60 dark:text-slate-300">
+        <h3 className="mb-3 flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+          <Keyboard className="h-5 w-5"/> FX Controls
+        </h3>
+        <ul className="space-y-1.5 text-xs">
+          {Object.entries(featureKeyMap).map(([key, name]) => (
+            <li key={name} className="flex items-center justify-between gap-4">
+              <button
+                type="button"
+                onClick={() => toggle(name)}
+                className="flex-1 text-left capitalize hover:underline"
+              >
+                {name.replace(/([A-Z])/g, ' $1').trim()}
+              </button>
+              <kbd
+                className={`rounded px-1.5 py-0.5 text-white ${features[name] ? 'bg-green-600/80' : 'bg-red-600/80'}`}
+                title={`Toggle ${name}`}
+              >
+                {key}
+              </kbd>
+            </li>
+          ))}
+        </ul>
+        <button
+          onClick={() => setOpen(false)}
+          className="mt-4 w-full rounded-md bg-slate-200/80 py-1 text-xs text-slate-600 hover:bg-slate-200 dark:bg-slate-700/80 dark:text-slate-200 dark:hover:bg-slate-700"
+        >
+          Close (or press K)
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
+});
 
 function useSystemTheme() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -65,11 +157,62 @@ function useSystemTheme() {
 }
 
 
+// Performance controller: tracks visibility and approximated FPS to scale/disable animations
+function usePerformanceController() {
+  // We avoid re-rendering every second: update only when buckets change.
+  const fpsRef = useRef(60);
+  const [visible, setVisible] = useState(() => typeof document === 'undefined' ? true : !document.hidden);
+  const [lowPerf, setLowPerf] = useState(false); // bucket: true if low perf
+  const [shouldAnimate, setShouldAnimate] = useState(true); // paused state with hysteresis
+
+  useEffect(() => {
+    let frames = 0;
+    let rafId: number | null = null;
+    let lastTime = performance.now();
+
+    const loop = (t: number) => {
+      frames++;
+      if (t - lastTime >= 1000) {
+        fpsRef.current = frames;
+        // Bucketize and only update state if bucket boundaries crossed
+        // Low perf if < 50 FPS
+        const nowLow = frames < 50;
+        if (nowLow !== lowPerf) setLowPerf(nowLow);
+        // Hysteresis for pausing: pause below 28, resume above 35
+        if (visible) {
+          if (frames < 28 && shouldAnimate) setShouldAnimate(false);
+          else if (frames > 35 && !shouldAnimate) setShouldAnimate(true);
+        }
+        frames = 0;
+        lastTime = t;
+      }
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+
+    const onVis = () => {
+      const v = !document.hidden;
+      setVisible(v);
+      // Pause immediately when hidden, resume when visible (keeps hysteresis for FPS only)
+      setShouldAnimate(v);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [lowPerf, shouldAnimate, visible]);
+
+  const deviceScale = lowPerf ? 0.6 : 1.0;
+  return { fps: fpsRef.current, lowPerf, deviceScale, shouldAnimate };
+}
+
+
 /**
  * Supernova Explosion Engine v2.4 (Type-Safe)
  * Now accepts a `theme` prop to adjust colors for light/dark mode.
  */
-function useSupernovaExplosion({ enabled = true, theme = 'dark' }: { enabled?: boolean; theme?: "light" | "dark" }) {
+function useSupernovaExplosion({ enabled = true, theme = 'dark', perfScale = 1 }: { enabled?: boolean; theme?: "light" | "dark"; perfScale?: number }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isShaking, setShaking] = useState(false);
   // FIX: Initialize useRef with null to provide an initial value and use a union type to allow for null.
@@ -92,6 +235,12 @@ function useSupernovaExplosion({ enabled = true, theme = 'dark' }: { enabled?: b
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
+      // Ensure the canvas is fully reset before starting a new explosion
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      animationFrameId.current = null;
 
       triggerScreenShake();
 
@@ -99,7 +248,7 @@ function useSupernovaExplosion({ enabled = true, theme = 'dark' }: { enabled?: b
       const cx = x ?? rect.width / 2;
       const cy = y ?? rect.height / 2;
 
-      const N = Math.floor(400 * power);
+      const N = Math.max(80, Math.floor(400 * power * perfScale));
       let activeParticles = N;
 
       const particles = Array.from({ length: N }, () => {
@@ -225,7 +374,7 @@ function useSupernovaExplosion({ enabled = true, theme = 'dark' }: { enabled?: b
 
       animate();
     },
-    [triggerScreenShake, enabled, theme]
+    [triggerScreenShake, enabled, theme, perfScale]
   );
 
   useEffect(() => {
@@ -237,12 +386,45 @@ function useSupernovaExplosion({ enabled = true, theme = 'dark' }: { enabled?: b
       canvas.width = canvas.clientWidth * dpr;
       canvas.height = canvas.clientHeight * dpr;
       const ctx = canvas.getContext("2d");
-      if (ctx) ctx.scale(dpr, dpr);
+      if (ctx) {
+        // Avoid compounded scaling by resetting transform each resize
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
     };
     resize();
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
+
+  // Cleanup when disabled or on unmount to prevent lingering RAF and artifacts
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d") || null;
+    if (!enabled && canvas && ctx) {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+    return () => {
+      const c = canvasRef.current;
+      const cctx = c?.getContext("2d") || null;
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
+      }
+      if (c && cctx) {
+        cctx.setTransform(1, 0, 0, 1, 0, 0);
+        cctx.clearRect(0, 0, c.width, c.height);
+        cctx.globalAlpha = 1;
+        cctx.globalCompositeOperation = "source-over";
+      }
+    };
+  }, [enabled]);
 
   return { canvasRef, supernova, isShaking };
 }
@@ -252,7 +434,7 @@ function useSupernovaExplosion({ enabled = true, theme = 'dark' }: { enabled?: b
  * Cosmic Cursor v1.9 (Type-Safe)
  * Now accepts a `theme` prop to adjust colors for light/dark mode.
  */
-function useCosmicCursor({ enabled = true, theme = 'dark' }: { enabled?: boolean; theme?: "light" | "dark" }) {
+function useCosmicCursor({ enabled = true, theme = 'dark', perfScale = 1, active = true }: { enabled?: boolean; theme?: "light" | "dark"; perfScale?: number; active?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   // FIX: Initialize useRef with null to provide an initial value and use a union type to allow for null.
   const animationFrameRef = useRef<number | null>(null);
@@ -260,12 +442,12 @@ function useCosmicCursor({ enabled = true, theme = 'dark' }: { enabled?: boolean
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !enabled) return;
+    if (!container || !enabled || !active) return;
 
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    const POOL_SIZE = 30;
+    const POOL_SIZE = Math.max(10, Math.floor(30 * perfScale));
     const pool: HTMLDivElement[] = [];
     let poolIndex = 0;
 
@@ -333,7 +515,7 @@ function useCosmicCursor({ enabled = true, theme = 'dark' }: { enabled?: boolean
       }
       pool.forEach(dot => dot.remove());
     };
-  }, [enabled, theme]);
+  }, [enabled, theme, perfScale, active]);
 
   return { containerRef };
 }
@@ -342,6 +524,7 @@ function useCosmicCursor({ enabled = true, theme = 'dark' }: { enabled?: boolean
 const NotFoundPage = () => {
   useSEO("404: Cosmic Singularity | DevServe", [{ name: "robots", content: "noindex" }]);
   const theme = useSystemTheme();
+  const { deviceScale, shouldAnimate } = usePerformanceController();
   const navigate = useNavigate();
   
   const [features, setFeatures] = useState({
@@ -351,8 +534,15 @@ const NotFoundPage = () => {
     backgroundNebula: true, scanlines: true, blackHole: true,
   });
 
-  const { canvasRef, supernova, isShaking } = useSupernovaExplosion({ enabled: features.supernova, theme });
-  const { containerRef: cosmicCursorRef } = useCosmicCursor({ enabled: features.cosmicCursor, theme });
+  const { canvasRef, supernova, isShaking } = useSupernovaExplosion({ enabled: features.supernova && shouldAnimate, theme, perfScale: deviceScale });
+  const handleGalaxyMode = useCallback(() => {
+    // Ensure feature is enabled and trigger a fresh explosion
+    if (!features.supernova) {
+      setFeatures((f) => ({ ...f, supernova: true }));
+    }
+    supernova(undefined, undefined, 3.0);
+  }, [features.supernova, supernova]);
+  const { containerRef: cosmicCursorRef } = useCosmicCursor({ enabled: features.cosmicCursor, theme, perfScale: deviceScale, active: shouldAnimate });
 
   // GPU layer helpers
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -376,34 +566,53 @@ const NotFoundPage = () => {
 
   const { containerRef: stageCosmicCursorContainer } = { containerRef: stageRef }; // alias to keep TS happy in JSX below
 
-  const [stars] = useState(() => Array.from({ length: 200 }, () => ({
+  const stars = useMemo(() => Array.from({ length: Math.max(80, Math.floor(200 * deviceScale)) }, () => ({
     x: Math.random() * 100,
     y: Math.random() * 100,
     s: Math.random() * 1.8 + 0.2,
     d: Math.random() * 6 + 4,
     o: Math.random() * 0.6 + 0.2,
     parallax: Math.random() * 0.4 + 0.1,
-  })));
+  })), [deviceScale]);
 
-  const [particles] = useState(() => Array.from({ length: 40 }, () => ({
+  const particles = useMemo(() => Array.from({ length: Math.max(12, Math.floor(40 * deviceScale)) }, () => ({
     x: Math.random() * 100,
     y: Math.random() * 100,
     size: Math.random() * 22 + 8,
     dur: Math.random() * 15 + 15,
     delay: Math.random() * 8,
     hue: Math.floor(Math.random() * 360),
-  })));
+  })), [deviceScale]);
 
-  const [shooters] = useState(() =>
-    Array.from({ length: 8 }, () => ({
+  const shooters = useMemo(() =>
+    Array.from({ length: Math.max(3, Math.floor(8 * deviceScale)) }, () => ({
       key: Math.random().toString(36).slice(2),
       delay: Math.random() * 8,
       top: Math.random() * 60 + 5,
       dur: Math.random() * 2 + 2.5,
     }))
-  );
+  , [deviceScale]);
 
   const emojiRing = ["🔥", "🚀", "✨", "🌌", "💥", "🪐", "🦄", "👾", "💫", "🌟", "☄️", "👽"];
+
+  // Memoized node lists to avoid heavy re-creation on each render
+  const starNodes = useMemo(() => (
+    stars.map((s, i) => (
+      <span key={i} className="gpu absolute rounded-full bg-slate-700/80 shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:bg-slate-300/80 dark:shadow-[0_0_12px_rgba(255,255,255,0.8)]" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: s.o, animation: `twinkle ${s.d}s ease-in-out infinite`, animationDelay: `${(i % 10) * 0.2}s`, transform: `translateZ(${s.parallax * -200}px)`, animationPlayState: shouldAnimate ? 'running' : 'paused' }} />
+    ))
+  ), [stars, shouldAnimate]);
+
+  const shooterNodes = useMemo(() => (
+    shooters.map((s, i) => (
+      <span key={s.key} className="absolute h-0.5 w-48 -translate-x-full bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-0 dark:via-purple-300" style={{ top: `${s.top}%`, left: "-10%", filter: "drop-shadow(0 0 10px rgba(168,85,247,0.7)) drop-shadow(0 0 24px rgba(168,85,247,0.6))", animation: `shoot ${s.dur}s ease-in ${s.delay + i * 0.8}s infinite`, animationPlayState: shouldAnimate ? 'running' : 'paused' }} />
+    ))
+  ), [shooters, shouldAnimate]);
+
+  const particleNodes = useMemo(() => (
+    particles.map((p, i) => (
+      <span key={i} className="gpu absolute rounded-full opacity-40 blur-lg mix-blend-multiply dark:mix-blend-screen" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, backgroundColor: `hsl(${p.hue}deg 100% ${theme === 'dark' ? '70%' : '60%'})`, animation: `floatY ${p.dur}s ease-in-out ${p.delay}s infinite alternate`, filter: "saturate(1.5) brightness(1.1)", animationPlayState: shouldAnimate ? 'running' : 'paused' }} />
+    ))
+  ), [particles, shouldAnimate, theme]);
 
   const message = useMemo(() => "This page hasn't just been lost; it has achieved glorious, explosive transcendence.", []);  
   const [typed, setTyped] = useState("");
@@ -430,14 +639,24 @@ const NotFoundPage = () => {
     return () => clearTimeout(timerId);
   }, [message, features.typewriter]);
 
+  // Global hotkey for Galaxy Mode: 'G'
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'g' || e.key === 'G') {
+        e.preventDefault();
+        handleGalaxyMode();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleGalaxyMode]);
 
   // Centralized Mouse Move Handler
-  const stageRef2 = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const stage = stageRef2.current;
+    const stage = stageRef.current;
     // FIX: Check if stage is possibly null before trying to access its properties.
     // This logic ensures we only set styles if the stage element exists.
-    if (!features.parallax) {
+    if (!features.parallax || !shouldAnimate) {
         if (stage) {
             stage.style.setProperty("--camX", `0deg`);
             stage.style.setProperty("--camY", `0deg`);
@@ -499,7 +718,7 @@ const NotFoundPage = () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseleave", onLeave);
     };
-  }, [features.parallax]);
+  }, [features.parallax, shouldAnimate]);
 
   
   // --- Keyboard Control Center ---
@@ -562,70 +781,48 @@ const NotFoundPage = () => {
     if (!prefersReduced) setTimeout(() => supernova(undefined, undefined, 0.8), 300);
   }, [supernova]);
 
+  
+
   return (
     <main
       ref={stageRef}
-      className={`relative isolate min-h-[calc(100vh-128px)] overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 ${isShaking ? "shake" : ""} ${vortex ? "vortex-active" : ""}`}
-      style={{ 
-        perspective: "1200px", 
-        transform:
-          "translateZ(0) rotateX(var(--camY, 0deg)) rotateY(var(--camX, 0deg))", 
-        transformStyle: "preserve-3d" 
+      className={`relative isolate min-h-[100svh] overflow-hidden bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 antialiased dark:from-slate-950 dark:via-slate-950 dark:to-black dark:text-slate-100 ${isShaking ? 'shake' : ''} ${vortex ? 'vortex-active' : ''}`}
+      style={{
+        perspective: '1200px',
+        transform: 'translateZ(0) rotateX(var(--camY, 0deg)) rotateY(var(--camX, 0deg))',
+        transformStyle: 'preserve-3d',
       }}
     >
-      
-      {/* --- Cosmic Cursor Container --- */}
-      {features.cosmicCursor && <div ref={cosmicCursorRef} className="gpu pointer-events-none fixed inset-0 z-50" />}
-
-      {/* --- Backgrounds --- */}
-      {features.backgroundNebula && <>
-        <div aria-hidden="true" className="gpu pointer-events-none absolute inset-0 mix-blend-multiply opacity-20 dark:mix-blend-plus-lighter dark:opacity-80" style={{ background: "radial-gradient(120% 100% at 50% 0%, rgba(56,189,248,0.15), transparent 50%), radial-gradient(110% 100% at 80% 20%, rgba(192,132,252,0.12), transparent 50%), radial-gradient(100% 100% at 20% 60%, rgba(244,63,94,0.12), transparent 50%)", filter: "saturate(1.5) brightness(1.2)", animation: "nebulaWarp 60s linear infinite" }} />
-        <div aria-hidden="true" className="gpu pointer-events-none absolute inset-0" style={{ background: `repeating-conic-gradient(from 0deg, rgba(${theme === 'dark' ? '255,255,255' : '0,0,0'},0.02) 0deg 5deg, transparent 5deg 10deg)`, mixBlendMode: theme === 'dark' ? "soft-light" : "multiply", animation: "nebulaSpin 80s linear infinite" }} />
-      </>}
-
-      {/* --- Starfield --- */}
-      {features.starfield &&
-        <div className="absolute inset-0 transition-transform duration-300 ease-out" style={{ 
-          transform: "translate(var(--mouseX, 0px), var(--mouseY, 0px))", 
-          transformStyle: "preserve-3d" 
-        }}>
-          {stars.map((s, i) => (
-            <span key={i} className="gpu absolute rounded-full bg-slate-700/80 shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:bg-slate-300/80 dark:shadow-[0_0_12px_rgba(255,255,255,0.8)]" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: s.o, animation: `twinkle ${s.d}s ease-in-out infinite`, animationDelay: `${(i % 10) * 0.2}s`, transform: `translateZ(${s.parallax * -200}px)` }} />
-          ))}
-        </div>
-      }
-
-      {/* --- Other Effects (Unchanged JSX) --- */}
-      {features.shootingStars && <div className="absolute inset-0 overflow-hidden">{shooters.map((s, i) => (<span key={s.key} className="absolute h-0.5 w-48 -translate-x-full bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-0 dark:via-purple-300" style={{ top: `${s.top}%`, left: "-10%", filter: "drop-shadow(0 0 10px rgba(168,85,247,0.7)) drop-shadow(0 0 24px rgba(168,85,247,0.6))", animation: `shoot ${s.dur}s ease-in ${s.delay + i * 0.8}s infinite` }} />))}</div>}
-      {features.floatingDust && <div className="absolute inset-0 overflow-hidden">{particles.map((p, i) => (<span key={i} className="gpu absolute rounded-full opacity-40 blur-lg mix-blend-multiply dark:mix-blend-screen" style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, backgroundColor: `hsl(${p.hue}deg 100% ${theme === 'dark' ? '70%' : '60%'})`, animation: `floatY ${p.dur}s ease-in-out ${p.delay}s infinite alternate`, filter: "saturate(1.5) brightness(1.1)" }} />))}</div>}
+      {features.floatingDust && <div className="absolute inset-0 overflow-hidden">{particleNodes}</div>}
       {features.supernova && <canvas ref={canvasRef} className="gpu pointer-events-none absolute inset-0 h-full w-full" />}
       {features.gridFloor && <div className="gpu pointer-events-none absolute inset-x-0 bottom-0 h-[60vh]"><div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent dark:from-slate-950 dark:via-slate-950/50" /><div className="absolute inset-0 opacity-80 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ backgroundImage: theme === 'dark' ? "linear-gradient(rgba(129,140,248,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,0.3) 1px, transparent 1px)" : "linear-gradient(rgba(148,163,184,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.3) 1px, transparent 1px)", backgroundSize: "40px 40px", backgroundPosition: "center center", animation: "gridPan 10s linear infinite", boxShadow: theme === 'dark' ? "inset 0 0 80px rgba(59,130,246,0.3), 0 0 100px rgba(59,130,246,0.25)" : "inset 0 0 80px rgba(148,163,184,0.2), 0 0 100px rgba(148,163,184,0.15)"}} /><div className="absolute inset-0 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ background: theme === 'dark' ? "radial-gradient(60% 80% at 50% 100%, rgba(129,140,248,0.2), transparent 70%)" : "radial-gradient(60% 80% at 50% 100%, rgba(100,116,139,0.15), transparent 70%)", animation: "pulse 4.5s ease-in-out infinite" }} /></div>}
       {features.scanlines && <div className="gpu pointer-events-none absolute inset-0 z-20 bg-[url('/scanlines.png')] opacity-[0.07] mix-blend-multiply dark:opacity-20 dark:mix-blend-overlay"></div>}
 
+      {/* FX Controls hub; memoized and isolated from parent; toggled with 'K' */}
+      <FXControlsHub features={features} setFeatures={setFeatures} />
       <section className="relative mx-auto flex max-w-6xl flex-col items-center px-4 py-16 text-center sm:py-20 md:py-28 z-10">
         <div className="inline-flex items-center gap-2 rounded-full border border-purple-300 bg-purple-100/70 px-3.5 py-1.5 text-xs font-semibold text-purple-700 ring-1 ring-black/5 backdrop-blur-sm dark:border-purple-400/40 dark:bg-purple-950/50 dark:text-purple-200 dark:ring-white/10">
           <Sparkles className="h-4 w-4 text-purple-500 dark:text-purple-300" />
           SYSTEM STATUS: CATASTROPHIC SUCCESS
         </div>
 
-        <div className="relative mt-8 grid place-items-center">
-            <h1 
-                className={features.glitchText ? "glitch-text" : ""} 
-                style={{ 
-                    textShadow: "var(--h1-shadow)", 
-                    filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.15)) dark:drop-shadow(0 10px 20px rgba(0,0,0,0.5))", 
-                    transformStyle: "preserve-3d", 
-                    position: "relative", zIndex: 10, 
-                    fontSize: "clamp(3.5rem, 10vw, 6rem)", 
-                    fontWeight: "900", 
-                    letterSpacing: "-0.05em",
-                    willChange: 'transform',
-                    transform: 'translate3d(var(--titleX, 0px), var(--titleY, 0px), 0) rotateX(var(--titleRotX, 0deg)) rotateY(var(--titleRotY, 0deg))'
-                }} 
-                data-text="404"
-            >
-                404
-            </h1>
+        <h1 
+            className={features.glitchText ? "glitch-text" : ""} 
+            style={{ 
+                textShadow: "var(--h1-shadow)", 
+                filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.15)) dark:drop-shadow(0 10px 20px rgba(0,0,0,0.5))", 
+                transformStyle: "preserve-3d", 
+                position: "relative", zIndex: 10, 
+                fontSize: "clamp(3.5rem, 10vw, 6rem)", 
+                fontWeight: "900", 
+                letterSpacing: "-0.05em",
+                willChange: 'transform',
+                transform: 'translate3d(var(--titleX, 0px), var(--titleY, 0px), 0) rotateX(var(--titleRotX, 0deg)) rotateY(var(--titleRotY, 0deg))'
+            }} 
+            data-text="404"
+        >
+            404
+        </h1>
 
           {features.orbitalEmojis &&
             <div className="pointer-events-none absolute inset-0">
@@ -636,7 +833,6 @@ const NotFoundPage = () => {
               ))}
             </div>
           }
-        </div>
 
         <p className="mt-6 max-w-2xl text-lg font-medium text-slate-600 dark:text-slate-300 md:text-xl">
           {typed || "\u00A0"}
@@ -661,7 +857,7 @@ const NotFoundPage = () => {
             <span aria-hidden="true" className="ml-1.5 inline-flex items-center rounded-md bg-black/10 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-white/25 dark:text-white" title="Press H">H</span>
           </Link>
           
-          <button type="button" onClick={() => supernova(undefined, undefined, 3.0)} className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl border border-rose-400/80 bg-gradient-to-br from-rose-400 to-red-500 px-6 py-3 text-base font-bold text-white shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)] transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-[0.97] dark:border-rose-500/50 dark:from-rose-500 dark:to-red-600 dark:shadow-[0_10px_40px_-10px_rgba(244,63,94,0.8)]" style={{ filter: "drop-shadow(0 0 10px rgba(244,63,94,0.5)) dark:drop-shadow(0 0 12px rgba(244,63,94,0.7)) dark:drop-shadow(0 0 30px rgba(244,63,94,0.5))" }}>
+          <button onClick={handleGalaxyMode} className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl border border-rose-400/80 bg-gradient-to-br from-rose-400 to-red-500 px-6 py-3 text-base font-bold text-white shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)] transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-[0.97] dark:border-rose-500/50 dark:from-rose-500 dark:to-red-600 dark:shadow-[0_10px_40px_-10px_rgba(244,63,94,0.8)]" style={{ filter: "drop-shadow(0 0 10px rgba(244,63,94,0.5)) dark:drop-shadow(0 0 12px rgba(244,63,94,0.7)) dark:drop-shadow(0 0 30px rgba(244,63,94,0.5))" }}>
             <ShieldAlert className="h-5 w-5" />
             GALAXY MODE
             <span aria-hidden="true" className="ml-1.5 inline-flex items-center rounded-md bg-white/25 px-2 py-0.5 text-[11px] font-semibold" title="Press G">G</span>
@@ -676,26 +872,6 @@ const NotFoundPage = () => {
           <span className="info-chip"><Atom className="h-3.5 w-3.5" /> Black Hole (B)</span>
         </div>
       </section>
-
-      {/* --- Help Panel (Unchanged) --- */}
-      {showHelp &&
-        <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-slate-300/80 bg-white/60 p-4 text-slate-700 shadow-2xl backdrop-blur-lg animate-fadeIn dark:border-slate-500/50 dark:bg-slate-800/60 dark:text-slate-300">
-          <h3 className="mb-3 flex items-center gap-2 font-bold text-slate-900 dark:text-white"><Keyboard className="h-5 w-5"/> FX Controls</h3>
-          <ul className="space-y-1.5 text-xs">
-            {Object.entries(featureKeyMap).map(([key, name]) => (
-                <li key={name} className="flex justify-between items-center gap-4">
-                    <span className="capitalize">{name.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    <kbd className={`rounded px-1.5 py-0.5 text-white ${features[name] ? 'bg-green-600/80' : 'bg-red-600/80'}`}>
-                        {key}
-                    </kbd>
-                </li>
-            ))}
-          </ul>
-          <button onClick={() => setShowHelp(false)} className="mt-4 w-full rounded-md bg-slate-200/80 py-1 text-xs text-slate-600 hover:bg-slate-200 dark:bg-slate-700/80 dark:text-slate-200 dark:hover:bg-slate-700">
-            Close (or press K)
-          </button>
-        </div>
-      }
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-slate-950 dark:via-slate-950/80" />
 
