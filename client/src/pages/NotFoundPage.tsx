@@ -593,7 +593,8 @@ const NotFoundPage = () => {
     }))
   , [deviceScale]);
 
-  const emojiRing = ["🔥", "🚀", "✨", "🌌", "💥", "🪐", "🦄", "👾", "💫", "🌟", "☄️", "👽"];
+  // Lucide icon ring (replaces emoji ring)
+  const iconRing = [Rocket, Stars, Atom, Zap, Flame, Sparkles, ShieldAlert, PartyPopper];
 
   // Memoized node lists to avoid heavy re-creation on each render
   const starNodes = useMemo(() => (
@@ -794,6 +795,36 @@ const NotFoundPage = () => {
       }}
     >
       {features.floatingDust && <div className="absolute inset-0 overflow-hidden">{particleNodes}</div>}
+      {features.backgroundNebula && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            opacity: 0.45,
+            filter: 'blur(40px) saturate(1.2)',
+            mixBlendMode: theme === 'dark' ? 'screen' as const : 'multiply' as const,
+            backgroundImage:
+              theme === 'dark'
+                ? 'radial-gradient(60% 50% at 20% 20%, rgba(168,85,247,0.25), transparent 60%), radial-gradient(50% 40% at 80% 30%, rgba(59,130,246,0.25), transparent 60%), radial-gradient(40% 50% at 50% 80%, rgba(236,72,153,0.25), transparent 60%)'
+                : 'radial-gradient(60% 50% at 20% 20%, rgba(168,85,247,0.18), transparent 60%), radial-gradient(50% 40% at 80% 30%, rgba(59,130,246,0.18), transparent 60%), radial-gradient(40% 50% at 50% 80%, rgba(236,72,153,0.18), transparent 60%)',
+            animation: 'nebulaWarp 60s linear infinite',
+          }}
+        />
+      )}
+      {features.backgroundNebula && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            opacity: 0.45,
+            filter: 'blur(40px) saturate(1.2)',
+            mixBlendMode: theme === 'dark' ? 'screen' as const : 'multiply' as const,
+            backgroundImage:
+              theme === 'dark'
+                ? 'radial-gradient(60% 50% at 20% 20%, rgba(168,85,247,0.25), transparent 60%), radial-gradient(50% 40% at 80% 30%, rgba(59,130,246,0.25), transparent 60%), radial-gradient(40% 50% at 50% 80%, rgba(236,72,153,0.25), transparent 60%)'
+                : 'radial-gradient(60% 50% at 20% 20%, rgba(168,85,247,0.18), transparent 60%), radial-gradient(50% 40% at 80% 30%, rgba(59,130,246,0.18), transparent 60%), radial-gradient(40% 50% at 50% 80%, rgba(236,72,153,0.18), transparent 60%)',
+            animation: 'nebulaWarp 60s linear infinite',
+          }}
+        />
+      )}
       {features.supernova && <canvas ref={canvasRef} className="gpu pointer-events-none absolute inset-0 h-full w-full" />}
       {features.gridFloor && <div className="gpu pointer-events-none absolute inset-x-0 bottom-0 h-[60vh]"><div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent dark:from-slate-950 dark:via-slate-950/50" /><div className="absolute inset-0 opacity-80 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ backgroundImage: theme === 'dark' ? "linear-gradient(rgba(129,140,248,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,0.3) 1px, transparent 1px)" : "linear-gradient(rgba(148,163,184,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.3) 1px, transparent 1px)", backgroundSize: "40px 40px", backgroundPosition: "center center", animation: "gridPan 10s linear infinite", boxShadow: theme === 'dark' ? "inset 0 0 80px rgba(59,130,246,0.3), 0 0 100px rgba(59,130,246,0.25)" : "inset 0 0 80px rgba(148,163,184,0.2), 0 0 100px rgba(148,163,184,0.15)"}} /><div className="absolute inset-0 [transform:perspective(1000px)_rotateX(70deg)_translateY(45%)] [transform-origin:bottom_center]" style={{ background: theme === 'dark' ? "radial-gradient(60% 80% at 50% 100%, rgba(129,140,248,0.2), transparent 70%)" : "radial-gradient(60% 80% at 50% 100%, rgba(100,116,139,0.15), transparent 70%)", animation: "pulse 4.5s ease-in-out infinite" }} /></div>}
       {features.scanlines && <div className="gpu pointer-events-none absolute inset-0 z-20 bg-[url('/scanlines.png')] opacity-[0.07] mix-blend-multiply dark:opacity-20 dark:mix-blend-overlay"></div>}
@@ -812,7 +843,7 @@ const NotFoundPage = () => {
                 textShadow: "var(--h1-shadow)", 
                 filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.15)) dark:drop-shadow(0 10px 20px rgba(0,0,0,0.5))", 
                 transformStyle: "preserve-3d", 
-                position: "relative", zIndex: 10, 
+                position: "relative", zIndex: 30, 
                 fontSize: "clamp(3.5rem, 10vw, 6rem)", 
                 fontWeight: "900", 
                 letterSpacing: "-0.05em",
@@ -824,17 +855,50 @@ const NotFoundPage = () => {
             404
         </h1>
 
-          {features.orbitalEmojis &&
-            <div className="pointer-events-none absolute inset-0">
-              {emojiRing.map((em, i) => (
-                <span key={i} className="absolute select-none text-2xl md:text-4xl" style={{ left: "50%", top: "50%", transformOrigin: "0 -160px", transform: `translate(-50%,-50%) rotate(${(360 / emojiRing.length) * i}deg)`, animation: `orbit 12s linear infinite`, animationDelay: `${i * -1.0}s`, filter: "drop-shadow(0 0 8px rgba(0,0,0,0.3)) dark:drop-shadow(0 0 8px rgba(255,255,255,0.7)) dark:drop-shadow(0 0 20px rgba(236,72,153,0.6))" }} >
-                  <span style={{ display: "inline-block", transform: `rotate(${-((360 / emojiRing.length) * i)}deg) rotate(-90deg)` }}>{em}</span>
-                </span>
-              ))}
+          {features.orbitalEmojis && (
+            <div className="pointer-events-none absolute inset-0 z-0">
+              {Array.from({ length: 24 }).map((_, i) => {
+                const Icon = iconRing[i % iconRing.length];
+                const radius = 140 + ((i * 37) % 60); // 140-200px pseudo-random
+                const dur = 11 + ((i * 3) % 8); // 11-19s
+                const hue = (250 + i * 12) % 360; // smooth spectrum
+                const sizeBase = 7 + (i % 3); // 7/8/9
+                const direction = i % 2 === 0 ? 'normal' : 'reverse';
+                return (
+                  <span
+                    key={i}
+                    className="absolute select-none"
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                      transformOrigin: `0 -${radius}px`,
+                      transform: `translate(-50%,-50%) rotate(${(360 / 24) * i}deg)`,
+                      animation: `orbit ${dur}s linear infinite`,
+                      animationDelay: `${i * -0.7}s`,
+                      animationDirection: direction as any,
+                      filter:
+                        theme === 'dark'
+                          ? 'drop-shadow(0 0 10px rgba(255,255,255,0.5)) drop-shadow(0 0 24px rgba(236,72,153,0.6))'
+                          : 'drop-shadow(0 0 6px rgba(0,0,0,0.2))',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        transform: `rotate(${-((360 / 24) * i)}deg) rotate(-90deg)`,
+                        color: `hsl(${hue}deg 90% ${theme === 'dark' ? '75%' : '45%'})`,
+                        animation: `swim ${3 + (i % 5)}s ease-in-out ${i * 0.15}s infinite alternate`,
+                      }}
+                    >
+                      <Icon style={{ width: `${sizeBase * 4}px`, height: `${sizeBase * 4}px` }} />
+                    </span>
+                  </span>
+                );
+              })}
             </div>
-          }
+          )}
 
-        <p className="mt-6 max-w-2xl text-lg font-medium text-slate-600 dark:text-slate-300 md:text-xl">
+        <p className="relative z-30 mt-6 max-w-2xl text-lg font-medium text-slate-600 dark:text-slate-300 md:text-xl">
           {typed || "\u00A0"}
         </p>
 
@@ -851,6 +915,10 @@ const NotFoundPage = () => {
               filter: "drop-shadow(0 0 2px rgba(0,0,0,0.1)) dark:drop-shadow(0 0 12px rgba(59,130,246,0.7)) dark:drop-shadow(0 0 30px rgba(59,130,246,0.5))",
             }}
           >
+            {/* subtle sheen */}
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+              <span className="absolute left-[-30%] top-0 h-full w-[30%] bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/20 skew-x-12 animate-sheen" />
+            </span>
             <span ref={glowRef} className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: theme === 'dark' ? "radial-gradient(160px 120px at var(--x,50%) var(--y,50%), rgba(255,255,255,0.35), transparent 70%)" : "radial-gradient(160px 120px at var(--x,50%) var(--y,50%), rgba(0,0,0,0.08), transparent 70%)" }} />
             <Home className="h-5 w-5" />
             ESCAPE REALITY
@@ -898,6 +966,9 @@ const NotFoundPage = () => {
         @keyframes pulse { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.45; } }
         @keyframes shoot { 0% { transform: translateX(0) translateY(0) rotate(10deg); opacity: 1; } 50% { opacity: 1; } 100% { transform: translateX(110vw) translateY(-10vw) rotate(0deg); opacity: 0; } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes sheen { from { transform: translateX(-120%) skewX(12deg); } to { transform: translateX(220%) skewX(12deg); } }
+        .animate-sheen { animation: sheen 2.4s ease-in-out infinite; }
+        @keyframes swim { 0% { transform: translateY(-4px) scale(0.98) rotate(-90deg); } 50% { transform: translateY(6px) scale(1.02) rotate(-90deg); } 100% { transform: translateY(-4px) scale(0.98) rotate(-90deg); } }
       `}</style>
     </main>
   );

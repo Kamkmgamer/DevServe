@@ -123,143 +123,127 @@ const CountdownTimerComponent: React.FC<{ onComplete?: () => void }> = ({ onComp
 const CountdownTimer = React.memo(CountdownTimerComponent);
 
 // Rich text parsing and rendering utilities
+type RichTextTokenType = string; // broadened to avoid union mismatch errors across cases
+
 interface RichTextToken {
-  type: 'text' | 'bold' | 'italic' | 'underline' | 'strikethrough' | 'code' | 'codeblock' | 
-        'heading1' | 'heading2' | 'heading3' | 'heading4' | 'heading5' | 'heading6' |
-        'blockquote' | 'unorderedlist' | 'orderedlist' | 'listitem' | 'horizontalrule' |
-        'link' | 'image' | 'table' | 'tablerow' | 'tablecell' | 'linebreak';
+  type: RichTextTokenType;
   content: string;
+  // Optional fields for specific tokens
   url?: string;
-  language?: string;
-  level?: number;
   alt?: string;
-  isHeader?: boolean;
+  language?: string; // for codeblock
 }
 
-const parseRichText = (text: string): RichTextToken[] => {
-  const tokens: RichTextToken[] = [];
-  let currentIndex = 0;
-  
-  const patterns = [
-    // Code tokens FIRST so they don't get parsed as headings/lists
-    { regex: /```([\w+-]*)?\n?([\s\S]*?)(?:```|$)/g, type: 'codeblock' as const },
-    // Inline code: non-empty content between single backticks
-    { regex: /`([^`]+?)`/g, type: 'code' as const },
-
-    // Headings
-    { regex: /^# (.+)$/gm, type: 'heading1' as const },
-    { regex: /^## (.+)$/gm, type: 'heading2' as const },
-    { regex: /^### (.+)$/gm, type: 'heading3' as const },
-    { regex: /^#### (.+)$/gm, type: 'heading4' as const },
-    { regex: /^##### (.+)$/gm, type: 'heading5' as const },
-    { regex: /^###### (.+)$/gm, type: 'heading6' as const },
-
-    // Horizontal rule
-    { regex: /^---$/gm, type: 'horizontalrule' as const },
-
-    // Blockquotes
-    { regex: /^> (.+)$/gm, type: 'blockquote' as const },
-
-    // Lists (unordered)
-    { regex: /^[*-+] (.+)$/gm, type: 'listitem' as const },
-
-    // Lists (ordered)
-    { regex: /^\d+\. (.+)$/gm, type: 'listitem' as const },
-
-    // Images
-    { regex: /!\[([^\]]*)\]\(([^)]+)\)/g, type: 'image' as const },
-
-    // Links
-    { regex: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'link' as const },
-
-    // Text formatting
-    { regex: /~~(.*?)~~/g, type: 'strikethrough' as const },
-    { regex: /__(.*?)__/g, type: 'underline' as const },
-    { regex: /\*\*(.*?)\*\*/g, type: 'bold' as const },
-    { regex: /\*(.*?)\*/g, type: 'italic' as const },
+// Helper to parse inline markdown within a single line (no newlines)
+const parseInline = (line: string): RichTextToken[] => {
+  const out: RichTextToken[] = [];
+  let i = 0;
+  const patterns: { type: string; regex: RegExp }[] = [
+    { type: 'image', regex: /!\[([^\]]*)\]\(([^)]+)\)/y },
+    { type: 'link', regex: /\[([^\]]+)\]\(([^)]+)\)/y },
+    { type: 'code', regex: /`([^`]+?)`/y },
+    { type: 'bold', regex: /\*\*([^*]+)\*\*/y },
+    { type: 'underline', regex: /__([^_]+)__/y },
+    { type: 'strikethrough', regex: /~~([^~]+)~~/y },
+    { type: 'italic', regex: /\*([^*]+)\*/y },
   ];
 
-  while (currentIndex < text.length) {
-    let earliestMatch: RegExpExecArray | null = null;
-    let earliestType: 'text' | 'bold' | 'italic' | 'underline' | 'strikethrough' | 'code' | 'codeblock' | 
-                      'heading1' | 'heading2' | 'heading3' | 'heading4' | 'heading5' | 'heading6' |
-                      'blockquote' | 'unorderedlist' | 'orderedlist' | 'listitem' | 'horizontalrule' |
-                      'link' | 'image' | 'table' | 'tablerow' | 'tablecell' | 'linebreak' | null = null;
-    let earliestPattern = null;
-
-    // Find the earliest pattern match
-    for (const pattern of patterns) {
-      pattern.regex.lastIndex = currentIndex;
-      const match = pattern.regex.exec(text);
-      if (match && (earliestMatch === null || match.index < earliestMatch.index)) {
-        earliestMatch = match;
-        earliestType = pattern.type;
-        earliestPattern = pattern.regex;
+  while (i < line.length) {
+    let earliest: { type: RichTextTokenType; match: RegExpExecArray } | null = null;
+    for (const p of patterns) {
+      p.regex.lastIndex = i;
+      const m = p.regex.exec(line);
+      if (m && (earliest === null || m.index < earliest.match.index)) {
+        earliest = { type: p.type, match: m };
       }
     }
 
-    if (earliestMatch && earliestType) {
-      // Add text before the match
-      if (earliestMatch.index > currentIndex) {
-        const beforeText = text.slice(currentIndex, earliestMatch.index);
-        const lines = beforeText.split('\n');
-        lines.forEach((line, i) => {
-          if (i > 0) tokens.push({ type: 'linebreak', content: '' });
-          if (line) tokens.push({ type: 'text', content: line });
-        });
-      }
-
-      // Add the formatted token
-      if (earliestType === 'link') {
-        tokens.push({ 
-          type: 'link', 
-          content: earliestMatch[1], 
-          url: earliestMatch[2] 
-        });
-      } else if (earliestType === 'image') {
-        tokens.push({ 
-          type: 'image', 
-          content: earliestMatch[1], 
-          url: earliestMatch[2],
-          alt: earliestMatch[1] 
-        });
-      } else if (earliestType === 'codeblock') {
-        tokens.push({ 
-          type: 'codeblock', 
-          content: earliestMatch[2] || '', 
-          language: earliestMatch[1] || '' 
-        });
-      } else if (earliestType.startsWith('heading')) {
-        tokens.push({ 
-          type: earliestType, 
-          content: earliestMatch[1] 
-        });
-      } else if (earliestType === 'horizontalrule') {
-        tokens.push({ 
-          type: 'horizontalrule', 
-          content: '' 
-        });
-      } else {
-        tokens.push({ 
-          type: earliestType, 
-          content: earliestMatch[1] || earliestMatch[0] 
-        });
-      }
-
-      currentIndex = earliestMatch.index + earliestMatch[0].length;
-      
-      // Reset all regex lastIndex
-      patterns.forEach(p => p.regex.lastIndex = 0);
-    } else {
-      // No more patterns, add remaining text
-      const remainingText = text.slice(currentIndex);
-      const lines = remainingText.split('\n');
-      lines.forEach((line, i) => {
-        if (i > 0) tokens.push({ type: 'linebreak', content: '' });
-        if (line) tokens.push({ type: 'text', content: line });
-      });
+    if (!earliest) {
+      out.push({ type: 'text', content: line.slice(i) });
       break;
     }
+
+    if (earliest.match.index > i) {
+      out.push({ type: 'text', content: line.slice(i, earliest.match.index) });
+    }
+
+    const [full, g1, g2] = earliest.match;
+    switch (earliest.type) {
+      case 'image':
+        out.push({ type: 'image', content: g1 || '', url: g2 });
+        break;
+      case 'link':
+        out.push({ type: 'link', content: g1, url: g2 });
+        break;
+      case 'code':
+        out.push({ type: 'code', content: g1 });
+        break;
+      case 'bold':
+      case 'underline':
+      case 'strikethrough':
+      case 'italic':
+        out.push({ type: earliest.type, content: g1 });
+        break;
+      default:
+        out.push({ type: 'text', content: full });
+        break;
+    }
+    i = earliest.match.index + full.length;
+  }
+
+  return out;
+};
+
+// Main parser supporting blocks and line-level features
+const parseRichText = (text: string): RichTextToken[] => {
+  const tokens: RichTextToken[] = [];
+  let pos = 0;
+
+  const codeBlockRe = /```([\w+-]*)?\n?([\s\S]*?)(?:```|$)/g;
+  let m: RegExpExecArray | null;
+  while ((m = codeBlockRe.exec(text)) !== null) {
+    const start = m.index;
+    if (start > pos) {
+      // Parse preceding non-code block segment
+      const segment = text.slice(pos, start);
+      const lines = segment.split('\n');
+      lines.forEach((line, idx) => {
+        if (idx > 0) tokens.push({ type: 'linebreak', content: '' });
+        // Block-level detections
+        const h = /^(#{1,6})\s+(.*)$/.exec(line);
+        if (h) {
+          const level = h[1].length as 1 | 2 | 3 | 4 | 5 | 6;
+          tokens.push({ type: (`heading${level}` as RichTextTokenType), content: h[2] });
+          return;
+        }
+        if (/^---\s*$/.test(line)) { tokens.push({ type: 'horizontalrule', content: '' }); return; }
+        const bq = /^>\s+(.*)$/.exec(line);
+        if (bq) { tokens.push({ type: 'blockquote', content: bq[1] }); return; }
+        const li = /^(?:[*+-]|\d+\.)\s+(.*)$/.exec(line);
+        if (li) { tokens.push({ type: 'listitem', content: li[1] }); return; }
+        // Inline within normal paragraph line
+        tokens.push(...parseInline(line));
+      });
+    }
+    // Code block token
+    tokens.push({ type: 'codeblock', content: m[2] || '', language: m[1] || '' });
+    pos = m.index + m[0].length;
+  }
+
+  if (pos < text.length) {
+    const segment = text.slice(pos);
+    const lines = segment.split('\n');
+    lines.forEach((line, idx) => {
+      if (idx > 0) tokens.push({ type: 'linebreak', content: '' });
+      const h = /^(#{1,6})\s+(.*)$/.exec(line);
+      if (h) { const level = h[1].length as 1|2|3|4|5|6; tokens.push({ type: (`heading${level}` as RichTextTokenType), content: h[2] }); return; }
+      if (/^---\s*$/.test(line)) { tokens.push({ type: 'horizontalrule', content: '' }); return; }
+      const bq = /^>\s+(.*)$/.exec(line);
+      if (bq) { tokens.push({ type: 'blockquote', content: bq[1] }); return; }
+      const li = /^(?:[*+-]|\d+\.)\s+(.*)$/.exec(line);
+      if (li) { tokens.push({ type: 'listitem', content: li[1] }); return; }
+      tokens.push(...parseInline(line));
+    });
   }
 
   return tokens;
@@ -326,9 +310,9 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
     // Code blocks
     case 'codeblock':
       return (
-        <div key={key} className="my-4 first:mt-0 last:mb-0">
+        <div key={key} className="my-4 first:mt-0 last:mb-0 not-prose">
           <pre className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 overflow-x-auto shadow-sm">
-            <code className="text-sm font-mono text-slate-800 dark:text-slate-200 leading-relaxed">
+            <code className="text-sm font-mono text-slate-800 dark:text-slate-200 leading-relaxed not-prose">
               {token.content}
             </code>
           </pre>
@@ -353,7 +337,8 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
       return (
         <code
           key={key}
-          className="px-1.5 py-0.5 text-[0.9em] leading-normal whitespace-pre-wrap bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 rounded border border-slate-200 dark:border-slate-700 font-mono align-baseline"
+          className="not-prose px-1.5 py-0.5 text-[0.9em] leading-normal whitespace-pre-wrap bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 rounded border border-slate-200 dark:border-slate-700 font-mono align-baseline"
+          aria-label="inline code"
         >
           {token.content}
         </code>
@@ -518,11 +503,11 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
       text += "\n```";
     }
 
-    // For inline code, if there's an odd number of backticks, add a trailing backtick to close
-    // This improves inline code rendering while typing
+    // If there's an odd number of backticks, we're mid-typing an inline code block.
+    // Temporarily add a closing backtick at the end to make it a valid, parsable token.
     const inlineBackticks = (text.match(/`/g) || []).length;
     if (inlineBackticks % 2 === 1) {
-      text += "`";
+      text += '`';
     }
 
     // Fix unmatched bold markers (**)
@@ -548,9 +533,9 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
 
   // While typing, render a sanitized, partially-formatted version for good UX
   const partialRich = useMemo(() => {
-    const sanitized = sanitizeForTyping(displayText);
-    const tokens = parseRichText(sanitized || '');
-    return tokens.map((token, index) => renderRichTextToken(token, `partial-${index}`));
+    const sanitized = sanitizeForTyping(displayText || '');
+    const tokens = parseRichText(sanitized);
+    return tokens.map((t, i) => renderRichTextToken(t, `partial-${i}`));
   }, [displayText]);
 
   return (
