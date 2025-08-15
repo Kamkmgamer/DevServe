@@ -139,13 +139,13 @@ const parseInline = (line: string): RichTextToken[] => {
   const out: RichTextToken[] = [];
   let i = 0;
   const patterns: { type: string; regex: RegExp }[] = [
-    { type: 'image', regex: /!\[([^\]]*)\]\(([^)]+)\)/y },
-    { type: 'link', regex: /\[([^\]]+)\]\(([^)]+)\)/y },
-    { type: 'code', regex: /`([^`]+?)`/y },
-    { type: 'bold', regex: /\*\*([^*]+)\*\*/y },
-    { type: 'underline', regex: /__([^_]+)__/y },
-    { type: 'strikethrough', regex: /~~([^~]+)~~/y },
-    { type: 'italic', regex: /\*([^*]+)\*/y },
+    { type: 'image', regex: /!\[([^\]]*)\]\(([^)]+)\)/g },
+    { type: 'link', regex: /\[([^\]]+)\]\(([^)]+)\)/g },
+    { type: 'code', regex: /`([^`]+?)`/g },
+    { type: 'bold', regex: /\*\*([^*]+)\*\*/g },
+    { type: 'underline', regex: /__([^_]+)__/g },
+    { type: 'strikethrough', regex: /~~([^~]+)~~/g },
+    { type: 'italic', regex: /\*([^*]+)\*/g },
   ];
 
   while (i < line.length) {
@@ -311,38 +311,78 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
     case 'codeblock':
       return (
         <div key={key} className="my-4 first:mt-0 last:mb-0 not-prose">
-          <pre className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 overflow-x-auto shadow-sm">
-            <code className="text-sm font-mono text-slate-800 dark:text-slate-200 leading-relaxed not-prose">
-              {token.content}
-            </code>
-          </pre>
-          {token.language && (
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 pl-2">
-              {token.language}
+          <div className="relative group">
+            {/* Header overlay with language and copy button */}
+            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 sm:px-4 py-2 pointer-events-none">
+              <span className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 select-none">
+                {token.language || 'code'}
+              </span>
+              <button
+                type="button"
+                aria-label="Copy code"
+                title="Copy code"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const btn = e.currentTarget as HTMLButtonElement;
+                  const prev = btn.innerText;
+                  const toCopy = token.content || '';
+                  const doCopy = async () => {
+                    try {
+                      if (navigator.clipboard?.writeText) {
+                        await navigator.clipboard.writeText(toCopy);
+                      } else {
+                        const ta = document.createElement('textarea');
+                        ta.value = toCopy;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                      }
+                      btn.innerText = 'Copied';
+                      window.dispatchEvent(new CustomEvent('code-copied', { detail: { msg: 'Code copied' } }));
+                      setTimeout(() => { btn.innerText = prev; }, 1200);
+                    } catch {
+                      btn.innerText = 'Failed';
+                      setTimeout(() => { btn.innerText = prev; }, 1200);
+                    }
+                  };
+                  void doCopy();
+                }}
+                className="pointer-events-auto inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] sm:text-xs font-medium bg-white/70 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 shadow-sm hover:bg-white dark:hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+              >
+                Copy
+              </button>
             </div>
-          )}
+
+            <pre className="custom-scrollbar bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pt-8 p-3 sm:p-4 overflow-auto max-w-full max-h-60 sm:max-h-none shadow-sm">
+              <code className="block min-w-full text-[11px] sm:text-sm md:text-[0.95rem] font-mono text-slate-800 dark:text-slate-200 leading-relaxed not-prose">
+                {token.content}
+              </code>
+            </pre>
+          </div>
         </div>
       );
     
     // Text formatting
     case 'bold':
-      return <strong key={key} className="font-black !text-slate-950 dark:!text-white">{token.content}</strong>;
+      return <strong key={key} className="font-extrabold text-slate-900 dark:text-slate-50">{token.content}</strong>;
     case 'italic':
-      return <em key={key} className="italic text-slate-700 dark:text-slate-300">{token.content}</em>;
+      return <em key={key} className="italic text-slate-800 dark:text-slate-200">{token.content}</em>;
     case 'underline':
       return <u key={key} className="underline decoration-slate-400 dark:decoration-slate-500 underline-offset-2">{token.content}</u>;
-    case 'strikethrough':
-      return <del key={key} className="line-through text-slate-500 dark:text-slate-400">{token.content}</del>;
     case 'code':
       return (
         <code
           key={key}
-          className="not-prose px-1.5 py-0.5 text-[0.9em] leading-normal whitespace-pre-wrap bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 rounded border border-slate-200 dark:border-slate-700 font-mono align-baseline"
-          aria-label="inline code"
+          className="align-baseline font-mono text-[0.9em] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words"
         >
           {token.content}
         </code>
       );
+    case 'strikethrough':
+      return <del key={key} className="line-through text-slate-500 dark:text-slate-400">{token.content}</del>;
     
     // Links and images
     case 'link':
@@ -623,6 +663,8 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
     }
   }, []);
 
+  
+
   const fetchTip = useCallback(
     async (opts?: { force?: boolean; fresh?: boolean }) => {
       const { force = false, fresh = false } = opts || {};
@@ -751,6 +793,24 @@ export const SecretDailyTips: React.FC<Props> = ({
   const reduced = useReducedMotion();
   const [inView, setInView] = useState(false);
   const [everInView, setEverInView] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string>("");
+  const toastTimerRef = useRef<number | null>(null);
+
+  // Toast: listen for global copy events from code blocks and copy actions
+  useEffect(() => {
+    const onCopied = (e: Event) => {
+      const ce = e as CustomEvent<{ msg?: string }>;
+      const msg = ce?.detail?.msg || "Copied to clipboard";
+      setToastMsg(msg);
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = window.setTimeout(() => setToastMsg(""), 1600);
+    };
+    window.addEventListener("code-copied", onCopied as EventListener);
+    return () => {
+      window.removeEventListener("code-copied", onCopied as EventListener);
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   const lastFetchedLabel = useMemo(() => {
     return lastFetchedAt ? `Fetched ${formatDateShort(new Date(lastFetchedAt))}` : "";
@@ -913,6 +973,8 @@ export const SecretDailyTips: React.FC<Props> = ({
         document.execCommand("copy");
         document.body.removeChild(ta);
       }
+      // Fire global toast event
+      window.dispatchEvent(new CustomEvent("code-copied", { detail: { msg: "Copied to clipboard" } }));
       return true;
     } catch {
       return false;
@@ -935,6 +997,25 @@ export const SecretDailyTips: React.FC<Props> = ({
 
   // Copy and share functions (keeping these for functionality)
 
+  // Inject custom scrollbar styles once
+  useEffect(() => {
+    const id = 'custom-code-scrollbar-style';
+    if (document.getElementById(id)) return;
+    const style = document.createElement('style');
+    style.id = id;
+    style.innerHTML = `
+      .custom-scrollbar{ scrollbar-width: thin; scrollbar-color: rgba(100,116,139,0.6) transparent; }
+      .custom-scrollbar::-webkit-scrollbar{ height: 10px; width: 10px; }
+      .custom-scrollbar::-webkit-scrollbar-track{ background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb{ background-color: rgba(100,116,139,0.6); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover{ background-color: rgba(100,116,139,0.8); }
+      .dark .custom-scrollbar{ scrollbar-color: rgba(148,163,184,0.5) transparent; }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb{ background-color: rgba(148,163,184,0.5); }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover{ background-color: rgba(148,163,184,0.7); }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   return (
     <div ref={containerRef} className={className} aria-live="polite" aria-atomic>
       <div className="relative">
@@ -947,11 +1028,11 @@ export const SecretDailyTips: React.FC<Props> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduced ? 0 : 0.6, ease: "easeOut" }}
-          className="max-w-4xl mx-auto"
+          className="max-w-4xl mx-auto px-4 sm:px-6"
         >
           <header className="text-center mb-8">
             <motion.div 
-              className="inline-flex items-center gap-4 mb-3"
+              className="inline-flex items-center gap-2 sm:gap-4 mb-3"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: reduced ? 0 : 0.5 }}
@@ -960,10 +1041,10 @@ export const SecretDailyTips: React.FC<Props> = ({
               <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">
                 Daily AI Tip
               </h2>
-              <Sparkles className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500 dark:text-indigo-400" />
             </motion.div>
             <motion.p 
-              className="text-slate-600 dark:text-slate-400 text-lg"
+              className="text-slate-600 dark:text-slate-400 text-base sm:text-lg"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: reduced ? 0 : 0.5 }}
@@ -979,24 +1060,24 @@ export const SecretDailyTips: React.FC<Props> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: reduced ? 0 : 0.6 }}
             whileHover={reduced ? undefined : { y: -4 }}
-            className="relative bg-white/90 dark:bg-slate-900/80 backdrop-blur-lg border border-slate-200/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500"
+            className="relative bg-white/90 dark:bg-slate-900/80 backdrop-blur-lg border border-slate-200/50 dark:border-slate-700/50 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden"
           >
-            <div className="flex items-start justify-between gap-6 mb-6">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-pink-500 text-white shadow-lg">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-pink-500 text-white shadow-lg">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" fill="currentColor" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">
                     {loading ? "Generating..." : "Today's Insight"}
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{lastFetchedLabel}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap w-full sm:w-auto items-center gap-2 sm:gap-3 mt-4 sm:mt-0 justify-start sm:justify-end">
                 <motion.button
                   onClick={() => load({ force: true })}
                   title="Refresh cached tip"
@@ -1004,7 +1085,7 @@ export const SecretDailyTips: React.FC<Props> = ({
                   disabled={loading}
                   whileTap={reduced ? undefined : { scale: 0.95 }}
                   whileHover={reduced ? undefined : { scale: 1.05 }}
-                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`inline-flex items-center gap-2 w-full sm:w-auto px-3 py-2 text-xs sm:text-sm sm:px-4 font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Refresh</span>
@@ -1017,7 +1098,7 @@ export const SecretDailyTips: React.FC<Props> = ({
                   disabled={loading}
                   whileTap={reduced ? undefined : { scale: 0.95 }}
                   whileHover={reduced ? undefined : { scale: 1.05 }}
-                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-amber-200 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/50 dark:hover:to-orange-900/50 text-amber-700 dark:text-amber-300 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 shadow-sm hover:shadow-md ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`inline-flex items-center gap-2 w-full sm:w-auto px-3 py-2 text-xs sm:text-sm sm:px-4 font-medium rounded-xl border border-amber-200 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/50 dark:hover:to-orange-900/50 text-amber-700 dark:text-amber-300 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 shadow-sm hover:shadow-md ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Zap className="w-4 h-4" />
                   <span>Fresh</span>
@@ -1030,7 +1111,7 @@ export const SecretDailyTips: React.FC<Props> = ({
                   disabled={loading || !tip}
                   whileTap={reduced ? undefined : { scale: 0.95 }}
                   whileHover={reduced ? undefined : { scale: 1.05 }}
-                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${(loading || !tip) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`inline-flex items-center gap-2 w-full sm:w-auto px-3 py-2 text-xs sm:text-sm sm:px-4 font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${(loading || !tip) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Share2 className="w-4 h-4" />
                   <span>Share</span>
@@ -1048,17 +1129,17 @@ export const SecretDailyTips: React.FC<Props> = ({
                   </div>
                 </div>
               ) : (
-                <div className="prose prose-lg max-w-none dark:prose-invert">
-                  <div ref={contentRef} className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-lg">
+                <div className="prose prose-base sm:prose-lg max-w-none dark:prose-invert">
+                  <div ref={contentRef} className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium text-base sm:text-lg break-words">
                     <TypingText text={tip || DEFAULT_TIP} speed={12} active={inView || everInView} />
                   </div>
                 </div>
               )}
             </div>
 
-            <footer className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <footer className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4 sm:gap-0 items-stretch sm:items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className={`w-3 h-3 rounded-full ${error ? "bg-red-400" : loading ? "bg-yellow-400" : "bg-green-400"} shadow-sm`} aria-hidden />
+                <span className={`${error ? "bg-red-400" : loading ? "bg-yellow-400" : "bg-green-400"} shadow-sm w-3 h-3 rounded-full`} aria-hidden />
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   {error ? error : loading ? "Loading..." : "Powered by AI"}
                 </span>
@@ -1071,20 +1152,19 @@ export const SecretDailyTips: React.FC<Props> = ({
                 disabled={loading || !tip}
                 whileTap={reduced ? undefined : { scale: 0.95 }}
                 whileHover={reduced ? undefined : { scale: 1.05 }}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${(loading || !tip) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`inline-flex items-center gap-2 w-full sm:w-auto px-3 py-2 text-xs sm:text-sm sm:px-4 font-medium rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shadow-sm hover:shadow-md ${(loading || !tip) ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Copy className="w-4 h-4" />
                 <span>Copy</span>
               </motion.button>
             </footer>
-
           </motion.section>
 
           {/* Countdown Timer */}
           <CountdownTimer onComplete={handleCountdownComplete} />
 
           <motion.div 
-            className="text-center mt-6 text-xs text-slate-400 dark:text-slate-500"
+            className="text-center mt-6 text-xs text-slate-400 dark:text-slate-500 hidden sm:block"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: reduced ? 0 : 0.5 }}
@@ -1093,6 +1173,17 @@ export const SecretDailyTips: React.FC<Props> = ({
           </motion.div>
         </motion.div>
       </div>
+      {/* Toast */}
+      <motion.div
+        role="status"
+        aria-live="polite"
+        initial={{ opacity: 0, y: 10 }}
+        animate={toastMsg ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+        transition={{ duration: reduced ? 0 : 0.2 }}
+        className={`fixed left-1/2 -translate-x-1/2 bottom-6 z-50 px-3 py-2 sm:px-4 sm:py-2 rounded-lg shadow-lg border text-xs sm:text-sm ${toastMsg ? 'pointer-events-auto' : 'pointer-events-none'} bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100`}
+      >
+        {toastMsg}
+      </motion.div>
     </div>
   );
 };
