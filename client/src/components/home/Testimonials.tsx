@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence, Variants, easeInOut } from "framer-motion";
 import { Star } from "lucide-react";
 import Button from "../ui/Button";
@@ -38,28 +38,36 @@ const cardVariants: Variants = {
   },
 };
 
-const TestimonialCard: React.FC<TestimonialCardProps> = ({ quote, author, role }) => (
+const TestimonialCardBase: React.FC<TestimonialCardProps> = ({ quote, author, role }) => (
   <motion.figure
     whileHover={{ scale: 1.02 }}
-    transition={{ type: "spring", stiffness: 200, damping: 15 }}
-    className={`${TOKENS.surfaceGlass} ${TOKENS.radius.lg} p-6 ${TOKENS.shadow} backdrop-blur-md`}
+    transition={{ type: "spring", stiffness: 220, damping: 18 }}
+    className={`${TOKENS.surfaceGlass} ${TOKENS.radius.xl} p-6 sm:p-8 ${TOKENS.shadow} backdrop-blur-md border border-white/10 dark:border-white/5 relative overflow-hidden`}
   >
+    <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[inherit]">
+      <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-amber-400/20 blur-3xl" />
+    </div>
+
     <div className="mb-3 flex gap-1 text-amber-400" aria-hidden="true">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} className="h-4 w-4 fill-current" />
+        <Star key={i} className="h-4 w-4 fill-current drop-shadow" />
       ))}
     </div>
-    <blockquote className="mb-4 text-lg italic text-slate-700 dark:text-slate-200">
+    <blockquote className="mb-4 text-lg sm:text-xl leading-relaxed italic text-slate-700 dark:text-slate-200">
       “{quote}”
     </blockquote>
     <figcaption className={`text-sm ${TOKENS.textMuted}`}>
-      <span className="font-medium text-slate-800 dark:text-slate-100">{author}</span> · {role}
+      <span className="font-medium text-slate-900 dark:text-slate-100">{author}</span>
+      <span className="mx-1 text-slate-400">·</span>
+      {role}
     </figcaption>
   </motion.figure>
 );
 
+const TestimonialCard = React.memo(TestimonialCardBase);
+
 export const Testimonials: React.FC = () => {
-  const slides: Testimonial[] = [
+  const slides: Testimonial[] = useMemo(() => [
     {
       quote:
         "Delivered ahead of schedule with flawless performance. Our conversions improved immediately.",
@@ -78,39 +86,61 @@ export const Testimonials: React.FC = () => {
       author: "Daniel Kim",
       role: "Founder, Arc Labs",
     },
-  ];
+  ], []);
 
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hoveringRef = useRef(false);
   const reduce = useReducedMotionPref();
   const [wrapRef, inView] = useInViewOnce<HTMLDivElement>();
 
-  const next = () => setIndex((i) => (i + 1) % slides.length);
-  const prev = () => setIndex((i) => (i - 1 + slides.length) % slides.length);
+  const next = useCallback(() => setIndex((i) => (i + 1) % slides.length), [slides.length]);
+  const prev = useCallback(() => setIndex((i) => (i - 1 + slides.length) % slides.length), [slides.length]);
+
+  // Helper to start/stop autoplay without causing re-renders
+  const startAutoplay = useCallback(() => {
+    if (intervalRef.current) return;
+    if (reduce || !inView || hoveringRef.current) return;
+    intervalRef.current = setInterval(next, 6000);
+  }, [next, reduce, inView]);
+
+  const stopAutoplay = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
-    if (reduce || paused || !inView) return;
-    const t = setInterval(next, 6000);
-    return () => clearInterval(t);
-  }, [reduce, paused, inView]);
+    startAutoplay();
+    return () => stopAutoplay();
+  }, [startAutoplay, stopAutoplay]);
 
   return (
     <div
       ref={wrapRef}
-      className="relative"
+      className="relative group"
       role="region"
       aria-roledescription="carousel"
       aria-label="Client testimonials"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onMouseEnter={() => {
+        hoveringRef.current = true;
+        stopAutoplay();
+      }}
+      onMouseLeave={() => {
+        hoveringRef.current = false;
+        startAutoplay();
+      }}
       onKeyDown={(e) => {
         if (e.key === "ArrowLeft") {
           prev();
-          setPaused(true);
+          hoveringRef.current = true;
+          stopAutoplay();
         }
         if (e.key === "ArrowRight") {
           next();
-          setPaused(true);
+          hoveringRef.current = true;
+          stopAutoplay();
         }
       }}
       tabIndex={0}
@@ -132,6 +162,19 @@ export const Testimonials: React.FC = () => {
         </AnimatePresence>
       </div>
 
+      {/* Progress bar */}
+      <div className="mt-4 flex justify-center">
+        <div className="h-1 w-56 sm:w-72 rounded-full bg-slate-200/60 dark:bg-slate-700/60 overflow-hidden" aria-hidden>
+          <motion.div
+            key={`progress-${index}-${reduce}`}
+            initial={{ width: 0 }}
+            animate={{ width: reduce ? 0 : "100%" }}
+            transition={{ duration: 6, ease: "linear" }}
+            className="h-full bg-amber-400 group-hover:opacity-60"
+          />
+        </div>
+      </div>
+
       <div className="mt-5 flex items-center justify-center gap-2">
         {slides.map((_, i) => (
           <button
@@ -145,7 +188,8 @@ export const Testimonials: React.FC = () => {
             } ${TOKENS.ring}`}
             onClick={() => {
               setIndex(i);
-              setPaused(true);
+              hoveringRef.current = true;
+              stopAutoplay();
             }}
           />
         ))}
