@@ -32,7 +32,9 @@ export const CTA: React.FC = () => {
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
-        className={`relative z-10 overflow-hidden ${TOKENS.surfaceGlass} ${TOKENS.radius.xl} p-8 md:p-12 ${TOKENS.shadow}`}
+        className={`relative z-10 overflow-hidden ${TOKENS.surfaceGlass} ${TOKENS.radius.xl} p-8 md:p-12 ${TOKENS.shadow} 
+          bg-white/15 dark:bg-slate-900/20 backdrop-blur-2xl 
+          border-white/30 dark:border-white/10 ring-1 ring-inset ring-white/10 dark:ring-white/5`}
       >
         {/* Decorative Shape */}
         <div
