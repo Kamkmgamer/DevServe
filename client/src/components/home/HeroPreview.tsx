@@ -47,7 +47,7 @@ const defaultSettings: Settings = {
   borderGlow: true,
 };
 
-export const HeroPreview: React.FC = () => {
+export const HeroPreview: React.FC<{ url?: string; title?: string }> = ({ url, title }) => {
   const reduce = useReducedMotionPref();
   const isTouch = useIsTouch();
 
@@ -407,6 +407,7 @@ useEffect(() => {
 
 // accessible label for screen readers
   const srText = 'Live preview surface. Move mouse or tilt device to interact.';
+  const resolvedTitle = title || 'Project Preview';
   const settingsPanelId = useId();
 
   const resetSettings = () => setSettings({ ...defaultSettings });
@@ -655,7 +656,7 @@ useEffect(() => {
             aria-hidden="true"
           />
 
-          {/* main panel */}
+          {/* main panel: acts as the floating window surface */}
           <div
             className="aspect-[16/10] relative bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900"
             style={{ transform: `translateZ(${settings.depth}px)` }}
@@ -686,22 +687,89 @@ useEffect(() => {
                 transition: 'opacity 180ms ease-out',
               }}
             />
-            <div className="flex h-full items-start justify-center pt-4 md:pt-6">
-              <div className="relative z-10">
-                <div className="mx-auto inline-flex flex-col items-center rounded-md px-3 py-2 bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-sm">
-                <div className="flex items-center justify-center gap-2 text-sm text-white/85">
-                    <CheckCircle2 className="h-4 w-4 text-green-400" />
-                    <span className="tracking-wide">Lighthouse 98-100</span>
-                  </div>
-                  <h3 className="mt-1 text-lg font-semibold text-white drop-shadow">
-                    Live Preview Surface
-                  </h3>
-                  <p className="text-xs text-white/85 drop-shadow-sm">
-                    Move your mouse, tilt your phone, or tap to interact
-                  </p>
-                </div>
-                <span className="sr-only">{srText}</span>
+            {/* floating window content */}
+            <div className="absolute inset-3 md:inset-4 flex flex-col rounded-xl overflow-hidden border border-slate-200/70 dark:border-slate-800/70 bg-white/80 dark:bg-slate-900/70 backdrop-blur z-10 shadow-sm">
+              {/* window chrome */}
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-200/70 dark:border-slate-800/70 bg-slate-50/70 dark:bg-slate-900/60">
+                <span className="inline-flex gap-1.5 mr-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-400/90" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/90" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-green-400/90" />
+                </span>
+                <strong className="text-xs text-slate-700 dark:text-slate-200 truncate" title={resolvedTitle}>
+                  {resolvedTitle}
+                </strong>
+                <span className="ml-auto text-[11px] text-slate-500 dark:text-slate-400">Preview</span>
               </div>
+              {/* mini-site content (no scroll) */}
+              <div className="flex-1 overflow-hidden">
+                {/* header */}
+                <div className="bg-white/80 dark:bg-slate-900/70 backdrop-blur px-3 py-1.5 border-b border-slate-100/70 dark:border-slate-800/70">
+                  <div className="flex items-center gap-3">
+                    <span className="h-7 w-7 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-500 shadow-sm" />
+                    <div className="flex-1">
+                      <div className="text-xs font-medium text-slate-800 dark:text-slate-200">DevServe</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">by You</div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span>Overview</span>
+                      <span>Projects</span>
+                      <span>About</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* hero section */}
+                <section className="px-3 py-3">
+                  <h3 className="text-slate-900 dark:text-white text-base md:text-lg font-semibold">Build. Ship. Delight.</h3>
+                  <p className="mt-1 text-xs md:text-sm text-slate-600 dark:text-slate-300 max-w-prose">
+                    I craft fast, accessible web experiences. Here’s a snapshot of recent work with a focus on performance, polish, and UX.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button className="text-xs px-3 py-1.5 rounded bg-slate-900 text-white dark:bg-white dark:text-slate-900">
+                      View Projects
+                    </button>
+                    <button className="text-xs px-3 py-1.5 rounded border border-slate-300/70 dark:border-slate-700/70 text-slate-700 dark:text-slate-200">
+                      Contact
+                    </button>
+                  </div>
+                </section>
+
+                {/* projects grid */}
+                <section className="px-3 pb-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="group rounded-lg border border-slate-200/70 dark:border-slate-800/70 bg-white/70 dark:bg-slate-900/60 overflow-hidden">
+                        <div className="h-20 bg-gradient-to-br from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-900" />
+                        <div className="p-3">
+                          <div className="flex items-center justify-between">
+                            <strong className="text-[13px] text-slate-800 dark:text-slate-100">Project {i + 1}</strong>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">Featured</span>
+                          </div>
+                          <p className="mt-1 text-[12px] text-slate-600 dark:text-slate-300 line-clamp-2">
+                            A concise description highlighting goals, impact, and stack choices.
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* about section */}
+                <section className="px-3 pb-3">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">About</h4>
+                  <p className="mt-1 text-[12px] text-slate-600 dark:text-slate-300 max-w-prose">
+                    I focus on developer experience, performance budgets, and tasteful interfaces. I enjoy
+                    building systems that are simple, scalable, and a joy to use.
+                  </p>
+                </section>
+
+                {/* footer */}
+                <footer className="px-3 py-2 border-t border-slate-200/70 dark:border-slate-800/70 text-[11px] text-slate-500 dark:text-slate-400">
+                  © {new Date().getFullYear()} DevServe — All rights reserved.
+                </footer>
+              </div>
+              <span className="sr-only">{srText}</span>
             </div>
           </div>
 
