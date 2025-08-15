@@ -22,6 +22,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import { useSEO } from "../utils/useSEO";
+import { useTheme } from "../contexts/ThemeContext";
 
 // Feature toggles used across the page and FX controls
 type Features = {
@@ -523,7 +524,7 @@ function useCosmicCursor({ enabled = true, theme = 'dark', perfScale = 1, active
 
 const NotFoundPage = () => {
   useSEO("404: Cosmic Singularity | DevServe", [{ name: "robots", content: "noindex" }]);
-  const theme = useSystemTheme();
+  const { theme } = useTheme();
   const { deviceScale, shouldAnimate } = usePerformanceController();
   const navigate = useNavigate();
   
