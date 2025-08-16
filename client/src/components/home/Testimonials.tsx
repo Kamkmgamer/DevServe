@@ -14,7 +14,7 @@ interface TestimonialCardProps extends Testimonial {}
 
 const cardVariants: Variants = {
   enter: {
-    x: 50,
+    x: 0,
     opacity: 0,
     scale: 0.96,
   },
@@ -28,7 +28,7 @@ const cardVariants: Variants = {
     },
   },
   exit: {
-    x: -50,
+    x: 0,
     opacity: 0,
     scale: 0.96,
     transition: {
@@ -40,11 +40,11 @@ const cardVariants: Variants = {
 
 const TestimonialCardBase: React.FC<TestimonialCardProps> = ({ quote, author, role }) => (
   <motion.figure
-    whileHover={{ scale: 1.02 }}
+    whileHover={{ scale: 1.01 }}
     transition={{ type: "spring", stiffness: 220, damping: 18 }}
-    className={`${TOKENS.surfaceGlass} ${TOKENS.radius.xl} p-6 sm:p-8 ${TOKENS.shadow} backdrop-blur-md border border-white/10 dark:border-white/5 relative overflow-hidden`}
+    className={`${TOKENS.surfaceGlass} ${TOKENS.radius.xl} p-6 sm:p-8 ${TOKENS.shadow} backdrop-blur-md border border-white/10 dark:border-white/5 relative z-0 overflow-visible`}
   >
-    <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[inherit]">
+    <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[inherit] overflow-hidden -z-10">
       <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-amber-400/20 blur-3xl" />
     </div>
 
@@ -124,12 +124,10 @@ export const Testimonials: React.FC = () => {
       aria-roledescription="carousel"
       aria-label="Client testimonials"
       onMouseEnter={() => {
-        hoveringRef.current = true;
-        stopAutoplay();
+        // Keep autoplay running on hover; do not stop interval
       }}
       onMouseLeave={() => {
-        hoveringRef.current = false;
-        startAutoplay();
+        // Do not restart autoplay; interval was never stopped
       }}
       onKeyDown={(e) => {
         if (e.key === "ArrowLeft") {
@@ -145,7 +143,7 @@ export const Testimonials: React.FC = () => {
       }}
       tabIndex={0}
     >
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-4xl px-8 sm:px-10 overflow-visible">
         <AnimatePresence mode="wait">
           <motion.div
             key={index}
@@ -153,6 +151,7 @@ export const Testimonials: React.FC = () => {
             initial="enter"
             animate="center"
             exit="exit"
+            className="overflow-visible transform-gpu p-2 md:p-3"
             aria-live="polite"
             role="group"
             aria-label={`Testimonial ${index + 1} of ${slides.length}`}
