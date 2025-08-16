@@ -312,9 +312,11 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
       return (
         <div key={key} className="my-4 first:mt-0 last:mb-0 not-prose">
           <div className="relative group">
-            {/* Header overlay with language and copy button */}
-            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 sm:px-4 py-2 pointer-events-none">
-              <span className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 select-none">
+            {/* Header with language and copy button (in normal flow) */}
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2 mb-2">
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/60 select-none"
+              >
                 {token.language || 'code'}
               </span>
               <button
@@ -350,13 +352,13 @@ const renderRichTextToken = (token: RichTextToken, key: string) => {
                   };
                   void doCopy();
                 }}
-                className="pointer-events-auto inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] sm:text-xs font-medium bg-white/70 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 shadow-sm hover:bg-white dark:hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] sm:text-xs font-medium bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 shadow-sm hover:bg-white dark:hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
                 Copy
               </button>
             </div>
 
-            <pre className="custom-scrollbar bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pt-8 p-3 sm:p-4 overflow-auto max-w-full max-h-60 sm:max-h-none shadow-sm">
+            <pre className="custom-scrollbar bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4 overflow-auto max-w-full max-h-60 sm:max-h-none shadow-sm">
               <code className="block min-w-full text-[11px] sm:text-sm md:text-[0.95rem] font-mono text-slate-800 dark:text-slate-200 leading-relaxed not-prose">
                 {token.content}
               </code>
@@ -465,6 +467,13 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
   const timeoutRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
 
+  // Pre-split into Unicode code points and strip problematic control chars (e.g., \u0000)
+  const codePoints = useMemo(() => {
+    const sanitized = (text || '').replace(/\u0000/g, '');
+    // Array.from splits by Unicode code points (handles emojis/combining marks)
+    return Array.from(sanitized);
+  }, [text]);
+
   useEffect(() => {
     cancelledRef.current = false;
 
@@ -479,7 +488,7 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
       clear();
       return () => clear();
     }
-    if (!text) {
+    if (codePoints.length === 0) {
       setDisplayText('');
       setIsTyping(false);
       clear();
@@ -488,7 +497,7 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
 
     if (reduced) {
       // Instantly render full text when reduced motion is preferred
-      setDisplayText(text);
+      setDisplayText(codePoints.join(''));
       setIsTyping(false);
       clear();
       return () => clear();
@@ -502,9 +511,9 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
 
     const typeWriter = () => {
       if (cancelledRef.current) return;
-      if (currentIndex < text.length) {
+      if (currentIndex < codePoints.length) {
         // Guard against state updates after unmount
-        setDisplayText(text.slice(0, currentIndex + 1));
+        setDisplayText(codePoints.slice(0, currentIndex + 1).join(''));
         currentIndex++;
         timeoutRef.current = window.setTimeout(typeWriter, effectiveDelay);
       } else {
@@ -519,7 +528,7 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
       cancelledRef.current = true;
       clear();
     };
-  }, [text, speed, reduced, active]);
+  }, [codePoints, speed, reduced, active]);
 
   // Cursor uses CSS animation to avoid state-driven re-renders
 
@@ -619,7 +628,7 @@ async function fetchData(url) {
 }
 \`\`\`
 
-And here is some \`inline code\` for you to see. Visit our [documentation](https://example.com) for more info.`;
+And here is some \`inline code\` for you to see. Visit our [documentation](https://github.com/Kamkmgamer/) for more info.`;
 
 function formatDateShort(date = new Date()) {
   try {
