@@ -175,3 +175,39 @@ export const adminCreateUserSchema = z.object({
   role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']).optional(),
 });
 export const adminUpdateUserSchema = adminCreateUserSchema.partial();
+
+// Coupons schemas
+export const couponSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .min(1, 'Code is required')
+      .transform((s) => s.toUpperCase()),
+    type: z.enum(['percentage', 'fixed']),
+    value: z.number().positive().int(),
+    minOrderAmount: z.number().positive().int().optional().nullable(),
+    maxUses: z.number().positive().int().optional().nullable(),
+    expiresAt: z.string().datetime().optional().nullable(),
+    active: z.boolean(),
+  })
+  .refine((d) => (d.type === 'percentage' ? d.value <= 100 : true), {
+    path: ['value'],
+    message: 'Percentage value may not exceed 100',
+  });
+
+export const couponUpdateSchema = couponSchema.partial();
+
+export const couponCodeParamSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(1)
+    .transform((s) => s.toUpperCase()),
+});
+
+// Common query schemas
+export const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(200).optional(),
+});
