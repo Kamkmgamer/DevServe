@@ -65,3 +65,11 @@ export const createOrderSchema = z.object({
     code: z.string(),
   }).optional(),
 });
+
+// Contact schemas
+export const contactSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Valid email is required'),
+  subject: z.string().min(1, 'Subject is required').max(200),
+  message: z.string().min(1, 'Message is required').max(5000),
+});
