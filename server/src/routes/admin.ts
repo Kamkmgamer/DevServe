@@ -3,6 +3,7 @@ import prisma from "../lib/prisma";
 import { protect, admin, superadmin, AuthRequest } from "../middleware/auth"; // Import protect, admin, superadmin, and AuthRequest
 import bcrypt from "bcryptjs";
 import { validate } from "../middleware/validation";
+import { AppError } from "../lib/errors";
 import {
   idParamSchema,
   updateOrderStatusSchema,
@@ -15,7 +16,7 @@ router.use(protect); // Use protect middleware for all admin routes
 router.use(admin); // Use admin middleware for all admin routes
 
 // Dashboard stats (unchanged)
-router.get("/", async (_req, res) => {
+router.get("/", async (_req, res, next) => {
   const [userCount, serviceCount, orderCount, cartItemCount] =
     await Promise.all([
       prisma.user.count(),
@@ -23,12 +24,15 @@ router.get("/", async (_req, res) => {
       prisma.order.count(),
       prisma.cartItem.count(),
     ]);
-  res.json({ userCount, serviceCount, orderCount, cartItemCount   }
-);
+  try {
+    res.json({ userCount, serviceCount, orderCount, cartItemCount });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // NEW route – matches the AdminOrdersPage fetch
-router.get("/orders", async (_req, res) => {
+router.get("/orders", async (_req, res, next) => {
   const orders = await prisma.order.findMany({
     include: {
       user: { select: { email: true } },
@@ -36,29 +40,33 @@ router.get("/orders", async (_req, res) => {
     },
     orderBy: { createdAt: "desc" },
   });
-  res.json(
-    orders.map((o) => ({
-      id: o.id,
-      email: o.user.email,
-      total: o.totalAmount,
-      status: o.status,
-      createdAt: o.createdAt,
-      lineItems: o.lineItems,
-    }))
-  );
+  try {
+    res.json(
+      orders.map((o) => ({
+        id: o.id,
+        email: o.user.email,
+        total: o.totalAmount,
+        status: o.status,
+        createdAt: o.createdAt,
+        lineItems: o.lineItems,
+      }))
+    );
+  } catch (err) {
+    next(err);
+  }
 });
 
 // PATCH /api/admin/orders/:id/status
 router.patch(
   "/orders/:id/status",
   validate({ params: idParamSchema, body: updateOrderStatusSchema }),
-  async (req, res) => {
+  async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
     if (!status) {
-      return res.status(400).json({ message: "Status is required" });
+      return next(AppError.badRequest("Status is required"));
     }
 
     const order = await prisma.order.update({
@@ -68,28 +76,26 @@ router.patch(
 
     res.json(order);
   } catch (error) {
-    console.error("Error updating order status:", error);
-    res.status(500).json({ message: "Failed to update order status" });
+    next(error);
   }
 });
 
 // User Management Routes
 
 // GET all users
-router.get("/users", async (_req, res) => {
+router.get("/users", async (_req, res, next) => {
   try {
     const users = await prisma.user.findMany({
       select: { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true },
     });
     res.json(users);
   } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ message: "Failed to fetch users" });
+    next(error);
   }
 });
 
 // GET single user by ID
-router.get("/users/:id", validate({ params: idParamSchema }), async (req, res) => {
+router.get("/users/:id", validate({ params: idParamSchema }), async (req, res, next) => {
   try {
     const { id } = req.params;
     const user = await prisma.user.findUnique({
@@ -97,21 +103,20 @@ router.get("/users/:id", validate({ params: idParamSchema }), async (req, res) =
       select: { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true },
     });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return next(AppError.notFound("User not found"));
     }
     res.json(user);
   } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).json({ message: "Failed to fetch user" });
+    next(error);
   }
 });
 
 // POST create new user
-router.post("/users", validate(adminCreateUserSchema), async (req, res) => {
+router.post("/users", validate(adminCreateUserSchema), async (req, res, next) => {
   try {
     const { email, password, name, role } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return next(AppError.badRequest("Email and password are required"));
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -121,11 +126,10 @@ router.post("/users", validate(adminCreateUserSchema), async (req, res) => {
     });
     res.status(201).json(newUser);
   } catch (error: any) {
-    console.error("Error creating user:", error);
     if (error.code === 'P2002') { // Unique constraint failed for email
-      return res.status(409).json({ message: "User with this email already exists" });
+      return next(AppError.conflict("User with this email already exists"));
     }
-    res.status(500).json({ message: "Failed to create user" });
+    next(error);
   }
 });
 
@@ -133,7 +137,7 @@ router.post("/users", validate(adminCreateUserSchema), async (req, res) => {
 router.put(
   "/users/:id",
   validate({ params: idParamSchema, body: adminUpdateUserSchema }),
-  async (req, res) => {
+  async (req, res, next) => {
   try {
     const { id } = req.params;
     const { email, password, name, role } = req.body;
@@ -153,11 +157,10 @@ router.put(
     });
     res.json(updatedUser);
   } catch (error: any) {
-    console.error("Error updating user:", error);
     if (error.code === 'P2002') { // Unique constraint failed for email
-      return res.status(409).json({ message: "User with this email already exists" });
+      return next(AppError.conflict("User with this email already exists"));
     }
-    res.status(500).json({ message: "Failed to update user" });
+    next(error);
   }
 });
 
@@ -166,18 +169,18 @@ router.delete(
   "/users/:id",
   superadmin,
   validate({ params: idParamSchema }),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res, next) => {
   try {
     const { id } = req.params;
     const requestingUser = req.user; // User making the request (from protect middleware)
 
     if (!requestingUser) {
-      return res.status(401).json({ message: "Not authenticated." });
+      return next(AppError.unauthorized("Not authenticated."));
     }
 
     // Prevent self-deletion
     if (requestingUser.id === id) {
-      return res.status(403).json({ message: "You cannot delete your own account." });
+      return next(AppError.forbidden("You cannot delete your own account."));
     }
 
     const targetUser = await prisma.user.findUnique({
@@ -185,12 +188,12 @@ router.delete(
     });
 
     if (!targetUser) {
-      return res.status(404).json({ message: "User not found." });
+      return next(AppError.notFound("User not found."));
     }
 
     // Only SUPERADMIN can delete ADMIN users
     if (targetUser.role === "ADMIN" && requestingUser.role !== "SUPERADMIN") {
-      return res.status(403).json({ message: "Only superadmins can delete admin accounts." });
+      return next(AppError.forbidden("Only superadmins can delete admin accounts."));
     }
 
     await prisma.user.delete({
@@ -198,8 +201,7 @@ router.delete(
     });
     res.status(204).send(); // No Content
   } catch (error) {
-    console.error("Error deleting user:", error);
-    res.status(500).json({ message: "Failed to delete user" });
+    next(error);
   }
 });
 
