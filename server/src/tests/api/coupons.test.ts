@@ -33,6 +33,9 @@ describe('Coupons API', () => {
     it('returns 404 for invalid code', async () => {
       const res = await request(app).get('/api/coupons/code/NOPE');
       expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error');
+      expect(res.body.error.code).toBe('NOT_FOUND');
+      expect(typeof res.body.error.message).toBe('string');
     });
   });
 

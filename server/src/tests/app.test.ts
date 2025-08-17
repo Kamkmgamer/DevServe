@@ -12,6 +12,11 @@ describe('App', () => {
   it('should return 404 for a non-existent route', async () => {
     const res = await request(app).get('/non-existent-route');
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ message: 'Route not found' });
+    expect(res.body).toHaveProperty('error');
+    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.message).toBe('Route not found');
+    expect(Object.keys(res.body.error)).toEqual(
+      expect.arrayContaining(['code', 'message'])
+    );
   });
 });
