@@ -86,7 +86,6 @@ export const createPaypalOrderSchema = z.object({
 
 export const capturePaypalOrderSchema = z.object({
   authorizationId: z.string().min(1),
-  totalCents: z.number().int().positive(),
 });
 
 // Common param schemas
