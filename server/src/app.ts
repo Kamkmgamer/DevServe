@@ -14,6 +14,9 @@ dotenv.config();
 // Create the Express app instance
 const app = express();
 
+// Trust proxy (needed when behind reverse proxies like Nginx/Heroku) for correct protocol detection
+app.set('trust proxy', 1);
+
 // Apply middleware
 app.use(requestId);
 app.use(
@@ -21,12 +24,27 @@ app.use(
     origin: [
       'http://localhost:5173',
       'http://192.168.0.100:5173',
-      /\.ngrok-free\.app$/
+      /.ngrok-free\.app$/
     ],
     credentials: true
   })
 );
 app.use(express.json());
+
+// Enforce HTTPS in production and add HSTS header
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV === 'production') {
+    const proto = (req.headers['x-forwarded-proto'] as string) || (req.protocol as string);
+    if (proto && proto !== 'https') {
+      const host = req.headers.host;
+      const url = `https://${host}${req.originalUrl}`;
+      return res.redirect(301, url);
+    }
+    // Add HSTS header: 1 year, include subdomains, allow preload
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  next();
+});
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
