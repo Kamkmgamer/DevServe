@@ -1,5 +1,6 @@
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
+import { getRequestId } from '../lib/httpContext';
 
 const { combine, timestamp, json, printf, colorize } = winston.format;
 
@@ -23,6 +24,15 @@ function redactValue(val: unknown): unknown {
   return '***';
 }
 
+// Attach correlation id from AsyncLocalStorage, if present
+const requestIdFormat = winston.format((info) => {
+  const id = getRequestId();
+  if (id && !info.requestId) {
+    (info as any).requestId = id;
+  }
+  return info;
+});
+
 const sanitizeFormat = winston.format((info) => {
   // Redact known sensitive keys in the root info and nested meta
   for (const key of Object.keys(info)) {
@@ -44,8 +54,10 @@ const sanitizeFormat = winston.format((info) => {
   return info;
 });
 
-const consoleFormat = printf(({ level, message, timestamp }) => {
-  return `${timestamp} ${level}: ${message}`;
+const consoleFormat = printf((info) => {
+  const { level, message, timestamp } = info as any;
+  const reqId = (info as any).requestId ? ` [${(info as any).requestId}]` : '';
+  return `${timestamp} ${level}${reqId}: ${message}`;
 });
 
 const transports: winston.transport[] = [];
@@ -54,8 +66,8 @@ const transports: winston.transport[] = [];
 transports.push(new winston.transports.Console({
   level: levelFromEnv,
   format: isDevelopment
-    ? combine(sanitizeFormat(), colorize(), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), consoleFormat)
-    : combine(sanitizeFormat(), timestamp(), json()),
+    ? combine(requestIdFormat(), sanitizeFormat(), colorize(), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), consoleFormat)
+    : combine(requestIdFormat(), sanitizeFormat(), timestamp(), json()),
 }));
 
 // Daily rotated files (skip in test to avoid open handle leaks)
@@ -67,7 +79,7 @@ if (!isTest) {
     zippedArchive: true,
     maxSize: '10m',
     maxFiles: '7d',
-    format: combine(sanitizeFormat(), timestamp(), json()),
+    format: combine(requestIdFormat(), sanitizeFormat(), timestamp(), json()),
   }));
   transports.push(new DailyRotateFile({
     level: 'error',
@@ -76,13 +88,13 @@ if (!isTest) {
     zippedArchive: true,
     maxSize: '10m',
     maxFiles: '7d',
-    format: combine(sanitizeFormat(), timestamp(), json()),
+    format: combine(requestIdFormat(), sanitizeFormat(), timestamp(), json()),
   }));
 }
 
 const logger = winston.createLogger({
   level: levelFromEnv,
-  format: combine(sanitizeFormat(), timestamp(), json()),
+  format: combine(requestIdFormat(), sanitizeFormat(), timestamp(), json()),
   transports,
 });
 

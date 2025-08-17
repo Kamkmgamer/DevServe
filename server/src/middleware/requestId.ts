@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
+import { runWithRequestContext } from '../lib/httpContext';
 
 function generateId() {
   // Prefer built-in randomUUID if available
@@ -14,5 +15,6 @@ export function requestId(req: Request, res: Response, next: NextFunction) {
   (req as any).requestId = id;
   res.locals.requestId = id;
   res.setHeader('X-Request-ID', id);
-  next();
+  // Initialize async context for this request so loggers can access it
+  runWithRequestContext({ requestId: id }, () => next());
 }
