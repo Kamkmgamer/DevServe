@@ -2,7 +2,7 @@ import { Router } from "express";
 import { protect } from "../middleware/auth";
 import { addToCart, getCart, removeFromCart } from "../api/cart";
 import { validate } from "../middleware/validation";
-import { addToCartSchema } from "../lib/validation";
+import { addToCartSchema, cartItemParamSchema } from "../lib/validation";
 
 const router = Router();
 
@@ -11,6 +11,6 @@ router.use(protect);
 
 router.get("/", getCart);
 router.post("/items", validate(addToCartSchema), addToCart);
-router.delete("/items/:itemId", removeFromCart);
+router.delete("/items/:itemId", validate({ params: cartItemParamSchema }), removeFromCart);
 
 export default router;

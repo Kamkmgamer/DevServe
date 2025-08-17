@@ -91,6 +91,8 @@ export const capturePaypalOrderSchema = z.object({
 
 // Common param schemas
 export const idParamSchema = z.object({ id: z.string().min(1) });
+export const cartItemParamSchema = z.object({ itemId: z.string().min(1) });
+export const codeParamSchema = z.object({ code: z.string().min(1) });
 
 // Blog schemas
 export const createBlogPostSchema = z
@@ -141,3 +143,35 @@ export const chatCompletionSchema = z.object({
     )
     .min(1),
 });
+
+// Referral schemas
+export const createReferralSchema = z.object({
+  code: z.string().min(1),
+  commissionRate: z.number().min(0).max(1),
+});
+export const updateReferralSchema = createReferralSchema.partial();
+
+// Commissions schemas
+export const updateCommissionSchema = z.object({
+  status: z.enum(['PENDING', 'PAID', 'FAILED', 'UNPAID']),
+});
+
+// Payouts schemas
+export const createPayoutSchema = z.object({
+  referralId: z.string().min(1),
+  amount: z.number().int().positive(),
+});
+
+// Admin user management schemas
+export const adminCreateUserSchema = z.object({
+  email: z.string().email(),
+  password: z
+    .string()
+    .regex(
+      strongPasswordRegex,
+      'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.'
+    ),
+  name: z.string().optional(),
+  role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']).optional(),
+});
+export const adminUpdateUserSchema = adminCreateUserSchema.partial();

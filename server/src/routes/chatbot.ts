@@ -7,11 +7,13 @@ import {
   getDailyTipStats,
   forceRefreshDailyTip
 } from '../api/chatbot';
+import { validate } from '../middleware/validation';
+import { chatCompletionSchema } from '../lib/validation';
 
 const router = Router();
 
 // Chat completion endpoint
-router.post('/chat', getChatCompletion);
+router.post('/chat', validate(chatCompletionSchema), getChatCompletion);
 
 // Daily tips endpoints
 router.get('/daily-tip', getDailyAiTip);                    // Legacy endpoint (redirects to cached)

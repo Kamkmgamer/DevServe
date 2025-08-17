@@ -2,6 +2,13 @@ import { Router } from "express";
 import prisma from "../lib/prisma";
 import { protect, admin, superadmin, AuthRequest } from "../middleware/auth"; // Import protect, admin, superadmin, and AuthRequest
 import bcrypt from "bcryptjs";
+import { validate } from "../middleware/validation";
+import {
+  idParamSchema,
+  updateOrderStatusSchema,
+  adminCreateUserSchema,
+  adminUpdateUserSchema,
+} from "../lib/validation";
 
 const router = Router();
 router.use(protect); // Use protect middleware for all admin routes
@@ -16,7 +23,8 @@ router.get("/", async (_req, res) => {
       prisma.order.count(),
       prisma.cartItem.count(),
     ]);
-  res.json({ userCount, serviceCount, orderCount, cartItemCount });
+  res.json({ userCount, serviceCount, orderCount, cartItemCount   }
+);
 });
 
 // NEW route – matches the AdminOrdersPage fetch
@@ -41,7 +49,10 @@ router.get("/orders", async (_req, res) => {
 });
 
 // PATCH /api/admin/orders/:id/status
-router.patch("/orders/:id/status", async (req, res) => {
+router.patch(
+  "/orders/:id/status",
+  validate({ params: idParamSchema, body: updateOrderStatusSchema }),
+  async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -96,7 +107,7 @@ router.get("/users/:id", async (req, res) => {
 });
 
 // POST create new user
-router.post("/users", async (req, res) => {
+router.post("/users", validate(adminCreateUserSchema), async (req, res) => {
   try {
     const { email, password, name, role } = req.body;
     if (!email || !password) {
@@ -119,7 +130,10 @@ router.post("/users", async (req, res) => {
 });
 
 // PUT update user
-router.put("/users/:id", async (req, res) => {
+router.put(
+  "/users/:id",
+  validate({ params: idParamSchema, body: adminUpdateUserSchema }),
+  async (req, res) => {
   try {
     const { id } = req.params;
     const { email, password, name, role } = req.body;
@@ -148,7 +162,11 @@ router.put("/users/:id", async (req, res) => {
 });
 
 // DELETE user
-router.delete("/users/:id", superadmin, async (req: AuthRequest, res) => {
+router.delete(
+  "/users/:id",
+  superadmin,
+  validate({ params: idParamSchema }),
+  async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const requestingUser = req.user; // User making the request (from protect middleware)
