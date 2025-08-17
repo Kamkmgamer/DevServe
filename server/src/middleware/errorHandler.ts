@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import logger from '../lib/logger';
 import { redactSensitive } from '../lib/redact';
 import { AppError, ErrorResponse } from '../lib/errors';
+import { ZodError } from 'zod';
 
 export const errorHandler = (
   error: any,
@@ -31,6 +32,14 @@ export const errorHandler = (
   let appErr: AppError;
   if (error instanceof AppError) {
     appErr = error;
+  } else if (error instanceof ZodError) {
+    appErr = AppError.badRequest('Validation failed', {
+      issues: error.issues.map((i) => ({
+        path: i.path,
+        message: i.message,
+        code: i.code,
+      })),
+    });
   } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
       appErr = new AppError(

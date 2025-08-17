@@ -30,7 +30,6 @@
     "pg": "^8.16.3",
     "prom-client": "^14.2.0",
     "stripe": "^18.3.0",
-    "web-services-ecommerce": "file:..",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^4.0.15"

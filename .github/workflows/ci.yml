@@ -44,6 +44,18 @@ jobs:
       - name: Prettier check
         run: npx prettier --check "**/*.{ts,tsx,js,json,md,css,scss,html,yml,yaml}"
 
+      - name: Dependency audit (server)
+        working-directory: server
+        continue-on-error: true
+        run: |
+          npm audit --omit=dev --audit-level=high || true
+
+      - name: Dependency audit (client)
+        working-directory: client
+        continue-on-error: true
+        run: |
+          npm audit --omit=dev --audit-level=high || true
+
       - name: Prisma validate & migrate (temp SQLite)
         working-directory: server
         env:
@@ -102,3 +114,18 @@ jobs:
         if: ${{ env.VERCEL_TOKEN != '' }}
         working-directory: client
         run: vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"
+
+  dependency-review:
+    name: Dependency Review (PRs)
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
