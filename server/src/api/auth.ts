@@ -100,7 +100,8 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
   // Generate a secure, unique token
   const resetToken = crypto.randomBytes(32).toString("hex");
-  const hashedResetToken = await bcrypt.hash(resetToken, 10); // Hash the token before storing
+  // Hash the token using SHA-256 before storing (constant-time compare is not needed if we query by hash)
+  const hashedResetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
   // Set token expiration (e.g., 1 hour)
   const passwordResetExpires = new Date(Date.now() + 3600000); // 1 hour from now
@@ -131,10 +132,11 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
 export const resetPassword = async (req: Request, res: Response) => {
   const { token, newPassword } = req.body;
-
-  // Find user by the hashed token and check expiry
+  // Hash provided token using SHA-256 and find matching, non-expired user
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
   const user = await prisma.user.findFirst({
     where: {
+      passwordResetToken: hashedToken,
       passwordResetExpires: {
         gt: new Date(), // Token must not be expired
       },
@@ -142,13 +144,6 @@ export const resetPassword = async (req: Request, res: Response) => {
   });
 
   if (!user) {
-    return res.status(400).json({ error: "Invalid or expired password reset token." });
-  }
-
-  // Compare the provided token with the hashed token in the database
-  const isTokenValid = user.passwordResetToken && await bcrypt.compare(token, user.passwordResetToken);
-
-  if (!isTokenValid) {
     return res.status(400).json({ error: "Invalid or expired password reset token." });
   }
 

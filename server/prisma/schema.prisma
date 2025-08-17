@@ -31,6 +31,8 @@ model User {
   passwordResetExpires   DateTime?
 }
 
+@@index([passwordResetToken])
+
 model PortfolioItem {
   id           String   @id @default(cuid())
   title        String

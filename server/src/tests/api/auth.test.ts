@@ -5,6 +5,7 @@ import prisma from '../../lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto'; // Import crypto for mocking
+import { sendEmail } from '../../lib/mailer';
 
 // Mock dependencies
 jest.mock('../../lib/prisma', () => ({
@@ -24,6 +25,10 @@ jest.mock('crypto', () => ({
   randomBytes: jest.fn(() => ({
     toString: jest.fn(() => 'mockResetToken'),
   })),
+}));
+jest.mock('../../lib/mailer', () => ({
+  __esModule: true,
+  sendEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('Auth API', () => {
@@ -147,40 +152,28 @@ describe('Auth API', () => {
   });
 
   describe('requestPasswordReset', () => {
-    let consoleSpy: jest.SpyInstance;
-
-    beforeEach(() => {
-      consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      consoleSpy.mockRestore();
-    });
-
     it('should send a reset link and update user with token for existing email', async () => {
       const req = { body: { email: 'test@example.com' } } as Request;
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
       const user = { id: '1', email: 'test@example.com' };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedMockResetToken');
       (prisma.user.update as jest.Mock).mockResolvedValue(user);
 
       await requestPasswordReset(req, res);
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'test@example.com' } });
       expect(crypto.randomBytes).toHaveBeenCalledWith(32);
-      expect(bcrypt.hash).toHaveBeenCalledWith('mockResetToken', 10);
+      // SHA-256 hash of 'mockResetToken'
+      const expectedHash = crypto.createHash('sha256').update('mockResetToken').digest('hex');
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: '1' },
         data: expect.objectContaining({
-          passwordResetToken: 'hashedMockResetToken',
+          passwordResetToken: expectedHash,
           passwordResetExpires: expect.any(Date),
         }),
       });
-      expect(consoleSpy).toHaveBeenCalledWith(
-        `Password reset link for ${user.email}: http://localhost:3000/reset-password?token=mockResetToken`
-      );
+      expect(sendEmail).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ message: 'If an account with that email exists, a password reset link has been sent.' });
     });
@@ -196,7 +189,7 @@ describe('Auth API', () => {
       expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'nonexistent@example.com' } });
       expect(crypto.randomBytes).not.toHaveBeenCalled(); // Should not generate token
       expect(prisma.user.update).not.toHaveBeenCalled(); // Should not update user
-      expect(consoleSpy).not.toHaveBeenCalled(); // Should not log email
+      expect(sendEmail).not.toHaveBeenCalled(); // Should not send email
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ message: 'If an account with that email exists, a password reset link has been sent.' });
     });
@@ -209,12 +202,11 @@ describe('Auth API', () => {
       const user = {
         id: '1',
         password: 'oldHashedPassword',
-        passwordResetToken: 'hashedValidToken',
+        passwordResetToken: crypto.createHash('sha256').update('validToken').digest('hex'),
         passwordResetExpires: new Date(Date.now() + 3600000), // 1 hour from now
       };
 
       (prisma.user.findFirst as jest.Mock).mockResolvedValue(user);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedNewPassword');
       (prisma.user.update as jest.Mock).mockResolvedValue(user);
 
@@ -222,12 +214,12 @@ describe('Auth API', () => {
 
       expect(prisma.user.findFirst).toHaveBeenCalledWith({
         where: {
+          passwordResetToken: crypto.createHash('sha256').update('validToken').digest('hex'),
           passwordResetExpires: {
             gt: expect.any(Date),
           },
         },
       });
-      expect(bcrypt.compare).toHaveBeenCalledWith('validToken', 'hashedValidToken');
       expect(bcrypt.hash).toHaveBeenCalledWith('newPassword123!', 10);
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: '1' },
@@ -251,22 +243,14 @@ describe('Auth API', () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'Invalid or expired password reset token.' });
-      expect(bcrypt.compare).not.toHaveBeenCalled();
       expect(prisma.user.update).not.toHaveBeenCalled();
     });
 
-    it('should return 400 if bcrypt.compare fails (token mismatch)', async () => {
+    it('should return 400 if no matching user found for provided token (mismatch)', async () => {
       const req = { body: { token: 'mismatchedToken', newPassword: 'newPassword123!' } } as Request;
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
-      const user = {
-        id: '1',
-        password: 'oldHashedPassword',
-        passwordResetToken: 'hashedValidToken',
-        passwordResetExpires: new Date(Date.now() + 3600000),
-      };
-
-      (prisma.user.findFirst as jest.Mock).mockResolvedValue(user);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false); // Token mismatch
+      // Simulate that no user matches the hashed token
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
 
       await resetPassword(req, res);
 
