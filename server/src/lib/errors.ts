@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'CONFLICT'
   | 'TOO_MANY_REQUESTS'
   | 'DB_UNIQUE_VIOLATION'
+  | 'DB_FOREIGN_KEY'
   | 'DB_NOT_FOUND'
   | 'DB_ERROR'
   | 'INTERNAL_ERROR';

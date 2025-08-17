@@ -50,9 +50,28 @@ export const errorHandler = (
       );
     } else if (error.code === 'P2025') {
       appErr = new AppError('DB_NOT_FOUND', 'Record not found', 404);
+    } else if (error.code === 'P2003') {
+      // Foreign key constraint failed
+      appErr = new AppError(
+        'DB_FOREIGN_KEY',
+        'Foreign key constraint violation',
+        409,
+        { field: (error.meta as any)?.field_name || (error.meta as any)?.target }
+      );
     } else {
       appErr = new AppError('DB_ERROR', 'Database error', 400);
     }
+  } else if (error instanceof Prisma.PrismaClientValidationError) {
+    appErr = AppError.badRequest('Invalid request for database operation', {
+      message: error.message,
+    });
+  } else if (
+    error instanceof Prisma.PrismaClientInitializationError ||
+    error instanceof Prisma.PrismaClientRustPanicError
+  ) {
+    appErr = AppError.internal('Database initialization error', {
+      message: error.message,
+    });
   } else {
     appErr = AppError.internal();
   }
