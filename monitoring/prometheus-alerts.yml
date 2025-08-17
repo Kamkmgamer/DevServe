@@ -1,0 +1,48 @@
+groups:
+  - name: devserve-api-alerts
+    interval: 30s
+    rules:
+      - alert: HighHTTPP95Latency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.75
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP p95 latency high (>750ms)"
+          description: "HTTP p95 latency is above 750ms for 10 minutes. Investigate slow endpoints or DB."
+
+      - alert: VeryHighHTTPP95Latency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1.5
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP p95 latency very high (>1.5s)"
+          description: "HTTP p95 latency is above 1.5s for 10 minutes. Immediate attention required."
+
+      - alert: HighHTTP5xxRate
+        expr: sum(rate(http_request_duration_seconds_count{status_code=~"5.."}[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Elevated 5xx error rate"
+          description: "5xx responses exceed 0.5 req/s over 5 minutes. Check logs and recent deploys."
+
+      - alert: SurgeInRateLimiting
+        expr: sum(rate(http_request_duration_seconds_count{status_code="429"}[5m])) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Frequent 429 rate-limited responses"
+          description: "429 responses exceed 0.3 req/s for 10 minutes. Consider tuning limits or investigating abuse."
+
+      - alert: HighPrismaP95Latency
+        expr: histogram_quantile(0.95, sum(rate(prisma_query_duration_seconds_bucket[5m])) by (le)) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prisma p95 latency high (>300ms)"
+          description: "Database query p95 latency above 300ms for 10 minutes. Investigate slow queries or DB load."
