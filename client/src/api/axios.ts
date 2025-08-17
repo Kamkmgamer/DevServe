@@ -6,6 +6,34 @@ const api = axios.create({
   baseURL: '/api',  // Use relative path; Vite proxy will handle forwarding
 });
 
+// Simple toast de-duplication to prevent spam
+const toastTimestamps = new Map<string, number>();
+const TOAST_TTL_MS = 3000; // 3s
+
+function showToastOnce(key: string, message: string) {
+  const now = Date.now();
+  const last = toastTimestamps.get(key) || 0;
+  if (now - last > TOAST_TTL_MS) {
+    toastTimestamps.set(key, now);
+    toast.error(message);
+  }
+}
+
+function triggerLogoutAndRedirect(reason: 'INVALID_TOKEN' | 'UNAUTHORIZED') {
+  try {
+    localStorage.removeItem("token");
+  } catch {}
+  // Notify app to clear auth state
+  window.dispatchEvent(new Event('auth:logout'));
+  // Redirect to login if not already there
+  if (typeof window !== 'undefined') {
+    const isOnLogin = window.location.pathname.toLowerCase().includes('/login');
+    if (!isOnLogin) {
+      window.location.assign('/login');
+    }
+  }
+}
+
 /* Attach token to every request */
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
@@ -27,34 +55,32 @@ api.interceptors.response.use(
       switch (status) {
         case 400:
           if (data.code === "INVALID_TOKEN") {
-            toast.error(`Session expired or invalid token. Please log in again.`);
-            localStorage.removeItem("token");
-            // Optionally, trigger a logout action in AuthContext if available
-            // e.g., window.dispatchEvent(new Event('logout'));
+            showToastOnce('invalid_token', `Session expired or invalid token. Please log in again.`);
+            triggerLogoutAndRedirect('INVALID_TOKEN');
           } else {
-            toast.error(`Bad Request: ${errorMessage}`);
+            showToastOnce('bad_request', `Bad Request: ${errorMessage}`);
           }
           break;
         case 401:
-          toast.error(`Unauthorized: ${errorMessage}`);
-          // Optionally, redirect to login page or refresh token
+          showToastOnce('unauthorized', `Unauthorized: ${errorMessage}`);
+          triggerLogoutAndRedirect('UNAUTHORIZED');
           break;
         case 403:
-          toast.error(`Forbidden: ${errorMessage}`);
+          showToastOnce('forbidden', `Forbidden: ${errorMessage}`);
           break;
         case 404:
-          toast.error(`Not Found: ${errorMessage}`);
+          showToastOnce('not_found', `Not Found: ${errorMessage}`);
           break;
         case 500:
-          toast.error(`Server Error: ${errorMessage}`);
+          showToastOnce('server_error', `Server Error: ${errorMessage}`);
           break;
         default:
-          toast.error(`Error ${status}: ${errorMessage}`);
+          showToastOnce(`error_${status}`, `Error ${status}: ${errorMessage}`);
       }
     } else if (error.request) {
-      toast.error("No response received from server. Please check your network connection.");
+      showToastOnce('no_response', "No response received from server. Please check your network connection.");
     } else {
-      toast.error(`Request Error: ${error.message}`);
+      showToastOnce('request_error', `Request Error: ${error.message}`);
     }
     return Promise.reject(error);
   }

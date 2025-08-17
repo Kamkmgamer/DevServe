@@ -77,6 +77,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [decodeAndSetUser]);
 
+  // Centralized logout listener (triggered by axios interceptor)
+  useEffect(() => {
+    const handler = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener('auth:logout', handler);
+    return () => window.removeEventListener('auth:logout', handler);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const { data } = await api.post<{ token: string }>("/auth/login", {
       email,
