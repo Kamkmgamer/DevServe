@@ -89,7 +89,7 @@ router.get("/users", async (_req, res) => {
 });
 
 // GET single user by ID
-router.get("/users/:id", async (req, res) => {
+router.get("/users/:id", validate({ params: idParamSchema }), async (req, res) => {
   try {
     const { id } = req.params;
     const user = await prisma.user.findUnique({
