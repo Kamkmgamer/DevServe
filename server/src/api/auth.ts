@@ -5,18 +5,17 @@ import jwt, { SignOptions } from "jsonwebtoken";
 import * as crypto from "crypto"; // For generating secure tokens (CJS-compatible)
 import { forgotPasswordRequestSchema, resetPasswordSchema } from "../lib/validation"; // Import new schemas
 import { sendEmail } from "../lib/mailer";
+import { getEnvOrFile, normalizeMultiline } from "../lib/secrets";
 
 // NOTE: In a real app, you'd want to protect this route or handle admin creation manually.
 
-const JWT_PRIVATE_KEY = process.env.JWT_PRIVATE_KEY;
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_PRIVATE_KEY = normalizeMultiline(getEnvOrFile('JWT_PRIVATE_KEY'));
+const JWT_SECRET = getEnvOrFile('JWT_SECRET');
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
 const JWT_KEY_ID = process.env.JWT_KEY_ID; // optional key id for rotation
 
 function getPrivateKey(): string | undefined {
-  if (!JWT_PRIVATE_KEY) return undefined;
-  // Support env with escaped newlines
-  return JWT_PRIVATE_KEY.includes('\\n') ? JWT_PRIVATE_KEY.replace(/\\n/g, '\n') : JWT_PRIVATE_KEY;
+  return JWT_PRIVATE_KEY;
 }
 
 function signJwt(payload: object): string {
