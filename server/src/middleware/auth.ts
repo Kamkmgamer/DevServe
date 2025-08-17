@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
+import jwt, { JsonWebTokenError, TokenExpiredError, VerifyOptions } from "jsonwebtoken";
 import prisma from "../lib/prisma"; // Import prisma client
 
 export interface AuthRequest extends Request {
@@ -15,10 +15,18 @@ export interface AuthRequest extends Request {
   };
 }
 
-// Ensure JWT_SECRET is loaded and available
+// Load verification material: prefer RS256 with public key, otherwise HS256 secret
+const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY;
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  console.error("FATAL ERROR: JWT_SECRET is not defined in the environment.");
+
+function getPublicKey(): string | undefined {
+  if (!JWT_PUBLIC_KEY) return undefined;
+  return JWT_PUBLIC_KEY.includes('\\n') ? JWT_PUBLIC_KEY.replace(/\\n/g, '\n') : JWT_PUBLIC_KEY;
+}
+
+const PUBLIC_KEY = getPublicKey();
+if (!PUBLIC_KEY && !JWT_SECRET) {
+  console.error("FATAL ERROR: JWT verification material missing. Set JWT_PUBLIC_KEY (preferred) or JWT_SECRET.");
   process.exit(1);
 }
 
@@ -38,7 +46,9 @@ export const protect = async (
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
+    const verifyKey: string = PUBLIC_KEY || (JWT_SECRET as string);
+    const options: VerifyOptions = PUBLIC_KEY ? { algorithms: ['RS256'] } : { algorithms: ['HS256'] };
+    const decoded = jwt.verify(token, verifyKey, options) as { id: string };
     req.userId = decoded.id;
     console.log('Protect middleware: decoded.userId', decoded.id);
 

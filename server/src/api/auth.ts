@@ -1,12 +1,40 @@
 import { Request, Response } from "express";
 import prisma from "../lib/prisma";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import * as crypto from "crypto"; // For generating secure tokens (CJS-compatible)
 import { forgotPasswordRequestSchema, resetPasswordSchema } from "../lib/validation"; // Import new schemas
 import { sendEmail } from "../lib/mailer";
 
 // NOTE: In a real app, you'd want to protect this route or handle admin creation manually.
+
+const JWT_PRIVATE_KEY = process.env.JWT_PRIVATE_KEY;
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
+const JWT_KEY_ID = process.env.JWT_KEY_ID; // optional key id for rotation
+
+function getPrivateKey(): string | undefined {
+  if (!JWT_PRIVATE_KEY) return undefined;
+  // Support env with escaped newlines
+  return JWT_PRIVATE_KEY.includes('\\n') ? JWT_PRIVATE_KEY.replace(/\\n/g, '\n') : JWT_PRIVATE_KEY;
+}
+
+function signJwt(payload: object): string {
+  const pk = getPrivateKey();
+  if (pk) {
+    const options: SignOptions = {
+      algorithm: 'RS256',
+      expiresIn: JWT_EXPIRES_IN as any,
+      keyid: JWT_KEY_ID,
+    };
+    return jwt.sign(payload as any, pk as any, options);
+  }
+  if (!JWT_SECRET) {
+    throw new Error('JWT configuration missing: set JWT_PRIVATE_KEY (preferred) or JWT_SECRET');
+  }
+  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as any, keyid: JWT_KEY_ID };
+  return jwt.sign(payload as any, JWT_SECRET as any, options);
+}
 
 export const registerAdmin = async (req: Request, res: Response) => {
   const { email, password, name } = req.body;
@@ -38,12 +66,8 @@ export const register = async (req: Request, res: Response) => {
         role: "USER",
       },
     });
-    
-    const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role }, // Changed userId to id
-      process.env.JWT_SECRET!,
-      { expiresIn: "1d" }
-    );
+
+    const token = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
 
     res.status(201).json({ token });
   } catch (error) {
@@ -59,11 +83,7 @@ export const login = async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  const token = jwt.sign(
-    { id: user.id, email: user.email, name: user.name, role: user.role }, // Changed userId to id
-    process.env.JWT_SECRET!,
-    { expiresIn: "1d" }
-  );
+  const token = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
 
   res.json({ token });
 };
