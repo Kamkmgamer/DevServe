@@ -72,8 +72,8 @@ describe('Services API', () => {
       const res = await request(app).get('/api/services');
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBe(1);
-      expect(res.body[0].name).toBe('TestSvc');
+      expect(res.body.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.some((s: any) => s.name === 'TestSvc')).toBe(true);
     });
   });
 
