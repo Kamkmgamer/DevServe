@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { z, ZodError, ZodTypeAny } from 'zod';
+import { z, ZodTypeAny } from 'zod';
+import { AppError } from '../lib/errors';
 
 /**
  * Validate request using Zod. Supports body, params, and query.
@@ -74,7 +75,12 @@ export const validate = (
     }
 
     if (allErrors.length > 0) {
-      return res.status(400).json({ message: 'Validation failed', errors: allErrors });
+      const issues = allErrors.map((e) => ({
+        path: [e.field],
+        message: e.message,
+        code: 'invalid',
+      }));
+      return next(AppError.badRequest('Validation failed', { issues }));
     }
 
     return next();
