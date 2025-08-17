@@ -88,3 +88,56 @@ export const capturePaypalOrderSchema = z.object({
   authorizationId: z.string().min(1),
   totalCents: z.number().int().positive(),
 });
+
+// Common param schemas
+export const idParamSchema = z.object({ id: z.string().min(1) });
+
+// Blog schemas
+export const createBlogPostSchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1),
+    content: z.string().min(1),
+    thumbnailUrl: z.string().url().optional(),
+    userId: z.string().optional(),
+  })
+  .passthrough();
+
+export const updateBlogPostSchema = createBlogPostSchema.partial().passthrough();
+
+// Portfolio schemas
+export const createPortfolioSchema = z
+  .object({
+    title: z.string().min(1),
+    description: z.string().min(1),
+    thumbnailUrl: z.string().url().optional(),
+    imageUrls: z.union([z.string(), z.array(z.string())]),
+  })
+  .passthrough();
+
+export const updatePortfolioSchema = createPortfolioSchema.partial().passthrough();
+
+// Orders schemas
+export const updateOrderStatusSchema = z.object({
+  status: z.enum([
+    'PENDING',
+    'PAID',
+    'IN_TECHNICAL_REVIEW',
+    'APPROVED',
+    'FAILED',
+    'REFUNDED',
+    'CANCELED',
+  ]),
+});
+
+// Chatbot schemas
+export const chatCompletionSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['system', 'user', 'assistant']),
+        content: z.string().min(1),
+      })
+    )
+    .min(1),
+});
