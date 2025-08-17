@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
-import prisma from '../../lib/prisma';
-import { createPayPalOrder, capturePayPalOrder } from '../../lib/paypal';
 
 // Mock prisma
 jest.mock('../../lib/prisma', () => ({
@@ -27,6 +25,9 @@ describe('Payments API', () => {
   let createCheckoutSession: typeof import('../../api/payments').createCheckoutSession;
   let createPaypalOrder: typeof import('../../api/payments').createPaypalOrder;
   let capturePaypalOrder: typeof import('../../api/payments').capturePaypalOrder;
+  let prisma: typeof import('../../lib/prisma').default;
+  let createPayPalOrder: typeof import('../../lib/paypal').createPayPalOrder;
+  let capturePayPalOrder: typeof import('../../lib/paypal').capturePayPalOrder;
 
   let mockStripeCreate: jest.Mock;
 
@@ -54,6 +55,12 @@ describe('Payments API', () => {
     createCheckoutSession = paymentsModule.createCheckoutSession;
     createPaypalOrder = paymentsModule.createPaypalOrder;
     capturePaypalOrder = paymentsModule.capturePaypalOrder;
+
+    // Re-obtain the mocked prisma and PayPal utilities after resetModules
+    prisma = require('../../lib/prisma').default;
+    const paypalUtils = require('../../lib/paypal');
+    createPayPalOrder = paypalUtils.createPayPalOrder;
+    capturePayPalOrder = paypalUtils.capturePayPalOrder;
 
     // Assign mockStripeCreate from the newly imported module's mock instance
     mockStripeCreate = mockStripeInstance.checkout.sessions.create;

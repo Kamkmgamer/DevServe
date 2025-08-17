@@ -4,7 +4,7 @@ import { Request, Response } from 'express';
 import prisma from '../../lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto'; // Import crypto for mocking
+import * as crypto from 'crypto'; // Use namespace import for compatibility
 import { sendEmail } from '../../lib/mailer';
 
 // Mock dependencies
@@ -21,11 +21,15 @@ jest.mock('../../lib/prisma', () => ({
 }));
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
-jest.mock('crypto', () => ({
-  randomBytes: jest.fn(() => ({
-    toString: jest.fn(() => 'mockResetToken'),
-  })),
-}));
+jest.mock('crypto', () => {
+  const actual = jest.requireActual('crypto');
+  return {
+    ...actual,
+    randomBytes: jest.fn(() => ({
+      toString: jest.fn(() => 'mockResetToken'),
+    })),
+  };
+});
 jest.mock('../../lib/mailer', () => ({
   __esModule: true,
   sendEmail: jest.fn().mockResolvedValue(undefined),

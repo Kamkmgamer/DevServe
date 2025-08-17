@@ -41,7 +41,7 @@ export const createServiceSchema = z.object({
   features: z.union([z.array(z.string()), z.string()]),
   category: z.string(),
   thumbnailUrl: z.string().url().optional(),
-  imageUrls: z.union([z.array(z.string().url()), z.string()]).optional(),
+  imageUrls: z.union([z.array(z.string()), z.string()]).optional(),
 });
 
 export const updateServiceSchema = createServiceSchema.partial();

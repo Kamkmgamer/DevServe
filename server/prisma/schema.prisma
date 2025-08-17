@@ -29,9 +29,9 @@ model User {
   blogPosts              BlogPost[] @relation("UserBlogPosts")
   passwordResetToken     String?    @unique
   passwordResetExpires   DateTime?
-}
 
-@@index([passwordResetToken])
+  @@index([passwordResetToken])
+}
 
 model PortfolioItem {
   id           String   @id @default(cuid())

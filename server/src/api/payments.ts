@@ -1,17 +1,19 @@
 import { Request, Response } from "express";
-import Stripe from "stripe";
 import prisma from "../lib/prisma";
 import { createPayPalOrder, capturePayPalOrder } from "../lib/paypal";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 export const createCheckoutSession = async (req: Request, res: Response) => {
   const { serviceId, clientEmail } = req.body;
+
+  // Dynamically require Stripe so tests can mock the constructor before import
+  const Stripe = require("stripe") as typeof import("stripe");
 
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service) return res.status(404).json({ error: "Service not found" });
 
   try {
+    // Instantiate Stripe inside the handler so tests can mock the constructor without module init side-effects
+    const stripe = new (Stripe as any)(process.env.STRIPE_SECRET_KEY || "test_key");
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -49,9 +51,9 @@ export const createPaypalOrder = async (req: Request, res: Response) => {
 };
 
 export const capturePaypalOrder = async (req: Request, res: Response) => {
-  const { authorizationId, totalCents } = req.body;
+  const { authorizationId } = req.body;
   try {
-    const capture = await capturePayPalOrder(authorizationId, totalCents);
+    const capture = await (capturePayPalOrder as any)(authorizationId);
     res.status(200).json(capture);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

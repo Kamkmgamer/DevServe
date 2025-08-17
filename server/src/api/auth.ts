@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import prisma from "../lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import crypto from "crypto"; // For generating secure tokens
+import * as crypto from "crypto"; // For generating secure tokens (CJS-compatible)
 import { forgotPasswordRequestSchema, resetPasswordSchema } from "../lib/validation"; // Import new schemas
 import { sendEmail } from "../lib/mailer";
 

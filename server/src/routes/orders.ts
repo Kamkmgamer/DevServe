@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { protect } from "../middleware/auth"; // Changed from authMiddleware
 import { AuthRequest } from "../middleware/auth";
 import { validate } from "../middleware/validation";
-import { createOrderSchema } from "../lib/validation";
+import { createOrderSchema, idParamSchema, updateOrderStatusSchema } from "../lib/validation";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -26,7 +26,8 @@ router.get("/", async (req: Req, res) => {
         },
       },
       orderBy: { createdAt: "desc" },
-    });
+      }
+);
     res.json(orders);
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -182,7 +183,10 @@ function formatCurrency(cents: number): string {
 }
 
 // PATCH /api/orders/:id/status
-router.patch("/:id/status", async (req: Req, res) => {
+router.patch(
+  "/:id/status",
+  validate({ params: idParamSchema, body: updateOrderStatusSchema }),
+  async (req: Req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
