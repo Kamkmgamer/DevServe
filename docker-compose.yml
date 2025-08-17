@@ -48,6 +48,7 @@ services:
       - "9093:9093"
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/secrets:/etc/alertmanager/secrets:ro
 
 volumes:
   postgres_data:

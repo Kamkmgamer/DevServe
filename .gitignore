@@ -39,3 +39,7 @@ coverage/
 
 # ToDo
 ToDo.md
+
+# Monitoring secrets (Alertmanager, etc.)
+monitoring/secrets/
+!monitoring/secrets/.gitkeep
