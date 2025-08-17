@@ -7,6 +7,8 @@ import { Request, Response, NextFunction } from "express";
 import { errorHandler } from "./middleware/errorHandler";
 import logger from "./lib/logger";
 import { requestId } from "./middleware/requestId";
+import { metricsMiddleware } from "./middleware/metrics";
+import { metricsHandler } from "./lib/metrics";
 
 // Load environment variables
 dotenv.config();
@@ -19,6 +21,8 @@ app.set('trust proxy', 1);
 
 // Apply middleware
 app.use(requestId);
+// Collect HTTP metrics for all requests
+app.use(metricsMiddleware);
 app.use(
   cors({
     origin: [
@@ -73,6 +77,9 @@ app.use("/api", apiRoutes);
 app.get("/", (req, res) => {
   res.status(200).json({ status: "ok", message: "API is healthy" });
 });
+
+// Expose Prometheus metrics
+app.get('/metrics', metricsHandler);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
