@@ -33,6 +33,8 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/devserve.json:ro
+      - ./monitoring/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
     environment:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
     depends_on:
