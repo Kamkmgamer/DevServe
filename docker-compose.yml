@@ -38,6 +38,15 @@ services:
     depends_on:
       - prometheus
 
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: devserve_alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
 volumes:
   postgres_data:
   grafana_data:
