@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import logger from '../lib/logger';
+import { redactSensitive } from '../lib/redact';
 
 export const errorHandler = (
   error: any,
@@ -8,15 +9,21 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  logger.error('=== SERVER ERROR ===', {
-    message: error.message,
-    stack: error.stack,
+  const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+  const safePayload = {
     path: req.path,
     method: req.method,
-    body: req.body,
-    params: req.params,
-    query: req.query,
-    error,
+    body: isDev ? req.body : redactSensitive(req.body),
+    params: isDev ? req.params : redactSensitive(req.params),
+    query: isDev ? req.query : redactSensitive(req.query),
+  };
+
+  logger.error('=== SERVER ERROR ===', {
+    message: error?.message,
+    stack: isDev ? error?.stack : undefined,
+    ...safePayload,
+    // Avoid dumping entire error objects in prod
+    error: isDev ? error : undefined,
   });
 
   if (error instanceof Prisma.PrismaClientKnownRequestError) {

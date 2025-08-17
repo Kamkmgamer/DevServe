@@ -20,6 +20,8 @@ class DailyTipsCache {
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
   private isGenerating = false;
   private generationPromise: Promise<string> | null = null;
+  private readonly persistToDisk: boolean;
+  private refreshTimer?: NodeJS.Timeout;
 
   constructor() {
     this.cache = {
@@ -27,22 +29,38 @@ class DailyTipsCache {
       lastGenerated: 0,
     };
     
+    // Decide persistence strategy
+    // Default: persist in development; in production, only if explicitly enabled
+    const envPersist = (process.env.DAILY_TIPS_PERSIST || '').toLowerCase();
+    const nodeEnv = process.env.NODE_ENV || 'development';
+    this.persistToDisk = envPersist === 'true' || (envPersist === '' && nodeEnv !== 'production');
+
     // Store cache file in server root directory
     this.cacheFilePath = path.join(__dirname, '../../daily-tips-cache.json');
     
-    // Load cache on initialization
-    this.loadCache().catch(err => {
-      logger.error('Failed to load daily tips cache on initialization:', err);
-    });
+    // Load cache on initialization (if persistence enabled)
+    if (this.persistToDisk) {
+      this.loadCache().catch(err => {
+        logger.error('Failed to load daily tips cache on initialization:', err);
+      });
+    } else {
+      logger.info('Daily tips cache persistence is disabled (memory-only)');
+    }
 
-    // Set up automatic daily refresh at midnight
-    this.scheduleNextRefresh();
+    // Set up automatic daily refresh at midnight (skip in tests to avoid open handle leaks)
+    const isTestEnv = (process.env.NODE_ENV === 'test') || !!process.env.JEST_WORKER_ID;
+    if (!isTestEnv) {
+      this.scheduleNextRefresh();
+    } else {
+      logger.info('Skipping daily tip auto-refresh scheduling in test environment');
+    }
   }
 
   /**
    * Load cache from persistent storage
    */
   private async loadCache(): Promise<void> {
+    if (!this.persistToDisk) return; // no-op when persistence disabled
     try {
       const data = await fs.readFile(this.cacheFilePath, 'utf-8');
       const parsed = JSON.parse(data) as CacheData;
@@ -64,6 +82,7 @@ class DailyTipsCache {
    * Save cache to persistent storage
    */
   private async saveCache(): Promise<void> {
+    if (!this.persistToDisk) return; // no-op when persistence disabled
     try {
       await fs.writeFile(this.cacheFilePath, JSON.stringify(this.cache, null, 2));
       logger.debug('Daily tips cache saved to disk');
@@ -201,7 +220,7 @@ class DailyTipsCache {
   private scheduleNextRefresh(): void {
     const msUntilMidnight = this.getSecondsUntilMidnight() * 1000;
     
-    setTimeout(() => {
+    this.refreshTimer = setTimeout(() => {
       this.updateDailyCache().catch(err => {
         logger.error('Failed to auto-refresh daily tip at midnight:', err);
       });

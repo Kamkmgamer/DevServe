@@ -20,6 +20,7 @@
 server/combined.log
 server/error.log
 server/public/
+server/logs/
 *.log
 
 # Temporary files
@@ -35,3 +36,6 @@ client/tsconfig.tsbuildinfo
 
 # Test coverage
 coverage/
+
+# ToDo
+ToDo.md

@@ -6,6 +6,7 @@ import apiRoutes from "./routes";
 import { Request, Response, NextFunction } from "express";
 import { errorHandler } from "./middleware/errorHandler";
 import logger from "./lib/logger";
+import { requestId } from "./middleware/requestId";
 
 // Load environment variables
 dotenv.config();
@@ -14,6 +15,7 @@ dotenv.config();
 const app = express();
 
 // Apply middleware
+app.use(requestId);
 app.use(
   cors({
     origin: [
@@ -28,6 +30,7 @@ app.use(express.json());
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
+  const reqId = (req as any).requestId;
   const redactedHeaders = { ...req.headers };
   if (redactedHeaders.authorization) {
     redactedHeaders.authorization = '[REDACTED]';
@@ -41,7 +44,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   const bodyString = JSON.stringify(redactedBody);
   const truncatedBody = bodyString.length > 200 ? `${bodyString.substring(0, 200)}...` : bodyString;
 
-  logger.info(`[${req.method}] ${req.path} - Headers: ${JSON.stringify(redactedHeaders)} - Body: ${truncatedBody}`);
+  logger.info(`[${reqId}] [${req.method}] ${req.path} - Headers: ${JSON.stringify(redactedHeaders)} - Body: ${truncatedBody}`);
   next();
 });
 
