@@ -9,6 +9,7 @@ import logger from "./lib/logger";
 import { requestId } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
 import { metricsHandler } from "./lib/metrics";
+import { generalLimiter } from "./middleware/rateLimit";
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +24,8 @@ app.set('trust proxy', 1);
 app.use(requestId);
 // Collect HTTP metrics for all requests
 app.use(metricsMiddleware);
+// Apply general API rate limiter
+app.use(generalLimiter);
 app.use(
   cors({
     origin: [

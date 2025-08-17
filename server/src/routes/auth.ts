@@ -3,15 +3,15 @@ import { registerAdmin, login, register, changePassword, requestPasswordReset, r
 import { validate } from "../middleware/validation";
 import { registerSchema, loginSchema, changePasswordSchema, forgotPasswordRequestSchema, resetPasswordSchema } from "../lib/validation";
 import { protect } from "../middleware/auth";
-import { sensitiveLimiter } from "../middleware/rateLimit";
+import { sensitiveLimiter, authBurstLimiter } from "../middleware/rateLimit";
 
 const router = Router();
 
-// Public auth routes
-router.post("/register", sensitiveLimiter, validate(registerSchema), register);
-router.post("/login", sensitiveLimiter, validate(loginSchema), login);
-router.post("/forgot-password", sensitiveLimiter, validate(forgotPasswordRequestSchema), requestPasswordReset);
-router.post("/reset-password", sensitiveLimiter, validate(resetPasswordSchema), resetPassword);
+// Public auth routes (stack burst limiter with sensitiveLimiter)
+router.post("/register", authBurstLimiter, sensitiveLimiter, validate(registerSchema), register);
+router.post("/login", authBurstLimiter, sensitiveLimiter, validate(loginSchema), login);
+router.post("/forgot-password", authBurstLimiter, sensitiveLimiter, validate(forgotPasswordRequestSchema), requestPasswordReset);
+router.post("/reset-password", authBurstLimiter, sensitiveLimiter, validate(resetPasswordSchema), resetPassword);
 
 // Protected auth routes
 router.post("/change-password", protect, validate(changePasswordSchema), changePassword);

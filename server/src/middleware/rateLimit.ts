@@ -22,3 +22,22 @@ export const createLimiter = (max = 5, windowMs = 15 * 60 * 1000) =>
       message: 'Too many requests, please try again later.'
     }
   });
+
+// General API limiter: reasonable defaults for overall traffic shaping
+export const generalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 req/min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Short-window burst limiter for auth endpoints (stacked with sensitiveLimiter)
+export const authBurstLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 req/min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Too many auth attempts, please slow down.'
+  }
+});
