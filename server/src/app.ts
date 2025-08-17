@@ -87,7 +87,14 @@ app.get('/metrics', metricsHandler);
 // 404 handler
 app.use((req: Request, res: Response) => {
   logger.warn(`[404] ${req.method} ${req.path} - Not Found`);
-  res.status(404).json({ message: "Route not found" });
+  const requestId = (req as any).requestId as string | undefined;
+  res.status(404).json({
+    error: {
+      code: 'NOT_FOUND',
+      message: 'Route not found',
+      requestId,
+    },
+  });
 });
 
 // Global error handler
