@@ -1,6 +1,6 @@
 // server/src/routes/coupons.ts
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../lib/prisma";
 import { admin, protect, AuthRequest } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import {
@@ -12,7 +12,6 @@ import {
 } from "../lib/validation";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /* ------------------------------------------------------------------ */
 /* Validation uses centralized schemas via validate() middleware       */
@@ -55,17 +54,37 @@ router.get("/code/:code", validate({ params: couponCodeParamSchema }), async (re
 });
 
 router.get("/", validate({ query: paginationQuerySchema }), async (req: AuthRequest, res: Response) => {
-  const page = (req.query as any).page || 1;
-  const pageSize = (req.query as any).pageSize || 100;
+  const { page = 1, pageSize = 100 } = (req.query as any) || {};
   try {
-    const [total, data] = await prisma.$transaction([
-      prisma.coupon.count(),
+    // Small retry wrapper for transient SQLite lock errors during tests
+    const withRetry = async <T>(fn: () => Promise<T>, retries = 3, delayMs = 50): Promise<T> => {
+      let lastErr: any;
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await fn();
+        } catch (e: any) {
+          const msg = e?.message || '';
+          // sqlite lock indicators
+          if (msg.includes('database is locked') || msg.includes('SQLITE_BUSY')) {
+            lastErr = e;
+            await new Promise((r) => setTimeout(r, delayMs));
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw lastErr;
+    };
+
+    // Run sequentially to avoid potential SQLite locking with concurrent tx
+    const total = await withRetry(() => prisma.coupon.count());
+    const data = await withRetry(() =>
       prisma.coupon.findMany({
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
-      }),
-    ]);
+      })
+    );
     res.json({ data, total, page, pageSize });
   } catch (e) {
     console.error("Fetch coupons error", e);

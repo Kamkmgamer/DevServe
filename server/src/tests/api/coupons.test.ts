@@ -16,7 +16,7 @@ beforeAll(async () => {
   await prisma.user.deleteMany();
 
   const hashedPassword = await bcrypt.hash('Test1234!', 10);
-  await prisma.user.create({ data: { email: 'coupon_admin@example.com', password: hashedPassword, name: 'Admin' } });
+  await prisma.user.create({ data: { email: 'coupon_admin@example.com', password: hashedPassword, name: 'Admin', role: 'ADMIN' } });
 
   const res = await request(app)
     .post('/api/auth/login')
@@ -54,7 +54,7 @@ describe('Coupons API', () => {
     it('POST /api/coupons creates a coupon', async () => {
       const payload = {
         code: 'WELCOME10',
-        type: 'PERCENT',
+        type: 'percentage',
         value: 10,
         minOrderAmount: 1000,
         maxUses: 5,

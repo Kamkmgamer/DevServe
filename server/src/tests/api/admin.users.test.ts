@@ -7,7 +7,15 @@ let adminToken: string;
 let createdUserId: string;
 
 beforeAll(async () => {
-  // Clean minimal tables used here
+  // Clean tables in dependency order to avoid FK violations
+  await prisma.orderLineItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.commission.deleteMany();
+  await prisma.payout.deleteMany();
+  await prisma.blogPost.deleteMany();
+  await prisma.referral.deleteMany();
   await prisma.user.deleteMany();
 
   // Seed an admin user and login
