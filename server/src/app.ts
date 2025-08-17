@@ -35,14 +35,28 @@ app.use(helmet({
   frameguard: { action: 'sameorigin' },
   crossOriginResourcePolicy: { policy: 'same-origin' },
 }));
+// CORS: allow configurable origins via env, fallback to safe defaults
+const defaultOrigins = [
+  'http://localhost:5173',
+  'http://192.168.0.100:5173',
+];
+const envOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const allowNgrok = true; // keep allowing ngrok for dev/testing
+const corsOrigins = [
+  ...defaultOrigins,
+  ...envOrigins,
+  ...(allowNgrok ? [/.ngrok-free\.app$/] : []),
+];
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://192.168.0.100:5173',
-      /.ngrok-free\.app$/
-    ],
-    credentials: true
+    origin: corsOrigins,
+    credentials: true,
+    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+    allowedHeaders: ['Content-Type','Authorization']
   })
 );
 app.use(express.json());
