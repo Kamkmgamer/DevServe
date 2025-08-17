@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dev deps (lint/prettier)
+        run: npm ci
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci
+
+      - name: Type-check client
+        working-directory: client
+        run: npx tsc --noEmit
+
+      - name: Type-check server
+        working-directory: server
+        run: npx tsc --noEmit
+
+      - name: Lint (ESLint)
+        run: npm run lint --if-present
+
+      - name: Prettier check
+        run: npx prettier --check "**/*.{ts,tsx,js,json,md,css,scss,html,yml,yaml}"
+
+      - name: Prisma validate & migrate (temp SQLite)
+        working-directory: server
+        env:
+          DATABASE_URL: file:./ci.db
+        run: |
+          npx prisma format
+          npx prisma generate
+          npx prisma migrate deploy --schema prisma/schema.prisma --skip-seed
+
+      - name: Run server tests with coverage
+        working-directory: server
+        env:
+          NODE_ENV: test
+        run: npm test -- --coverage
+
+      - name: Build client
+        working-directory: client
+        run: npm run build --if-present
