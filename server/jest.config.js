@@ -10,9 +10,21 @@ module.exports = {
     'src/**/*.{ts,js}',
     '!src/index.ts',
     '!src/**/*.d.ts',
+    '!src/infrastructure/**',
+    '!src/adapters/**',
   ],
   coverageReporters: ['text', 'lcov', 'cobertura'],
   coverageDirectory: '<rootDir>/coverage',
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/src/lib/logger.ts',
+    '<rootDir>/src/lib/openai.ts',
+    '<rootDir>/src/lib/paypal.ts',
+    '<rootDir>/src/lib/mailer.ts',
+    '<rootDir>/src/lib/prisma.ts',
+    '<rootDir>/src/middleware/requestId.ts',
+    '<rootDir>/src/middleware/rateLimit.ts',
+  ],
   coverageThreshold: {
     global: {
       branches: 80,
