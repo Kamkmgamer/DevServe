@@ -73,3 +73,18 @@ export const contactSchema = z.object({
   subject: z.string().min(1, 'Subject is required').max(200),
   message: z.string().min(1, 'Message is required').max(5000),
 });
+
+// Payments schemas
+export const createCheckoutSessionSchema = z.object({
+  serviceId: z.string().min(1),
+  clientEmail: z.string().email(),
+});
+
+export const createPaypalOrderSchema = z.object({
+  totalCents: z.number().int().positive(),
+});
+
+export const capturePaypalOrderSchema = z.object({
+  authorizationId: z.string().min(1),
+  totalCents: z.number().int().positive(),
+});
