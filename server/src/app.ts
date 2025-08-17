@@ -10,6 +10,8 @@ import { requestId } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
 import { metricsHandler } from "./lib/metrics";
 import { generalLimiter } from "./middleware/rateLimit";
+import { jsonParseErrorHandler } from "./middleware/jsonError";
+import helmet from "helmet";
 
 // Load environment variables
 dotenv.config();
@@ -26,6 +28,13 @@ app.use(requestId);
 app.use(metricsMiddleware);
 // Apply general API rate limiter
 app.use(generalLimiter);
+// Security headers; we set HSTS below conditionally, so disable here
+app.use(helmet({
+  hsts: false,
+  referrerPolicy: { policy: 'no-referrer' },
+  frameguard: { action: 'sameorigin' },
+  crossOriginResourcePolicy: { policy: 'same-origin' },
+}));
 app.use(
   cors({
     origin: [
@@ -37,6 +46,8 @@ app.use(
   })
 );
 app.use(express.json());
+// Handle malformed JSON bodies in a standardized way (400 BAD_REQUEST)
+app.use(jsonParseErrorHandler);
 
 // Enforce HTTPS in production and add HSTS header
 app.use((req: Request, res: Response, next: NextFunction) => {

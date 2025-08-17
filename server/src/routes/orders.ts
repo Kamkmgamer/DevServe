@@ -1,20 +1,20 @@
 // server/src/routes/orders.ts
-import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Router, NextFunction } from "express";
+import prisma from "../lib/prisma";
 import { protect } from "../middleware/auth"; // Changed from authMiddleware
 import { AuthRequest } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { createOrderSchema, idParamSchema, updateOrderStatusSchema } from "../lib/validation";
+import { AppError } from "../lib/errors";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(protect); // Changed from authMiddleware
 
 type Req = AuthRequest;
 
 // GET /api/orders
-router.get("/", async (req: Req, res) => {
+router.get("/", async (req: Req, res, next: NextFunction) => {
   try {
     const orders = await prisma.order.findMany({
       where: { userId: req.userId },
@@ -30,22 +30,21 @@ router.get("/", async (req: Req, res) => {
 );
     res.json(orders);
   } catch (error) {
-    console.error("Error fetching orders:", error);
-    res.status(500).json({ message: "Failed to fetch orders" });
+    next(error);
   }
 });
 
 // POST /api/orders
-router.post("/", validate(createOrderSchema), async (req: Req, res) => {
+router.post("/", validate(createOrderSchema), async (req: Req, res, next: NextFunction) => {
   try {
     const { items, requirements, discount, referralCode } = req.body;
 
     if (!items?.length) {
-      return res.status(400).json({ message: "No items provided" });
+      return next(AppError.badRequest("No items provided"));
     }
 
     if (!requirements) {
-      return res.status(400).json({ message: "Requirements are required" });
+      return next(AppError.badRequest("Requirements are required"));
     }
 
     let totalCents = 0;
@@ -54,7 +53,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
     // Validate all items and calculate total
     for (const item of items) {
       if (!item.serviceId || !item.quantity || item.quantity < 1) {
-        return res.status(400).json({ message: "Invalid item data" });
+        return next(AppError.badRequest("Invalid item data"));
       }
 
       const service = await prisma.service.findUnique({
@@ -62,7 +61,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
       });
 
       if (!service) {
-        return res.status(400).json({ message: `Service not found: ${item.serviceId}` });
+        return next(AppError.badRequest(`Service not found: ${item.serviceId}`));
       }
 
       const unitPrice = Math.round(service.price * 100);
@@ -90,19 +89,19 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
 
         // Check if coupon is expired
         if (coupon.expiresAt && new Date(coupon.expiresAt) < now) {
-          return res.status(400).json({ message: "Coupon has expired" });
+          return next(AppError.badRequest("Coupon has expired"));
         }
 
         // Check max uses
         if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) {
-          return res.status(400).json({ message: "Coupon usage limit reached" });
+          return next(AppError.badRequest("Coupon usage limit reached"));
         }
 
         // Check minimum order amount
         if (coupon.minOrderAmount && totalCents < coupon.minOrderAmount) {
-          return res.status(400).json({
-            message: `Minimum order amount is ${formatCurrency(coupon.minOrderAmount)}`
-          });
+          return next(AppError.badRequest(
+            `Minimum order amount is ${formatCurrency(coupon.minOrderAmount)}`
+          ));
         }
 
         // Apply discount
@@ -122,7 +121,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
           data: { currentUses: { increment: 1 } },
         });
       } else {
-        return res.status(400).json({ message: "Invalid coupon code" });
+        return next(AppError.badRequest("Invalid coupon code"));
       }
     }
 
@@ -135,7 +134,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
         if (referral) {
             referralId = referral.id;
         } else {
-            return res.status(400).json({ message: "Invalid referral code" });
+            return next(AppError.badRequest("Invalid referral code"));
         }
     }
 
@@ -172,8 +171,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res) => {
 
     res.status(201).json(order);
   } catch (error) {
-    console.error("Error creating order:", error);
-    res.status(500).json({ message: "Failed to create order" });
+    next(error);
   }
 });
 
@@ -186,13 +184,13 @@ function formatCurrency(cents: number): string {
 router.patch(
   "/:id/status",
   validate({ params: idParamSchema, body: updateOrderStatusSchema }),
-  async (req: Req, res) => {
+  async (req: Req, res, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
     if (!status) {
-      return res.status(400).json({ message: "Status is required" });
+      return next(AppError.badRequest("Status is required"));
     }
 
     const order = await prisma.order.update({
@@ -202,8 +200,7 @@ router.patch(
 
     res.json(order);
   } catch (error) {
-    console.error("Error updating order status:", error);
-    res.status(500).json({ message: "Failed to update order status" });
+    next(AppError.internal("Failed to update order status"));
   }
 });
 
