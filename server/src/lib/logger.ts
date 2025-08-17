@@ -3,7 +3,9 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 
 const { combine, timestamp, json, printf, colorize } = winston.format;
 
-const isDevelopment = process.env.NODE_ENV === 'development';
+const env = process.env.NODE_ENV || 'development';
+const isDevelopment = env === 'development';
+const isTest = env === 'test';
 
 const consoleFormat = printf(({ level, message, timestamp }) => {
   return `${timestamp} ${level}: ${message}`;
@@ -19,25 +21,27 @@ transports.push(new winston.transports.Console({
     : combine(timestamp(), json()),
 }));
 
-// Daily rotated files (production and development if desired)
-transports.push(new DailyRotateFile({
-  level: 'info',
-  filename: 'logs/%DATE%-app.log',
-  datePattern: 'YYYY-MM-DD',
-  zippedArchive: true,
-  maxSize: '10m',
-  maxFiles: '7d',
-  format: combine(timestamp(), json()),
-}));
-transports.push(new DailyRotateFile({
-  level: 'error',
-  filename: 'logs/%DATE%-error.log',
-  datePattern: 'YYYY-MM-DD',
-  zippedArchive: true,
-  maxSize: '10m',
-  maxFiles: '7d',
-  format: combine(timestamp(), json()),
-}));
+// Daily rotated files (skip in test to avoid open handle leaks)
+if (!isTest) {
+  transports.push(new DailyRotateFile({
+    level: 'info',
+    filename: 'logs/%DATE%-app.log',
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: true,
+    maxSize: '10m',
+    maxFiles: '7d',
+    format: combine(timestamp(), json()),
+  }));
+  transports.push(new DailyRotateFile({
+    level: 'error',
+    filename: 'logs/%DATE%-error.log',
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: true,
+    maxSize: '10m',
+    maxFiles: '7d',
+    format: combine(timestamp(), json()),
+  }));
+}
 
 const logger = winston.createLogger({
   level: isDevelopment ? 'debug' : 'info',
