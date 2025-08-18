@@ -85,8 +85,7 @@ DevServe offers a rich set of features for both users and administrators:
 *   **Express.js:** Minimalist web framework.
 *   **TypeScript:** Type safety and clean code.
 *   **Prisma ORM:** Type-safe database access.
-*   **PostgreSQL:** Robust relational database (recommended for production).
-*   **SQLite:** File-based database (default for development).
+*   **PostgreSQL:** Robust relational database (used by default; recommended for all environments).
 *   **JSON Web Tokens (JWT):** Secure authentication.
 *   **Bcrypt.js:** Password hashing.
 *   **Zod:** Data validation.
@@ -142,7 +141,18 @@ Follow these steps to set up your development environment:
     # DATABASE_URL="postgresql://<USER>:<PASSWORD>@localhost:5432/<DB_NAME>?schema=public"
     DATABASE_URL=
 
-    JWT_SECRET=YOUR_VERY_STRONG_JWT_SECRET_HERE  # Change this!
+    # JWT (prefer RS256 with key rotation)
+    # Provide PEM-formatted keys. For multi-line keys in .env, keep literal \n where line breaks are.
+    # Example:
+    # JWT_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----
+    # JWT_PUBLIC_KEY=-----BEGIN PUBLIC KEY-----\nMIIB...\n-----END PUBLIC KEY-----
+    JWT_PRIVATE_KEY=
+    JWT_PUBLIC_KEY=
+    # Optional: JSON map of kid -> PEM public keys for rotation
+    # e.g. {"2025-01":"-----BEGIN PUBLIC KEY-----\\nMIIB...\\n-----END PUBLIC KEY-----"}
+    JWT_PUBLIC_KEYS=
+    # Dev-only fallback if RS256 keys are not set
+    JWT_SECRET=
 
     # Admin password for seeding (do NOT commit real secrets)
     ADMIN_PASSWORD=
@@ -167,6 +177,9 @@ Follow these steps to set up your development environment:
     SITE_URL=http://localhost:5173  # Frontend URL
     SITE_NAME=DevServe  # Your application name
     ```
+
+    See `.env.example` for comprehensive environment documentation, including PostgreSQL connection patterns
+    for local Docker Compose and production managed databases.
 
     **For the `client` (`client/.env`):**
     ```env

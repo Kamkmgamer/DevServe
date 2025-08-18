@@ -219,3 +219,136 @@ With targeted improvements, this can reach 9/10.
 - Docker/monitoring: `server/Dockerfile`, `docker-compose.yml`, `monitoring/`
 - Vercel client deploy: `vercel.json`
 - Environment examples: `.env.example`
+
+---
+
+# DevServe Codebase Audit (Updated)
+
+Date: 2025-08-18 14:17 (local)
+
+Repo: DevServe (React + Node/Express + Prisma monorepo)
+
+## 1) Audit Report
+
+### A. Code Quality
+
+- __Structure & Modularity__
+  - Clear monorepo split: `client/` and `server/`. Root scripts for concurrent dev.
+  - Backend: `server/src/` organized into `routes/`, `api/`, `middleware/`, `lib/`; app bootstrap in `server/src/app.ts`, entry in `server/src/index.ts`.
+  - Domain-oriented routes with validation and RBAC, e.g., `server/src/routes/admin.ts` guarded by `protect`, `admin`, `superadmin`.
+  - Prisma single instance with metrics: `server/src/lib/prisma.ts`.
+
+- __Readability & Maintainability__
+  - TypeScript across server; `AuthRequest` extends request safely in `server/src/middleware/auth.ts`.
+  - Central logging with redaction and request-scoped context; request logging in `server/src/app.ts`.
+  - Cross-cutting concerns isolated: requestId, metrics, rate limits, error + JSON parse handlers, CSRF, CSP, CORS.
+
+- __Reusability__
+  - Reusable validation middleware.
+  - Client Axios instance with global interceptors and CSRF handling: `client/src/api/axios.ts`.
+
+Overall: Well-structured, modular, and maintainable.
+
+### B. Architecture Design
+
+- __Scalability & Performance__
+  - Express 5 with layered middleware.
+  - Prometheus metrics for HTTP and Prisma queries; Grafana dashboard and alert rules present.
+  - Rate limiting applied globally and to sensitive auth routes.
+
+- __Correctness__
+  - Defensive handlers: JSON parse error middleware, 404s with requestId, global error handler.
+  - RBAC layered correctly; input validation at route boundaries.
+
+- __Deployment & Ops__
+  - Client deploy via Vercel (`vercel.json`).
+  - Backend Docker image built and pushed to GHCR in CI; optional deploy webhook trigger.
+  - Docker Compose stack for Postgres + monitoring.
+
+Verdict: Solid architecture with observability and CI integration.
+
+### C. Security Review
+
+- __Auth & JWT__
+  - RS256-first JWT verification with support for key rotation via `JWT_PUBLIC_KEYS` and `kid`; dev-only HS256 fallback if configured: `server/src/middleware/auth.ts`.
+  - `protect` reads bearer or `session` cookie and loads user from DB; RBAC via `admin`/`superadmin`.
+
+- __Token Storage & CSRF__
+  - Cookie-based auth model with CSRF protection: client fetches `/auth/csrf-token` and sends `x-csrf-token` on mutating requests, `withCredentials: true` in `client/src/api/axios.ts`; `csurf` configured in `server/src/app.ts` with secure cookie flags in prod.
+
+- __CSP, CORS, HTTPS__
+  - Helmet CSP uses per-request nonces for scripts/styles; no `'unsafe-inline'` used. HTTPS enforced in prod with HSTS. CORS allowlist with optional ngrok for dev.
+
+- __Secrets__
+  - `.env.example` emphasizes secure practices; Compose uses Docker secrets for DB password.
+
+- __Input Safety__
+  - Validation present; ensure any rich HTML is sanitized or safely encoded server-side.
+
+- __Payments__
+  - Stripe checkout session creation present; PayPal order/capture via `server/src/lib/paypal`. Webhook signature verification and idempotency handling not yet implemented.
+
+Verdict: Strong posture (CSP nonces, cookie auth + CSRF, HTTPS). Main gaps: payment webhooks/idempotency; explicit rich-text sanitization policy.
+
+### D. Documentation
+
+- `README.md` comprehensive. `.env.example` is detailed. Add backend deploy/runbooks for production.
+
+### E. Testing
+
+- Server `jest.config.ts` enforces 80% global coverage; CI runs DB-backed tests and uploads coverage.
+- Client has RTL with thresholds in `client/package.json`; CI executes coverage.
+- Add e2e tests for auth/checkout/webhooks.
+
+### F. Tooling & Workflows
+
+- ESLint + Prettier + Husky/lint-staged.
+- CI runs lint, type-check, audits, tests with coverage, builds, deploys client, and builds/pushes backend image.
+- Monitoring stack wired.
+
+---
+
+## 2) Rating
+
+- Overall rating: 8.5/10
+
+Justification: Modern, secure-by-default patterns (CSP nonces, cookie auth + CSRF), observability, and CI. Improve webhooks/idempotency and deployment docs to reach 9+.
+
+---
+
+## 3) Next Steps
+
+### Short-term (1–2 sprints)
+
+- __Payments hardening__: Add Stripe/PayPal webhooks with signature verification and idempotency; map events to order state. Add tests.
+- __CSP/CORS__: Ensure `connectSrc` includes needed third parties (Stripe/PayPal) while staying strict; keep ngrok limited to dev.
+- __Rich-text safety__: Sanitize/encode server-rendered HTML or store markdown; verify blog/portfolio paths.
+- __Runbooks__: JWT key rotation, CSRF troubleshooting, DB restore, metrics/alerts response.
+
+### Mid-term (2–6 sprints)
+
+- __Auth lifecycle__: Refresh rotation and revocation tooling; device metadata on sessions.
+- __Observability__: Business KPIs (orders, payment success), alerts. Surface request IDs to clients when helpful.
+- __Testing__: E2E (Playwright/Cypress) for auth, checkout, webhooks; load tests; index review.
+- __Updates__: Renovate/Dependabot; consider CodeQL/SAST in CI.
+
+### Long-term
+
+- __Deployment__: Formalize backend platform deploy (Render/DO/ECS/K8s) with IaC and blue/green or canary; automate `prisma migrate deploy`.
+- __Architecture__: Move toward domain modules and clearer service boundaries.
+- __Data governance__: Audit logs for sensitive actions, PII retention policies, compliance posture.
+
+### Refactor vs Rebuild
+
+- __Recommendation__: Refactor and harden; no rebuild needed.
+
+---
+
+## Citations
+
+- `server/src/app.ts`, `server/src/index.ts`
+- `server/src/middleware/auth.ts`
+- `server/src/lib/prisma.ts`
+- `server/src/routes/admin.ts`, `server/src/routes/payments.ts`, `server/src/api/payments.ts`
+- `client/src/api/axios.ts`
+- `.github/workflows/ci.yml`, `docker-compose.yml`, `monitoring/`

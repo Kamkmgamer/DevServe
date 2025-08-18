@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -32,6 +33,7 @@
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.7.0",
+    "react-syntax-highlighter": "^15.6.1",
     "react-toastify": "^11.0.5",
     "tailwind-merge": "^3.3.1",
     "vite": "^7.1.0",
@@ -75,6 +77,25 @@
     },
     "setupFilesAfterEnv": [
       "<rootDir>/src/setupTests.ts"
+    ],
+    "collectCoverage": true,
+    "coverageDirectory": "<rootDir>/coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "json",
+      "html"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 80,
+        "branches": 70,
+        "functions": 75,
+        "lines": 80
+      }
+    },
+    "coveragePathIgnorePatterns": [
+      "<rootDir>/src/__mocks__/"
     ]
   }
 }

@@ -9,15 +9,16 @@ export default async function globalSetup() {
   process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret';
   process.env.CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
-  const projectRoot = path.resolve(__dirname, '../../..');
-  const prismaSchemaPath = path.join(projectRoot, 'prisma', 'schema.prisma');
+  // Point to the server directory (repoRoot/server)
+  const serverRoot = path.resolve(__dirname, '../..');
+  const prismaSchemaPath = path.join(serverRoot, 'prisma', 'schema.prisma');
 
   // If a previous test DB exists, remove it to start clean
   const dbUrl = process.env.DATABASE_URL || '';
   if (dbUrl.startsWith('file:')) {
-    const dbFile = path.join(projectRoot, 'prisma', 'test.db');
-    // Note: Prisma stores SQLite relative to working dir; using file:./test.db at project root
-    const rootDbFile = path.join(projectRoot, 'test.db');
+    const dbFile = path.join(serverRoot, 'prisma', 'test.db');
+    // Note: Prisma stores SQLite relative to working dir; using file:./test.db at server root
+    const rootDbFile = path.join(serverRoot, 'test.db');
     try {
       if (fs.existsSync(dbFile)) fs.rmSync(dbFile);
     } catch {}
@@ -29,7 +30,7 @@ export default async function globalSetup() {
   // Run migrations against the test DB
   try {
     execSync(`npx prisma migrate deploy --schema "${prismaSchemaPath}"`, {
-      cwd: projectRoot,
+      cwd: serverRoot,
       stdio: 'inherit',
       env: { ...process.env },
     });

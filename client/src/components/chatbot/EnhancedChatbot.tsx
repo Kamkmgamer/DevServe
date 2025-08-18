@@ -5,6 +5,8 @@ import {
   Square, Circle, MessageSquare 
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import api from "../../api/axios";
 
 /**
@@ -1346,7 +1348,35 @@ const EnhancedChatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                     <ReactMarkdown 
                       components={{
                         p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
-                        code: ({children}) => <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono">{children}</code>,
+                        code(rawProps: any) {
+                          const { inline, className, children } = rawProps || {};
+                          const match = /language-(\w+)/.exec(className || "");
+                          if (!inline) {
+                            return (
+                              <SyntaxHighlighter
+                                style={isDarkMode ? oneDark : oneLight}
+                                language={match?.[1] || "plaintext"}
+                                PreTag="div"
+                                wrapLongLines
+                                customStyle={{
+                                  borderRadius: 8,
+                                  margin: 0,
+                                  padding: "12px 14px",
+                                  fontSize: "0.85rem",
+                                }}
+                              >
+                                {String(children).replace(/\n$/, "")}
+                              </SyntaxHighlighter>
+                            );
+                          }
+                          return (
+                            <code
+                              className={`px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs font-mono ${className || ""}`}
+                            >
+                              {children}
+                            </code>
+                          );
+                        },
                       }}
                     >
                       {message.content}

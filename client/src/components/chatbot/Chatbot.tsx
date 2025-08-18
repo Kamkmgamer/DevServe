@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { X, Send, Bot, User, Loader, Edit2, Save, Settings, Palette, Type, Plus, Minus, RotateCw, Maximize2, Minimize2, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import api from "../../api/axios";
 
 /**
@@ -361,40 +363,32 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
   const [tempProfile, setTempProfile] = useState<UserProfile>(profile);
 
   useEffect(() => setTempProfile(profile), [editing]);
-
   const saveEdits = () => {
     setProfile(tempProfile);
-    saveProfile(tempProfile);
     setEditing(false);
-    pushMessage({ id: uid(), role: "assistant", content: `Profile updated to ${tempProfile.name}.`, timestamp: nowISO() });
   };
-
-  if (!isOpen) return null;
-
+  
+  // Render
   return (
-    <div className="fixed bottom-5 right-5 z-50 w-96 h-[600px] max-h-[80vh] bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col">
-      <div className="flex items-start justify-between p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
-        <div>
-          <div className="flex items-center space-x-2">
-            <Bot className="w-5 h-5" />
-            <div>
-              <div className="font-semibold">{profile.name}</div>
-              <div className="text-xs opacity-90">{profile.title}</div>
+    <div className="w-[420px] h-[620px] flex flex-col rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+      <div className="p-3 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-sm font-semibold">{profile.name}</div>
+            <div className="text-xs opacity-90">{profile.title}</div>
+            <div className="text-xs opacity-90 mt-2 max-w-[20rem]">{profile.bio}</div>
+          </div>
+          <div className="flex flex-col items-end">
+            <div className="flex gap-1">
+              <button onClick={() => setEditing((s) => !s)} className="p-1 hover:bg-white/20 rounded-md" title="Edit profile">
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-md" title="Close">
+                <X className="w-4 h-4" />
+              </button>
             </div>
+            <div className="text-xs opacity-70 mt-2">{new Date().toLocaleString()}</div>
           </div>
-          <div className="text-xs opacity-90 mt-2 max-w-[20rem]">{profile.bio}</div>
-        </div>
-
-        <div className="flex flex-col items-end">
-          <div className="flex gap-1">
-            <button onClick={() => setEditing((s) => !s)} className="p-1 hover:bg-white/20 rounded-md" title="Edit profile">
-              <Edit2 className="w-4 h-4" />
-            </button>
-            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-md" title="Close">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="text-xs opacity-70 mt-2">{new Date().toLocaleString()}</div>
         </div>
       </div>
 
@@ -440,7 +434,42 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
               </div>
               <div className={`ml-2 p-3 rounded-lg ${m.role === "user" ? "bg-blue-600 text-white" : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"}`}>
                 <div className="text-sm whitespace-pre-wrap">
-                  <ReactMarkdown>{m.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      code(rawProps: any) {
+                        const { inline, className, children } = rawProps || {};
+                        const match = /language-(\w+)/.exec(className || "");
+                        const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+                        if (!inline) {
+                          return (
+                            <SyntaxHighlighter
+                              style={isDark ? oneDark : oneLight}
+                              language={match?.[1] || "plaintext"}
+                              PreTag="div"
+                              wrapLongLines
+                              customStyle={{
+                                borderRadius: 8,
+                                margin: 0,
+                                padding: "12px 14px",
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              {String(children).replace(/\n$/, "")}
+                            </SyntaxHighlighter>
+                          );
+                        }
+                        return (
+                          <code
+                            className={`px-1 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700/70 ${className || ""}`}
+                          >
+                            {children}
+                          </code>
+                        );
+                      },
+                    }}
+                  >
+                    {m.content}
+                  </ReactMarkdown>
                 </div>
                 <div className="text-xs opacity-60 mt-1">{new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
               </div>

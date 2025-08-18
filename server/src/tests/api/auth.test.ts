@@ -1,5 +1,5 @@
 
-import { login, registerAdmin, changePassword, requestPasswordReset, resetPassword } from '../../api/auth';
+import { login, registerAdmin, changePassword, requestPasswordReset, resetPassword, logout, refresh } from '../../api/auth';
 import { Request, Response } from 'express';
 import prisma from '../../lib/prisma';
 import bcrypt from 'bcryptjs';
@@ -16,6 +16,11 @@ jest.mock('../../lib/prisma', () => ({
       create: jest.fn(),
       update: jest.fn(), // Mock update
       findFirst: jest.fn(), // Mock findFirst
+    },
+    refreshToken: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
   },
 }));
@@ -40,19 +45,63 @@ describe('Auth API', () => {
     jest.clearAllMocks();
   });
 
+  describe('refresh', () => {
+    it('should rotate refresh token and issue new access token', async () => {
+      const req = { cookies: { refresh: 'old-refresh' } } as unknown as Request;
+      const res = { json: jest.fn(), status: jest.fn(() => res), cookie: jest.fn() } as unknown as Response;
+
+      const user = { id: '1', email: 'test@example.com', name: 'Test User', role: 'USER' };
+      const tokenHash = require('crypto').createHash('sha256').update('old-refresh').digest('hex');
+
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue({ userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 10000), revokedAt: null });
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
+      (prisma.refreshToken.create as jest.Mock).mockResolvedValue({ id: 'rt2' });
+      (prisma.refreshToken.update as jest.Mock).mockResolvedValue({});
+      (jwt.sign as jest.Mock).mockReturnValue('new-access');
+
+      await refresh(req, res);
+
+      expect(prisma.refreshToken.update).toHaveBeenCalled();
+      expect(res.cookie).toHaveBeenCalledWith('session', 'new-access', expect.any(Object));
+      expect(res.cookie).toHaveBeenCalledWith('refresh', expect.any(String), expect.any(Object));
+      expect(res.json).toHaveBeenCalledWith({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+    });
+  });
+
+  describe('logout', () => {
+    it('should revoke refresh and clear cookies', async () => {
+      const req = { cookies: { refresh: 'to-revoke' } } as unknown as Request;
+      const res = { json: jest.fn(), status: jest.fn(() => res), clearCookie: jest.fn() } as unknown as Response;
+      const tokenHash = require('crypto').createHash('sha256').update('to-revoke').digest('hex');
+
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue({ tokenHash, revokedAt: null });
+      (prisma.refreshToken.update as jest.Mock).mockResolvedValue({});
+
+      await logout(req, res);
+
+      expect(res.clearCookie).toHaveBeenCalledWith('session', expect.any(Object));
+      expect(res.clearCookie).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Logged out' });
+    });
+  });
+
   describe('login', () => {
-    it('should return a token for valid credentials', async () => {
+    it('should set cookies and return user for valid credentials', async () => {
       const req = { body: { email: 'test@example.com', password: 'password' } } as Request;
-      const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
+      const res = { json: jest.fn(), status: jest.fn(() => res), cookie: jest.fn() } as unknown as Response;
       const user = { id: '1', email: 'test@example.com', password: 'hashedPassword', name: 'Test User', role: 'USER' };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      (jwt.sign as jest.Mock).mockReturnValue('test-token');
+      (jwt.sign as jest.Mock).mockReturnValue('access-token');
+      (prisma.refreshToken.create as jest.Mock).mockResolvedValue({ id: 'rt1' });
 
       await login(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ token: 'test-token' });
+      expect(res.cookie).toHaveBeenCalledWith('session', 'access-token', expect.any(Object));
+      expect(res.cookie).toHaveBeenCalledWith('refresh', expect.any(String), expect.any(Object));
+      expect(res.json).toHaveBeenCalledWith({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
     });
 
     it('should return 401 for invalid credentials', async () => {

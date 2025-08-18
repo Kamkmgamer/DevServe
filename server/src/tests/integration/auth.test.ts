@@ -46,4 +46,41 @@ describe('Auth integration', () => {
     expect(cookieStr).toContain('session=');
     expect(cookieStr).toContain('refresh=');
   });
+
+  it('POST /api/auth/refresh should rotate refresh and set new cookies', async () => {
+    // First, login to obtain cookies
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'test@example.com', password: 'Passw0rd!' });
+    expect(loginRes.status).toBe(200);
+    const cookies = loginRes.headers['set-cookie'];
+
+    const refreshRes = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', cookies);
+
+    expect(refreshRes.status).toBe(200);
+    const setCookies = refreshRes.headers['set-cookie'] || [];
+    const cookieStr2 = Array.isArray(setCookies) ? setCookies.join(';') : String(setCookies || '');
+    expect(cookieStr2).toContain('session=');
+    expect(cookieStr2).toContain('refresh=');
+  });
+
+  it('POST /api/auth/logout should clear cookies', async () => {
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'test@example.com', password: 'Passw0rd!' });
+    const cookies = loginRes.headers['set-cookie'];
+
+    const logoutRes = await request(app)
+      .post('/api/auth/logout')
+      .set('Cookie', cookies);
+
+    expect(logoutRes.status).toBe(200);
+    const clearedCookies = logoutRes.headers['set-cookie'] || [];
+    const cookieStr3 = Array.isArray(clearedCookies) ? clearedCookies.join(';') : String(clearedCookies || '');
+    // Should include Set-Cookie directives clearing session and refresh
+    expect(cookieStr3).toContain('session=');
+    expect(cookieStr3).toContain('refresh=');
+  });
 });
