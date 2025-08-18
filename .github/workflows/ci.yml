@@ -85,6 +85,13 @@ jobs:
           DATABASE_URL: postgresql://devserve:devserve@localhost:5432/devserve
         run: npm run test:coverage
 
+      - name: Upload server coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage
+          path: server/coverage
+
       - name: Build client
         working-directory: client
         run: npm run build --if-present
