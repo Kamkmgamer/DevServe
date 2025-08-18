@@ -122,7 +122,8 @@ Follow these steps to set up your development environment:
 
 1.  **Clone the repository:**
     ```bash
-gimini
+    git clone https://github.com/Kamkmgamer/DevServe.git
+    cd DevServe
     ```
     (Replace the URL with your repository if necessary.)
 
