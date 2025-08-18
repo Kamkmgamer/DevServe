@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 
 const api = axios.create({
   baseURL: '/api',  // Use relative path; Vite proxy will handle forwarding
+  withCredentials: true, // Send/receive httpOnly cookies
 });
 
 // Simple toast de-duplication to prevent spam
@@ -21,7 +22,7 @@ function showToastOnce(key: string, message: string) {
 
 function triggerLogoutAndRedirect(reason: 'INVALID_TOKEN' | 'UNAUTHORIZED') {
   try {
-    localStorage.removeItem("token");
+    // No token in localStorage anymore (cookie-based auth). Intentionally left blank.
   } catch {}
   // Notify app to clear auth state
   window.dispatchEvent(new Event('auth:logout'));
@@ -34,12 +35,42 @@ function triggerLogoutAndRedirect(reason: 'INVALID_TOKEN' | 'UNAUTHORIZED') {
   }
 }
 
-/* Attach token to every request */
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
+// CSRF token management for cookie-based auth
+let csrfToken: string | null = null;
+let csrfFetchInFlight: Promise<string> | null = null;
+
+async function fetchCsrfToken(): Promise<string> {
+  const { data } = await api.get<{ csrfToken: string }>("/auth/csrf-token");
+  return data.csrfToken;
+}
+
+async function ensureCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  if (!csrfFetchInFlight) {
+    csrfFetchInFlight = fetchCsrfToken().then((t) => {
+      csrfToken = t;
+      csrfFetchInFlight = null;
+      return t;
+    }).catch((e) => {
+      csrfFetchInFlight = null;
+      throw e;
+    });
+  }
+  return csrfFetchInFlight;
+}
+
+/* Attach CSRF header for state-changing requests */
+api.interceptors.request.use(async (config) => {
+  const method = (config.method || 'get').toLowerCase();
+  const needsCsrf = ["post", "put", "patch", "delete"].includes(method);
+  if (needsCsrf) {
+    try {
+      const token = await ensureCsrfToken();
+      config.headers = config.headers || {};
+      (config.headers as any)["x-csrf-token"] = token;
+    } catch (e) {
+      // If we can't fetch CSRF, allow request to proceed; server will reject and UI will show errors
+    }
   }
   return config;
 });
