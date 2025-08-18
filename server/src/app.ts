@@ -14,6 +14,7 @@ import { jsonParseErrorHandler } from "./middleware/jsonError";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import csurf from "csurf";
+import crypto from "crypto";
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,12 @@ app.use(requestId);
 app.use(metricsMiddleware);
 // Apply general API rate limiter
 app.use(generalLimiter);
+// Generate a per-request CSP nonce and expose it via res.locals
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  (res.locals as any).cspNonce = nonce;
+  next();
+});
 // Security headers; we set HSTS below conditionally, so disable here
 app.use(helmet({
   hsts: false,
@@ -40,8 +47,9 @@ app.use(helmet({
     useDefaults: true,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'","'unsafe-inline'"],
-      styleSrc: ["'self'","'unsafe-inline'"],
+      // Disallow inline scripts/styles; allow only with a per-request nonce
+      scriptSrc: ["'self'", (req: any, res: any) => `'nonce-${(res.locals as any).cspNonce}'`],
+      styleSrc: ["'self'", (req: any, res: any) => `'nonce-${(res.locals as any).cspNonce}'`],
       imgSrc: ["'self'", 'data:'],
       connectSrc: ["'self'"],
       objectSrc: ["'none'"],
