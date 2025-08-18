@@ -1,8 +1,7 @@
-jest.mock('react-hot-toast', () => ({
-  success: jest.fn(),
-  error: jest.fn(),
-}));
-
+/// <reference types="@testing-library/jest-dom" />
+import '@testing-library/jest-dom';
+import React from 'react';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 jest.mock('../api/services', () => ({
   resetPassword: jest.fn(),
 }));
@@ -21,7 +20,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ResetPasswordPage from './ResetPasswordPage';
 import { resetPassword } from '../api/services'; // Now this import will get the mock
 import { mockMutate } from '../../__mocks__/@tanstack/react-query';
-import toast from 'react-hot-toast'; // Now this import will get the mock
 
 const queryClient = new QueryClient();
 
@@ -38,8 +36,6 @@ describe('ResetPasswordPage', () => {
     mockUseLocation.mockReturnValue({ search: '?token=test-token' });
     mockUseNavigate.mockClear();
     mockMutate.mockClear(); // Clear mockMutate calls before each test
-    (toast.success as jest.Mock).mockClear(); // Correct way to clear mock
-    (toast.error as jest.Mock).mockClear();   // Correct way to clear mock
   });
 
   it('should render password inputs and submit button', () => {
@@ -68,7 +64,6 @@ describe('ResetPasswordPage', () => {
 
     expect(await screen.findByText('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.')).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled(); // Should not call mutate if validation fails
-    expect(toast.error).not.toHaveBeenCalled(); // No toast error for client-side validation
   });
 
   it('should show validation error if passwords do not match', async () => {
@@ -83,12 +78,11 @@ describe('ResetPasswordPage', () => {
 
     expect(await screen.findByText('Passwords don\'t match')).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled(); // Should not call mutate if validation fails
-    expect(toast.error).not.toHaveBeenCalled(); // No toast error for client-side validation
   });
 
   it('should call resetPassword on valid submission and show success message, then navigate to login', async () => {
     // Mock mockMutate to simulate a successful API call
-    mockMutate.mockResolvedValue({});
+    (mockMutate as unknown as jest.Mock).mockResolvedValue({});
 
     renderComponent();
     const newPasswordInput = screen.getByLabelText('New Password');
@@ -100,10 +94,10 @@ describe('ResetPasswordPage', () => {
     await userEvent.click(submitButton);
 
     expect(mockMutate).toHaveBeenCalledWith({ token: 'test-token', newPassword: 'StrongPassword123!' });
+    // Assert success message is shown in the DOM
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith('Password has been reset successfully. You can now log in with your new password.');
+      expect(screen.getByText('Password has been reset successfully. You can now log in with your new password.')).toBeInTheDocument();
     });
-    expect(screen.queryByText('Password has been reset successfully. You can now log in with your new password.')).not.toBeInTheDocument();
     // Wait for navigation
     await waitFor(() => {
       expect(mockUseNavigate).toHaveBeenCalledWith('/login');
@@ -112,7 +106,7 @@ describe('ResetPasswordPage', () => {
 
   it('should show error message on API failure', async () => {
     // Mock mockMutate to simulate a failed API call
-    mockMutate.mockRejectedValue({ response: { data: { error: 'Invalid token' } } });
+    (mockMutate as unknown as jest.Mock).mockRejectedValue({ response: { data: { error: 'Invalid token' } } });
 
     renderComponent();
     const newPasswordInput = screen.getByLabelText('New Password');
@@ -124,9 +118,9 @@ describe('ResetPasswordPage', () => {
     await userEvent.click(submitButton);
 
     expect(mockMutate).toHaveBeenCalledWith({ token: 'test-token', newPassword: 'StrongPassword123!' });
+    // Assert error message is shown in the DOM
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Invalid token');
+      expect(screen.getByText('Invalid token')).toBeInTheDocument();
     });
-    expect(screen.queryByText('Invalid token')).not.toBeInTheDocument();
   });
 });

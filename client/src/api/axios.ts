@@ -1,5 +1,5 @@
 // api/axios.ts
-import axios from "axios";
+import axios, { type AxiosRequestHeaders } from "axios";
 import { toast } from "react-hot-toast";
 
 const api = axios.create({
@@ -20,10 +20,12 @@ function showToastOnce(key: string, message: string) {
   }
 }
 
-function triggerLogoutAndRedirect(reason: 'INVALID_TOKEN' | 'UNAUTHORIZED') {
+function triggerLogoutAndRedirect(_reason: 'INVALID_TOKEN' | 'UNAUTHORIZED') {
   try {
     // No token in localStorage anymore (cookie-based auth). Intentionally left blank.
-  } catch {}
+  } catch {
+    // no-op
+  }
   // Notify app to clear auth state
   window.dispatchEvent(new Event('auth:logout'));
   // Redirect to login if not already there
@@ -66,10 +68,12 @@ api.interceptors.request.use(async (config) => {
   if (needsCsrf) {
     try {
       const token = await ensureCsrfToken();
-      config.headers = config.headers || {};
-      (config.headers as any)["x-csrf-token"] = token;
+      const headers = (config.headers ?? {}) as AxiosRequestHeaders;
+      headers["x-csrf-token"] = token;
+      config.headers = headers;
     } catch (e) {
       // If we can't fetch CSRF, allow request to proceed; server will reject and UI will show errors
+      // TODO: Log or handle error
     }
   }
   return config;

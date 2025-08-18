@@ -843,18 +843,56 @@ export const SecretDailyTips: React.FC<Props> = ({
         setLoading(false);
       }
     },
-    [fetchTip]
+    [fetchTip, loading]
   );
 
   useEffect(() => {
     load();
   }, [load]);
 
+  // copy with feedback
+  const copyRaw = useCallback(async (text: string) => {
+    if (!text) return false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      // Fire global toast event
+      window.dispatchEvent(new CustomEvent("code-copied", { detail: { msg: "Copied to clipboard" } }));
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const shareRaw = useCallback(async (text: string) => {
+    if (!text) return false;
+    if ((navigator as any).share) {
+      try {
+        await (navigator as any).share({ title: "Daily AI Tip", text });
+        return true;
+      } catch {
+        return false;
+      }
+    } else {
+      return await copyRaw(text);
+    }
+  }, [copyRaw]);
+
   useEffect(() => {
     if (!refreshInterval) return;
     const id = window.setInterval(() => load({ force: true }), refreshInterval);
     return () => clearInterval(id);
-  }, [refreshInterval, load]);
+  }, [load, refreshInterval]);
 
   const handleCountdownComplete = useCallback(() => {
     load({ force: true });
@@ -901,7 +939,7 @@ export const SecretDailyTips: React.FC<Props> = ({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [loading, load, copyRaw, shareRaw, tip]);
 
   // Touch gestures: swipe left to refresh, swipe right to share, long press to copy
   useEffect(() => {
@@ -965,44 +1003,6 @@ export const SecretDailyTips: React.FC<Props> = ({
       el.removeEventListener("touchend", onTouchEnd as EventListener);
     };
   }, []);
-
-  // copy with feedback
-  const copyRaw = useCallback(async (text: string) => {
-    if (!text) return false;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-      }
-      // Fire global toast event
-      window.dispatchEvent(new CustomEvent("code-copied", { detail: { msg: "Copied to clipboard" } }));
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const shareRaw = useCallback(async (text: string) => {
-    if (!text) return false;
-    if ((navigator as any).share) {
-      try {
-        await (navigator as any).share({ title: "Daily AI Tip", text });
-        return true;
-      } catch {
-        return false;
-      }
-    } else {
-      return await copyRaw(text);
-    }
-  }, [copyRaw]);
 
   // Copy and share functions (keeping these for functionality)
 

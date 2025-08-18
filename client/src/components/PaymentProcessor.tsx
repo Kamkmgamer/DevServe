@@ -53,9 +53,13 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       await api.post(`/orders/${orderId}/authorize`, { authorizationId });
       toast.success("Order placed! We'll begin our technical review shortly.");
       // You might want to redirect the user or clear the cart here
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("PayPal approval error:", err);
-      toast.error(err.message || "There was an issue with your payment approval.");
+      const message =
+        (err && typeof err === "object" && "message" in err
+          ? String((err as { message?: unknown }).message)
+          : undefined) || "There was an issue with your payment approval.";
+      toast.error(message);
     }
   };
 
@@ -68,9 +72,13 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       <PayPalButtons
         createOrder={createPayPalOrder}
         onApprove={onApprove}
-        onError={(err: any) =>
-          toast.error(`Payment failed: ${err.message || "Unknown error"}`)
-        }
+        onError={(err: unknown) => {
+          const message =
+            (err && typeof err === "object" && "message" in err
+              ? String((err as { message?: unknown }).message)
+              : "Unknown error");
+          toast.error(`Payment failed: ${message}`);
+        }}
         style={{ layout: "vertical" }}
       />
     </div>

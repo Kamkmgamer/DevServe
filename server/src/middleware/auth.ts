@@ -109,7 +109,7 @@ export const protect = async (
     }
 
     req.user = user; // Attach the full user object to the request
-    logger.debug('Protect middleware: req.user set', { userId: req.user.id });
+    logger.debug('Protect middleware: req.user set', { userId: req.user?.id });
     next();
   } catch (error) {
     if (error instanceof TokenExpiredError) {

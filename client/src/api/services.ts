@@ -23,7 +23,12 @@ export const getServiceById = async (id: string): Promise<Service> => {
   return response.data;
 };
 
-export const changePassword = async (data: any) => {
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export const changePassword = async (data: ChangePasswordPayload) => {
   const response = await api.post("/auth/change-password", data);
   return response.data;
 };

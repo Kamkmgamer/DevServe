@@ -62,7 +62,7 @@ const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\[
       const { data } = await api.post<{ user: User }>("/auth/register", { email, password, name });
       setUser(data.user);
     },
-    []
+    [strongPasswordRegex]
   );
 
   const logout = useCallback(async () => {

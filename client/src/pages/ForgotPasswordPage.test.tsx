@@ -1,3 +1,8 @@
+/// <reference types="@testing-library/jest-dom" />
+import '@testing-library/jest-dom';
+import React from 'react';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+
 jest.mock('react-hot-toast', () => ({
   success: jest.fn(),
   error: jest.fn(),
@@ -48,7 +53,7 @@ describe('ForgotPasswordPage', () => {
 
   it('should call requestPasswordReset on valid submission and show success message', async () => {
     // Mock mockMutate to simulate a successful API call
-    mockMutate.mockResolvedValue({});
+    (mockMutate as unknown as jest.Mock).mockResolvedValue({});
 
     renderComponent();
     const emailInput = screen.getByRole('textbox', { name: /email/i });
@@ -65,7 +70,7 @@ describe('ForgotPasswordPage', () => {
 
   it('should show error message on API failure', async () => {
     // Mock mockMutate to simulate a failed API call
-    mockMutate.mockRejectedValue({ response: { data: { error: 'An error occurred. Please try again.' } } });
+    (mockMutate as unknown as jest.Mock).mockRejectedValue({ response: { data: { error: 'An error occurred. Please try again.' } } });
 
     renderComponent();
     const emailInput = screen.getByRole('textbox', { name: /email/i });

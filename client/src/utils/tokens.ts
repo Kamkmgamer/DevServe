@@ -20,9 +20,11 @@ export const TOKENS = {
 };
 
 export const useReducedMotionPref = () =>
-  typeof window !== "undefined" &&
-  window.matchMedia &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  !!(
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 
 export const useIsTouch = () =>
   typeof window !== "undefined" &&

@@ -1,23 +1,24 @@
 import React from 'react';
+import { jest } from '@jest/globals';
 
 export const QueryClient = jest.fn();
-export const QueryClientProvider = ({ children, client }: { children: React.ReactNode; client?: any }) => children;
+export const QueryClientProvider = ({ children }: { children: React.ReactNode }) => children;
 
 // Create a mock for the mutate function that can be controlled by tests
 export const mockMutate = jest.fn();
 
-export const useMutation = jest.fn((options) => ({
-  mutate: async (variables: any) => {
+export const useMutation = jest.fn((options?: Partial<{ onSuccess: (result: unknown) => void; onError: (error: unknown) => void }>) => ({
+  mutate: async (variables: unknown) => {
     try {
       // Simulate an asynchronous operation
       const result = await mockMutate(variables);
       // If mockMutate resolves, call onSuccess
-      if (options && options.onSuccess) {
+      if (options?.onSuccess) {
         options.onSuccess(result);
       }
     } catch (error) {
       // If mockMutate rejects, call onError
-      if (options && options.onError) {
+      if (options?.onError) {
         options.onError(error);
       }
     }
