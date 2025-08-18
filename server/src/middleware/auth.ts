@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { JsonWebTokenError, TokenExpiredError, VerifyOptions, JwtPayload } from "jsonwebtoken";
 import prisma from "../lib/prisma"; // Import prisma client
 import { getEnvOrFile, normalizeMultiline } from "../lib/secrets";
+import logger from "../lib/logger";
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -33,7 +34,7 @@ if (JWT_PUBLIC_KEYS_JSON) {
       Object.entries(parsed).map(([kid, pem]) => [kid, normalizeMultiline(String(pem))!])
     );
   } catch (e) {
-    console.error('Invalid JWT_PUBLIC_KEYS JSON');
+    logger.error('Invalid JWT_PUBLIC_KEYS JSON');
     PUBLIC_KEYS = null;
   }
 }
@@ -96,19 +97,19 @@ export const protect = async (
       return res.status(400).json({ error: 'Invalid token payload', code: 'INVALID_TOKEN_PAYLOAD' });
     }
     req.userId = decoded.id;
-    console.log('Protect middleware: decoded.userId', decoded.id);
+    logger.debug('Protect middleware: decoded.userId', { userId: decoded.id });
 
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
     });
-    console.log('Protect middleware: fetched user', user);
+    logger.debug('Protect middleware: fetched user', { userId: req.userId, found: !!user });
 
     if (!user) {
       return res.status(401).json({ message: "User not found." });
     }
 
     req.user = user; // Attach the full user object to the request
-    console.log('Protect middleware: req.user set', req.user);
+    logger.debug('Protect middleware: req.user set', { userId: req.user.id });
     next();
   } catch (error) {
     if (error instanceof TokenExpiredError) {
@@ -152,7 +153,7 @@ export const admin = async (
       res.status(403).json({ message: "Access denied. Admin role required." });
     }
   } catch (error) {
-    console.error("Error in admin middleware:", error);
+    logger.error("Error in admin middleware:", { error });
     res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -178,7 +179,7 @@ export const superadmin = async (
       res.status(403).json({ message: "Access denied. Superadmin role required." });
     }
   } catch (error) {
-    console.error("Error in superadmin middleware:", error);
+    logger.error("Error in superadmin middleware:", { error });
     res.status(500).json({ message: "Internal server error." });
   }
 };

@@ -11,7 +11,10 @@ const levelFromEnv = process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info')
 
 // Simple sanitizer to redact sensitive fields
 const SENSITIVE_KEYS = [
-  'authorization', 'password', 'pwd', 'secret', 'api_key', 'apikey', 'token', 'access_token', 'refresh_token', 'stripe_secret_key', 'jwt_secret'
+  'authorization', 'password', 'pwd', 'secret', 'api_key', 'apikey', 'token', 'access_token', 'refresh_token', 'stripe_secret_key', 'jwt_secret',
+  // additional PII
+  'email', 'phone', 'phone_number', 'ssn', 'social_security_number', 'credit_card', 'card_number', 'cvv', 'cvc', 'expiry', 'iban', 'bic',
+  'address', 'street', 'city', 'zip', 'postal_code', 'set-cookie'
 ];
 
 function redactValue(val: unknown): unknown {
@@ -33,18 +36,43 @@ const requestIdFormat = winston.format((info) => {
   return info;
 });
 
+// Deeply redact nested objects/arrays by sensitive keys
+function deepRedact(obj: any): any {
+  if (obj == null) return obj;
+  if (Array.isArray(obj)) return obj.map(deepRedact);
+  if (typeof obj === 'object') {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (SENSITIVE_KEYS.includes(k.toLowerCase())) {
+        out[k] = redactValue(v);
+      } else if (v && typeof v === 'object') {
+        out[k] = deepRedact(v);
+      } else {
+        out[k] = v as any;
+      }
+    }
+    return out;
+  }
+  return obj;
+}
+
 const sanitizeFormat = winston.format((info) => {
   // Redact known sensitive keys in the root info and nested meta
   for (const key of Object.keys(info)) {
     if (SENSITIVE_KEYS.includes(key.toLowerCase())) {
-      info[key] = redactValue(info[key]);
+      info[key] = redactValue((info as any)[key]);
     }
   }
+  // Redact common nested containers
+  if ((info as any).headers) (info as any).headers = deepRedact((info as any).headers);
+  if ((info as any).meta) (info as any).meta = deepRedact((info as any).meta);
+  if ((info as any).context) (info as any).context = deepRedact((info as any).context);
+
   // Attempt to sanitize message if it's a JSON-like string containing sensitive keys
   if (typeof info.message === 'string') {
     let msg = info.message;
     for (const k of SENSITIVE_KEYS) {
-      const r = new RegExp(`("${k}"\\s*:\\s*")[^"]+("")?`, 'gi');
+      const r = new RegExp(`(\"${k}\"\\s*:\\s*\")[^\"]+(\"\")?`, 'gi');
       msg = msg.replace(r, `$1***$2`);
     }
     // Mask bare tokens (base64/jwt-ish) in messages

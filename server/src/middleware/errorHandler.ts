@@ -1,5 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { Prisma } from '@prisma/client';
+import {
+  PrismaClientKnownRequestError,
+  PrismaClientValidationError,
+  PrismaClientInitializationError,
+  PrismaClientRustPanicError,
+} from '@prisma/client/runtime/library';
 import logger from '../lib/logger';
 import { redactSensitive } from '../lib/redact';
 import { AppError, ErrorResponse } from '../lib/errors';
@@ -40,13 +45,13 @@ export const errorHandler = (
         code: i.code,
       })),
     });
-  } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  } else if (error instanceof PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
       appErr = new AppError(
         'DB_UNIQUE_VIOLATION',
         'Unique constraint violation',
         409,
-        { target: error.meta?.target }
+        { target: (error as any).meta?.target }
       );
     } else if (error.code === 'P2025') {
       appErr = new AppError('DB_NOT_FOUND', 'Record not found', 404);
@@ -56,18 +61,18 @@ export const errorHandler = (
         'DB_FOREIGN_KEY',
         'Foreign key constraint violation',
         409,
-        { field: (error.meta as any)?.field_name || (error.meta as any)?.target }
+        { field: ((error as any).meta as any)?.field_name || ((error as any).meta as any)?.target }
       );
     } else {
       appErr = new AppError('DB_ERROR', 'Database error', 400);
     }
-  } else if (error instanceof Prisma.PrismaClientValidationError) {
+  } else if (error instanceof PrismaClientValidationError) {
     appErr = AppError.badRequest('Invalid request for database operation', {
       message: error.message,
     });
   } else if (
-    error instanceof Prisma.PrismaClientInitializationError ||
-    error instanceof Prisma.PrismaClientRustPanicError
+    error instanceof PrismaClientInitializationError ||
+    error instanceof PrismaClientRustPanicError
   ) {
     appErr = AppError.internal('Database initialization error', {
       message: error.message,

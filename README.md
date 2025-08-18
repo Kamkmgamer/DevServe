@@ -342,6 +342,42 @@ The backend includes a production-ready Dockerfile at `server/Dockerfile`.
    - Use `docker-compose.yml` for Postgres. Provide `POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB` via environment or Docker secrets. A sample secret path is `./monitoring/secrets/postgres_password` referenced as `postgres_password`.
    - Set `DATABASE_URL` in the backend environment to point to the running Postgres (e.g., `postgresql://user:pass@host:5432/db`).
 
+### Backend Production Deployment
+
+This repository ships with a GitHub Actions job that builds and publishes the backend image to GitHub Container Registry (GHCR). On push to `main`/`master`, the job tags and pushes the image, and can optionally trigger a downstream deploy webhook.
+
+Steps to use in production:
+
+1. Configure GitHub Secrets for CI/CD:
+   - `GHCR` login uses the built-in `GITHUB_TOKEN` (already configured in the workflow).
+   - Optional: set `DEPLOY_WEBHOOK_URL` to notify your deployment platform after image push.
+
+2. Image naming and tags:
+   - Image is published as `ghcr.io/<owner>/<repo>/server` with tags `latest`, date-run (e.g., `YYYYMMDD-<run_number>`), and `sha`.
+
+3. Run the container in your platform (Kubernetes, ECS, Render, DO App Platform, etc.):
+   - Provide environment variables (see `.env.example`). At minimum:
+     - `NODE_ENV=production`
+     - `PORT=8000`
+     - `DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require` (managed DBs often require SSL)
+     - JWT config (prefer RS256: `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEYS`)
+     - `SITE_URL` and `CLIENT_URL`
+   - Expose port 8000 via your load balancer/ingress.
+
+4. Database migrations at runtime:
+   - The container is expected to run `npx prisma migrate deploy` before starting the app (see CI and Dockerfile/entrypoint guidance). Ensure your platform runs migrations during deploys or add a preStart hook.
+
+5. Health checks:
+   - HTTP GET `/` returns `{ status: "ok" }`.
+   - Metrics at `/metrics` (Prometheus format).
+
+6. CORS and Cookies:
+   - Set allowed origins via `CORS_ORIGINS` (comma-separated) and ensure TLS in production.
+   - Cookies are `httpOnly`, `Secure`, `SameSite=strict` by default in production. Your domain must serve HTTPS.
+
+7. Rollback strategy:
+   - Use the `sha` tag to pin/rollback deployments via your orchestrator if needed.
+
 Security notes:
 * Do not hardcode secrets in Compose files or code. Prefer environment variables or Docker secrets.
 * In production, use RS256 JWT with key rotation (`JWT_PUBLIC_KEYS`).

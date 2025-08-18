@@ -10,9 +10,8 @@ Overall, DevServe is a well-structured monorepo with clear separation between cl
 
 Key risks to address:
 - Security hardening: JWT key management, CSP, CSRF, auth token storage, and secrets handling.
-- Data layer consistency: SQLite in `server/prisma/schema.prisma` vs Postgres in `docker-compose.yml` and `README.md`.
-- Secrets exposure in docs and compose file.
-- Production deployment strategy for the backend (only `vercel.json` for frontend).
+- Secrets management: ensure real credentials are never shown in docs; prefer Docker secrets or a secrets manager for all environments.
+- Production deployment strategy for the backend is not yet documented/automated.
 
 Recommendation: Proceed with targeted refactors and hardening (not a rebuild). Adopt best practices for auth, secrets, DB configuration, and CI quality gates.
 
@@ -53,7 +52,7 @@ Overall: Good structure, disciplined middleware usage, and maintainable patterns
   - Tests cover error handling and endpoint behaviors, but coverage status not enforced in CI.
 
 - __Deployment__
-  - `vercel.json` targets the client (`root: "client"`). Backend deployment path not explicit (no Dockerfile for server in repo root).
+  - `vercel.json` targets the client (`root: "client"`). Backend Dockerfile exists at `server/Dockerfile`, but a deployment pipeline is not yet defined in CI.
   - Monitoring stack via `docker-compose.yml` (Prometheus, Grafana, Alertmanager) is a plus.
 
 ### C. Security Review
@@ -68,13 +67,13 @@ Overall: Good structure, disciplined middleware usage, and maintainable patterns
   - Recommendation: Switch to HTTP-only, secure cookies with SameSite and CSRF protection.
 
 - __CSRF__
-  - Not present. If moving to cookie auth, add CSRF tokens (double-submit or header-based with SameSite).
+  - Present via `csurf` middleware with cookie token in `server/src/app.ts`. Ensure alignment with your auth model: for bearer tokens, consider disabling CSRF on API routes; for cookie-based auth, expose a CSRF token endpoint and send `x-csrf-token` from the client.
 
 - __CORS & HTTPS__
   - CORS allowlist and ngrok regex in `server/src/app.ts`. HTTPS enforced in production with HSTS; good.
 
 - __Content Security Policy (CSP)__
-  - No explicit CSP. Add `helmet.contentSecurityPolicy` to mitigate XSS.
+  - CSP is enabled via `helmet` with permissive directives (`'unsafe-inline'` for scripts/styles). Tighten policy to remove `unsafe-inline` and use nonces/hashes.
 
 - __Secrets Management__
   - Hard-coded Postgres password in `docker-compose.yml` and real-looking creds in `README.md`. Remove and use Docker secrets or a secrets manager.
@@ -91,13 +90,13 @@ Overall: Good structure, disciplined middleware usage, and maintainable patterns
   - Consider extending redaction for more PII depending on policy.
 
 - __Dependency Risks__
-  - Modern stack (Express 5.1, Prisma 6.12, React 19, Vite 7). Add `npm audit` or similar in CI.
+  - Modern stack (Express 5.1, Prisma 6.12, React 19, Vite 7). CI already runs `npm audit --audit-level=high` for client and server.
 
 ### D. Documentation & Comments
 
 - `README.md` is comprehensive (setup, scripts, structure). Issues:
   - Placeholder typo in clone command (`gimini`).
-  - Backend production deployment not described. Add Dockerfile and deployment steps.
+  - Backend production deployment not described. Document deployment steps (image build/push, environment config, migrations).
 
 - `.env.example` is excellent and detailed (RS256 guidance, logging). Inline comments are meaningful in key modules.
 
@@ -140,18 +139,18 @@ With targeted improvements, this can reach 9/10.
 - __Security hardening__
   - Enforce RS256 in prod and support key rotation in `server/src/middleware/auth.ts`.
   - Move to httpOnly, secure cookie auth and add CSRF protection.
-  - Add CSP via `helmet.contentSecurityPolicy` in `server/src/app.ts`.
-  - Remove secrets from `docker-compose.yml` and `README.md`. Use Docker secrets / secrets manager.
+  - Tighten CSP in `server/src/app.ts` (remove `'unsafe-inline'`; adopt nonces/hashes).
+  - Ensure secrets are never committed or documented as literals; keep using Docker secrets or a secrets manager.
 
-- __DB consistency__
-  - Align `server/prisma/schema.prisma` to use env-driven `DATABASE_URL` (Postgres for prod), remove hard-coded SQLite URL.
+- __DB configuration__
+  - Ensure `DATABASE_URL` is set per-environment (Postgres for dev/staging/prod). Add clear guidance in README for running migrations consistently.
 
 - __Deployment clarity__
-  - Add backend `Dockerfile` and document production deployment (Render/DO/AWS). Optionally, add GitHub Actions to build/push images and deploy.
+  - Document backend production deployment (Render/DO/AWS/Kubernetes). Add a GitHub Actions job to build/push the server image and deploy.
 
 - __CI quality gates__
   - Add coverage thresholds (e.g., 80% lines/branches) and fail builds when below.
-  - Add `npm audit` (or `audit-ci`) in CI with severity threshold.
+  - Keep dependency audits; consider `audit-ci` with allowlist/thresholds if needed.
 
 - __Fix small issues__
   - Fix README clone command placeholder.
@@ -217,6 +216,6 @@ With targeted improvements, this can reach 9/10.
 - Client app routing and providers: `client/src/App.tsx`, `client/src/main.tsx`
 - Root lint/format: `.eslintrc.cjs`, `.prettierrc`
 - CI: `.github/workflows/ci.yml`, `.github/workflows/server-tests.yml`
-- Docker/monitoring: `docker-compose.yml`, `monitoring/`
+- Docker/monitoring: `server/Dockerfile`, `docker-compose.yml`, `monitoring/`
 - Vercel client deploy: `vercel.json`
 - Environment examples: `.env.example`

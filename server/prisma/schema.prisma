@@ -29,6 +29,7 @@ model User {
   blogPosts              BlogPost[] @relation("UserBlogPosts")
   passwordResetToken     String?    @unique
   passwordResetExpires   DateTime?
+  refreshTokens          RefreshToken[]
 
   @@index([passwordResetToken])
 }
@@ -222,4 +223,18 @@ enum PayoutStatus {
   PAID
   FAILED
   UNPAID
+}
+
+model RefreshToken {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash        String   @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  replacedByTokenId String?
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }

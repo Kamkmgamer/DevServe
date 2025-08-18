@@ -38,6 +38,12 @@ COPY --chown=nodeuser:nodejs --from=deps /app/node_modules ./node_modules
 COPY --chown=nodeuser:nodejs --from=builder /app/dist ./dist
 COPY --chown=nodeuser:nodejs package.json ./package.json
 COPY --chown=nodeuser:nodejs prisma ./prisma
+COPY --chown=nodeuser:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
+
+# Ensure entrypoint is executable
+USER root
+RUN chmod +x /app/docker-entrypoint.sh
+USER nodeuser
 
 # Prisma requires OpenSSL in alpine, ensure it's present
 # (already present in base, but keep for clarity)
@@ -55,4 +61,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # - JWT_PRIVATE_KEY (only for signing if the server signs tokens)
 # - CORS_ORIGINS, CLIENT_URL, SITE_URL
 
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -6,6 +6,7 @@ import * as crypto from "crypto"; // For generating secure tokens (CJS-compatibl
 import { forgotPasswordRequestSchema, resetPasswordSchema } from "../lib/validation"; // Import new schemas
 import { sendEmail } from "../lib/mailer";
 import { getEnvOrFile, normalizeMultiline } from "../lib/secrets";
+import logger from "../lib/logger";
 
 // NOTE: In a real app, you'd want to protect this route or handle admin creation manually.
 
@@ -33,6 +34,41 @@ function signJwt(payload: object): string {
   }
   const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as any, keyid: JWT_KEY_ID };
   return jwt.sign(payload as any, JWT_SECRET as any, options);
+}
+
+// Refresh token helpers
+const REFRESH_TTL_MS = Number(process.env.REFRESH_TTL_MS || 1000 * 60 * 60 * 24 * 30); // 30d default
+const REFRESH_COOKIE_NAME = 'refresh';
+function generateToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+function refreshCookieOptions() {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: (isProd ? 'strict' : 'lax') as 'strict' | 'lax',
+    path: '/api/auth/refresh',
+    maxAge: REFRESH_TTL_MS,
+  };
+}
+async function issueRefreshToken(userId: string) {
+  const token = generateToken();
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
+  const created = await prisma.refreshToken.create({
+    data: { userId, tokenHash, expiresAt },
+  });
+  return { token, db: created };
+}
+async function revokeRefreshToken(tokenHash: string) {
+  const existing = await prisma.refreshToken.findUnique({ where: { tokenHash } });
+  if (!existing) return;
+  if (existing.revokedAt) return;
+  await prisma.refreshToken.update({ where: { tokenHash }, data: { revokedAt: new Date() } });
 }
 
 export const registerAdmin = async (req: Request, res: Response) => {
@@ -66,15 +102,17 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
-    const token = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
+    const access = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
     const isProd = process.env.NODE_ENV === 'production';
+    const { token: refresh } = await issueRefreshToken(user.id);
     res
-      .cookie('session', token, {
+      .cookie('session', access, {
         httpOnly: true,
         secure: isProd,
         sameSite: isProd ? 'strict' : 'lax',
         path: '/',
       })
+      .cookie(REFRESH_COOKIE_NAME, refresh, refreshCookieOptions())
       .status(201)
       .json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (error) {
@@ -90,15 +128,17 @@ export const login = async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  const token = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
+  const access = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
   const isProd = process.env.NODE_ENV === 'production';
+  const { token: refresh } = await issueRefreshToken(user.id);
   res
-    .cookie('session', token, {
+    .cookie('session', access, {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? 'strict' : 'lax',
       path: '/',
     })
+    .cookie(REFRESH_COOKIE_NAME, refresh, refreshCookieOptions())
     .json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 };
 
@@ -159,7 +199,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
     );
     res.status(200).json({ message: "If an account with that email exists, a password reset link has been sent." });
   } catch (error) {
-    console.error("Error sending password reset email:", error);
+    logger.error("Error sending password reset email", { err: (error as any)?.message, email });
     res.status(500).json({ error: "Error sending password reset email." });
   }
 };
@@ -197,6 +237,14 @@ export const resetPassword = async (req: Request, res: Response) => {
 
 export const logout = async (_req: Request, res: Response) => {
   const isProd = process.env.NODE_ENV === 'production';
+  const refresh = (_req as any).cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
+  if (refresh) {
+    try {
+      await revokeRefreshToken(hashToken(refresh));
+    } catch (e) {
+      logger.warn('Failed to revoke refresh token on logout');
+    }
+  }
   res
     .clearCookie('session', {
       httpOnly: true,
@@ -204,6 +252,7 @@ export const logout = async (_req: Request, res: Response) => {
       sameSite: isProd ? 'strict' : 'lax',
       path: '/',
     })
+    .clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions())
     .status(200)
     .json({ message: 'Logged out' });
 };
@@ -213,4 +262,35 @@ export const csrfToken = (req: Request, res: Response) => {
   const token = (req as any).csrfToken?.();
   if (!token) return res.status(500).json({ error: 'CSRF not initialized' });
   res.json({ csrfToken: token });
+};
+
+export const refresh = async (req: Request, res: Response) => {
+  const refresh = (req as any).cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
+  if (!refresh) return res.status(401).json({ error: 'Missing refresh token' });
+  const tokenHash = hashToken(refresh);
+  const existing = await prisma.refreshToken.findUnique({ where: { tokenHash } });
+  if (!existing || existing.revokedAt || existing.expiresAt <= new Date()) {
+    return res.status(401).json({ error: 'Invalid refresh token' });
+  }
+  const user = await prisma.user.findUnique({ where: { id: existing.userId } });
+  if (!user) return res.status(401).json({ error: 'User not found' });
+
+  // Rotate token
+  const { token: newRefresh, db: created } = await issueRefreshToken(user.id);
+  await prisma.refreshToken.update({
+    where: { tokenHash },
+    data: { revokedAt: new Date(), replacedByTokenId: created.id },
+  });
+
+  const access = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
+  const isProd = process.env.NODE_ENV === 'production';
+  res
+    .cookie('session', access, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'strict' : 'lax' as 'strict' | 'lax',
+      path: '/',
+    })
+    .cookie(REFRESH_COOKIE_NAME, newRefresh, refreshCookieOptions())
+    .json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 };

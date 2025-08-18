@@ -42,7 +42,7 @@ router.get("/orders", async (_req, res, next) => {
   });
   try {
     res.json(
-      orders.map((o) => ({
+      orders.map((o: any) => ({
         id: o.id,
         email: o.user.email,
         total: o.totalAmount,

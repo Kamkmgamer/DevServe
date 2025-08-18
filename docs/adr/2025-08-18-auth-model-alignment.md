@@ -1,8 +1,8 @@
 # ADR: Authentication Model Alignment (Bearer vs httpOnly Cookies)
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2025-08-18
-- Owners: Core team
+- Owners: khalil
 
 ## Context
 
