@@ -12,6 +12,8 @@ import { metricsHandler } from "./lib/metrics";
 import { generalLimiter } from "./middleware/rateLimit";
 import { jsonParseErrorHandler } from "./middleware/jsonError";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
+import csurf from "csurf";
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +36,19 @@ app.use(helmet({
   referrerPolicy: { policy: 'no-referrer' },
   frameguard: { action: 'sameorigin' },
   crossOriginResourcePolicy: { policy: 'same-origin' },
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'","'unsafe-inline'"],
+      styleSrc: ["'self'","'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'self'"],
+    },
+  },
 }));
 // CORS: allow configurable origins via env, fallback to safe defaults
 const defaultOrigins = [
@@ -56,12 +71,29 @@ app.use(
     origin: corsOrigins,
     credentials: true,
     methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type','Authorization']
+    allowedHeaders: ['Content-Type','Authorization','x-csrf-token']
   })
 );
+app.use(cookieParser());
 app.use(express.json());
 // Handle malformed JSON bodies in a standardized way (400 BAD_REQUEST)
 app.use(jsonParseErrorHandler);
+
+// CSRF protection (cookie-based token). Ignore during tests.
+const isProd = process.env.NODE_ENV === 'production';
+if (process.env.NODE_ENV !== 'test') {
+  app.use(
+    csurf({
+      cookie: {
+        httpOnly: true,
+        sameSite: isProd ? 'strict' : 'lax',
+        secure: isProd,
+        // set explicit cookie name for clarity
+        key: '_csrf',
+      } as any,
+    })
+  );
+}
 
 // Enforce HTTPS in production and add HSTS header
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -108,6 +140,21 @@ app.get("/", (req, res) => {
 
 // Expose Prometheus metrics
 app.get('/metrics', metricsHandler);
+
+// CSRF error handler: respond with 403 and code
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err && err.code === 'EBADCSRFTOKEN') {
+    const requestId = (req as any).requestId as string | undefined;
+    return res.status(403).json({
+      error: {
+        code: 'CSRF_TOKEN_INVALID',
+        message: 'Invalid CSRF token',
+        requestId,
+      },
+    });
+  }
+  next(err);
+});
 
 // 404 handler
 app.use((req: Request, res: Response) => {

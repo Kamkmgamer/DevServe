@@ -67,8 +67,16 @@ export const register = async (req: Request, res: Response) => {
     });
 
     const token = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
-
-    res.status(201).json({ token });
+    const isProd = process.env.NODE_ENV === 'production';
+    res
+      .cookie('session', token, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'strict' : 'lax',
+        path: '/',
+      })
+      .status(201)
+      .json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (error) {
     res.status(400).json({ error: "User already exists" });
   }
@@ -83,8 +91,15 @@ export const login = async (req: Request, res: Response) => {
   }
 
   const token = signJwt({ id: user.id, email: user.email, name: user.name, role: user.role });
-
-  res.json({ token });
+  const isProd = process.env.NODE_ENV === 'production';
+  res
+    .cookie('session', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'strict' : 'lax',
+      path: '/',
+    })
+    .json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 };
 
 export const changePassword = async (req: Request, res: Response) => {
@@ -178,4 +193,24 @@ export const resetPassword = async (req: Request, res: Response) => {
   });
 
   res.status(200).json({ message: "Password has been reset successfully." });
+};
+
+export const logout = async (_req: Request, res: Response) => {
+  const isProd = process.env.NODE_ENV === 'production';
+  res
+    .clearCookie('session', {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'strict' : 'lax',
+      path: '/',
+    })
+    .status(200)
+    .json({ message: 'Logged out' });
+};
+
+export const csrfToken = (req: Request, res: Response) => {
+  // csurf middleware adds req.csrfToken
+  const token = (req as any).csrfToken?.();
+  if (!token) return res.status(500).json({ error: 'CSRF not initialized' });
+  res.json({ csrfToken: token });
 };

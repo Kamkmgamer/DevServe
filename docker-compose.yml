@@ -4,9 +4,11 @@ services:
     container_name: web_services_db
     restart: always
     environment:
-      - POSTGRES_USER=devserveuser
-      - POSTGRES_PASSWORD=9cf18f8c5f9bbd3ea6d645c8ffc917d2
-      - POSTGRES_DB=DevServeMainDB
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+    secrets:
+      - postgres_password
     ports:
       - "5432:5432"
     volumes:
@@ -53,3 +55,7 @@ services:
 volumes:
   postgres_data:
   grafana_data:
+
+secrets:
+  postgres_password:
+    file: ./monitoring/secrets/postgres_password

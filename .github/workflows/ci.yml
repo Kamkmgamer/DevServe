@@ -9,6 +9,17 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: devserve
+          POSTGRES_PASSWORD: devserve
+          POSTGRES_DB: devserve
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U devserve" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,30 +57,33 @@ jobs:
 
       - name: Dependency audit (server)
         working-directory: server
-        continue-on-error: true
         run: |
-          npm audit --omit=dev --audit-level=high || true
+          npm audit --omit=dev --audit-level=high
 
       - name: Dependency audit (client)
         working-directory: client
-        continue-on-error: true
         run: |
-          npm audit --omit=dev --audit-level=high || true
+          npm audit --omit=dev --audit-level=high
 
-      - name: Prisma validate & migrate (temp SQLite)
+      - name: Prisma format/generate
         working-directory: server
-        env:
-          DATABASE_URL: file:./ci.db
         run: |
           npx prisma format
           npx prisma generate
+
+      - name: Migrate database (Postgres service)
+        working-directory: server
+        env:
+          DATABASE_URL: postgresql://devserve:devserve@localhost:5432/devserve
+        run: |
           npx prisma migrate deploy --schema prisma/schema.prisma --skip-seed
 
       - name: Run server tests with coverage
         working-directory: server
         env:
           NODE_ENV: test
-        run: npm test -- --coverage
+          DATABASE_URL: postgresql://devserve:devserve@localhost:5432/devserve
+        run: npm run test:coverage
 
       - name: Build client
         working-directory: client

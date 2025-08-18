@@ -136,12 +136,15 @@ gimini
     PORT=8000
 
     # Database Connection (Docker-based)
-    DATABASE_URL="postgresql://devserveuser:9cf18f8c5f9bbd3ea6d645c8ffc917d2@localhost:5432/DevServeMainDB?schema=public"
+    # Use environment variables or Docker secrets for credentials.
+    # Example (local):
+    # DATABASE_URL="postgresql://<USER>:<PASSWORD>@localhost:5432/<DB_NAME>?schema=public"
+    DATABASE_URL=
 
     JWT_SECRET=YOUR_VERY_STRONG_JWT_SECRET_HERE  # Change this!
 
-    # Admin password for seeding
-    ADMIN_PASSWORD=YourSecurePasswordHere # Add a secure password here
+    # Admin password for seeding (do NOT commit real secrets)
+    ADMIN_PASSWORD=
 
     # Email Sending Configuration (Example with Mailtrap or similar)
     EMAIL_HOST=smtp.mailtrap.io
@@ -319,6 +322,28 @@ DevServe is designed for flexible deployment:
 *   **Frontend:** Can be deployed as static assets on platforms like [Vercel](https://vercel.com/), [Netlify](https://www.netlify.com/), or served directly by the backend.
 *   **Backend:** Deployable on cloud platforms such as [Render](https://render.com/), [DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform), or AWS-based solutions (e.g., EC2, Elastic Beanstalk).
 *   **Database:** Utilize managed PostgreSQL services like [Supabase](https://supabase.com/), [Aiven](https://aiven.io/), or [AWS RDS](https://aws.amazon.com/rds/postgresql/).
+
+### Backend (Docker)
+
+The backend includes a production-ready Dockerfile at `server/Dockerfile`.
+
+1. Build the image:
+   ```bash
+   docker build -t devserve-backend:latest ./server
+   ```
+2. Run the container (example with env file):
+   ```bash
+   docker run -p 8000:8000 --env-file ./server/.env \
+     -e NODE_ENV=production \
+     devserve-backend:latest
+   ```
+3. With Docker Compose Postgres:
+   - Use `docker-compose.yml` for Postgres. Provide `POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB` via environment or Docker secrets. A sample secret path is `./monitoring/secrets/postgres_password` referenced as `postgres_password`.
+   - Set `DATABASE_URL` in the backend environment to point to the running Postgres (e.g., `postgresql://user:pass@host:5432/db`).
+
+Security notes:
+* Do not hardcode secrets in Compose files or code. Prefer environment variables or Docker secrets.
+* In production, use RS256 JWT with key rotation (`JWT_PUBLIC_KEYS`).
 
 ## Contribution Guidelines
 
