@@ -27,16 +27,16 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-gradient-to-r from-blue-900 to-blue-500 text-white " +
+    "bg-gradient-to-r from-blue-900 to-blue-500 text-blue-100 " +
     "hover:from-blue-800 hover:to-blue-400 " +
     "shadow-md hover:shadow-lg " +
     "focus-visible:ring-2 focus-visible:ring-blue-500/60 " +
     "disabled:opacity-60 disabled:hover:shadow-none",
 
   secondary:
-    "bg-white/90 dark:bg-slate-900/90 text-slate-900 dark:text-white " +
+    "bg-blue-100/90 dark:bg-slate-900/90 text-slate-900 dark:text-blue-100 " +
     "border border-slate-200 dark:border-slate-700 " +
-    "hover:bg-white dark:hover:bg-slate-900 " +
+    "hover:bg-blue-100 dark:hover:bg-slate-900 " +
     "hover:border-blue-400/70 dark:hover:border-blue-400/60 " +
     "focus-visible:ring-2 focus-visible:ring-blue-500/60 " +
     "disabled:opacity-60",
@@ -48,15 +48,15 @@ const variantClasses: Record<Variant, string> = {
     "disabled:opacity-60",
 
   "cta-light":
-    "bg-white text-blue-600 " +
-    "hover:bg-slate-100 " +
+    "bg-blue-100 text-blue-600 " +
+    "hover:bg-blue-200 hover:text-blue-700 " +
     "border border-slate-200 " +
     "shadow-md hover:shadow-lg " +
     "focus-visible:ring-2 focus-visible:ring-blue-500/60 " +
     "disabled:opacity-60",
 
   "cta-ghost":
-    "bg-white text-blue-700 " + 
+    "bg-blue-100 text-blue-700 " + 
     "border border-blue-500 " +
     "hover:bg-blue-50 hover:text-blue-800 " +
     "dark:bg-slate-900 dark:text-blue-400 " +
