@@ -92,7 +92,7 @@ const Navbar = () => {
 
     const uniqueKey = link.href || `link-${link.label}`;
 
-    if ((link as any).isExternal) {
+    if (link.isExternal) {
       return (
         <a
           key={uniqueKey}
