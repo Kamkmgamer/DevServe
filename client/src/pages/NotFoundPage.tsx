@@ -387,8 +387,10 @@ function useSupernovaExplosion({ enabled = true, theme = 'dark', perfScale = 1 }
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
     }
+    // Copy canvasRef.current to a variable for the cleanup function
+    const canvasForCleanup = canvasRef.current;
     return () => {
-      const c = canvasRef.current;
+      const c = canvasForCleanup;
       const cctx = c?.getContext("2d") || null;
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);

@@ -11,7 +11,7 @@ const CartPage = () => {
   const { cart, loading, error, removeFromCart } = useCart();
   const navigate = useNavigate();
 
-  const items = cart?.items ?? [];
+  const items = useMemo(() => cart?.items ?? [], [cart]);
 
   const total = useMemo(
     () =>

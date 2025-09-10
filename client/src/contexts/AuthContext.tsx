@@ -23,6 +23,9 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  // Regex for strong password: at least one uppercase, one lowercase, one number, one special character, min 8 chars
+  const strongPasswordRegex = useMemo(() => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\\]{};':"\\|,.<>/?]).{8,}$/, []);
+
   // Initialize session from refresh endpoint (cookies)
   useEffect(() => {
     let isMounted = true;
