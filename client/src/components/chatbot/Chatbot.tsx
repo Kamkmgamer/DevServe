@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { X, Send, Bot, User, Loader, Edit2, Save, Settings, Palette, Type, Plus, Minus, RotateCw, Maximize2, Minimize2, Trash2 } from "lucide-react";
+
+import React, { useEffect, useRef, useState } from "react";
+import { X, Send, Bot, User, Loader, Edit2, Save } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -68,82 +69,7 @@ interface Position {
   y: number;
 }
 
-interface DragState {
-  isDragging: boolean;
-  isResizing: boolean;
-  startX: number;
-  startY: number;
-  startWidth: number;
-  startHeight: number;
-  resizeHandle: string;
-}
 
-// Storage keys
-const STORAGE_PROFILE = "chatbot_profile_khalil_v2";
-const STORAGE_MESSAGES = "chatbot_msgs_khalil_v2";
-const STORAGE_SETTINGS = "chatbot_settings_v2";
-const STORAGE_POSITION = "chatbot_position_v2";
-
-// Default configuration
-const DEFAULT_PROFILE: UserProfile = {
-  name: "خليل عبد المجيد خليل محمد",
-  title: "Web developer and designer",
-  bio: "I build web apps and landing pages with React, TypeScript, Tailwind CSS, Framer Motion. I also work with Odoo and Webflow.",
-  contact: "contact@khalil.excellence.sd",
-  lang: ["Arabic", "English"],
-};
-
-const DEFAULT_SETTINGS: ChatbotSettings = {
-  backgroundColor: "#ffffff",
-  fontFamily: "Inter",
-  fontSize: 14,
-  width: 420,
-  height: 650,
-  isMaximized: false,
-};
-
-const DEFAULT_POSITION: Position = {
-  x: window.innerWidth - 440,
-  y: window.innerHeight - 670,
-};
-
-const FONT_OPTIONS = [
-  { name: "Inter", value: "Inter, system-ui, sans-serif" },
-  { name: "Roboto", value: "Roboto, sans-serif" },
-  { name: "Open Sans", value: "'Open Sans', sans-serif" },
-  { name: "Lato", value: "Lato, sans-serif" },
-  { name: "Poppins", value: "Poppins, sans-serif" },
-  { name: "Montserrat", value: "Montserrat, sans-serif" },
-];
-
-const COLOR_PRESETS = [
-  "#ffffff", "#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1",
-  "#fef2f2", "#fef7ed", "#f0fdf4", "#ecfdf5", "#f0f9ff",
-  "#faf5ff", "#fdf4ff", "#fffbeb", "#18181b", "#0f172a",
-];
-
-const suggestedPrompts = [
-  "Introduce Khalil for the hero section on a portfolio site",
-  "Summarize Khalil's top skills and tools",
-  "Give 3 friendly ways visitors can contact Khalil",
-  "Tell a short story about Khalil's approach to design",
-];
-
-// Utility functions
-const nowISO = () => new Date().toISOString();
-const uid = () => Math.random().toString(36).slice(2, 9);
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-const debounce = (func: Function, wait: number) => {
-  let timeout: NodeJS.Timeout;
-  return function executedFunction(...args: any[]) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
 
 const loadProfile = (): UserProfile => {
   try {
@@ -259,7 +185,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
   };
 
   // send message to backend with simple retry and abort
-  const sendToApi = async (payload: any, retries = 2) => {
+  const sendToApi = async (payload: { role: string; content: string }[], retries = 2) => {
     if (abortRef.current) {
       abortRef.current.abort();
     }
@@ -283,7 +209,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
         return { ok: false, code: 500, message: "Chatbot not configured" };
 
       return { ok: false, code: res.status, message: res.data?.message || "Server error" };
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err.name === "AbortError") return { ok: false, code: 0, message: "Request aborted" };
       if (retries > 0) {
         await new Promise((r) => setTimeout(r, 300));
@@ -362,7 +288,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
   // profile editor state
   const [tempProfile, setTempProfile] = useState<UserProfile>(profile);
 
-  useEffect(() => setTempProfile(profile), [editing]);
+  useEffect(() => setTempProfile(profile), [editing, profile]);
   const saveEdits = () => {
     setProfile(tempProfile);
     setEditing(false);
@@ -436,8 +362,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                 <div className="text-sm whitespace-pre-wrap">
                   <ReactMarkdown
                     components={{
-                      code(rawProps: any) {
-                        const { inline, className, children } = rawProps || {};
+                      code({ inline, className, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
                         const match = /language-(\w+)/.exec(className || "");
                         const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
                         if (!inline) {
@@ -453,6 +378,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                                 padding: "12px 14px",
                                 fontSize: "0.85rem",
                               }}
+                              {...props}
                             >
                               {String(children).replace(/\n$/, "")}
                             </SyntaxHighlighter>
@@ -461,6 +387,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                         return (
                           <code
                             className={`px-1 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700/70 ${className || ""}`}
+                            {...props}
                           >
                             {children}
                           </code>
