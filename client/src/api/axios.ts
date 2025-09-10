@@ -20,7 +20,7 @@ function showToastOnce(key: string, message: string) {
   }
 }
 
-function triggerLogoutAndRedirect(_reason: 'INVALID_TOKEN' | 'UNAUTHORIZED') {
+function triggerLogoutAndRedirect() {
   try {
     // No token in localStorage anymore (cookie-based auth). Intentionally left blank.
   } catch {
@@ -91,14 +91,14 @@ api.interceptors.response.use(
         case 400:
           if (data.code === "INVALID_TOKEN") {
             showToastOnce('invalid_token', `Session expired or invalid token. Please log in again.`);
-            triggerLogoutAndRedirect('INVALID_TOKEN');
+            triggerLogoutAndRedirect();
           } else {
             showToastOnce('bad_request', `Bad Request: ${errorMessage}`);
           }
           break;
         case 401:
           showToastOnce('unauthorized', `Unauthorized: ${errorMessage}`);
-          triggerLogoutAndRedirect('UNAUTHORIZED');
+          triggerLogoutAndRedirect();
           break;
         case 403:
           showToastOnce('forbidden', `Forbidden: ${errorMessage}`);
