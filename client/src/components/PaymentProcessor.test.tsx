@@ -8,7 +8,7 @@ import { Toaster } from 'react-hot-toast';
 // Mock the @paypal/react-paypal-js library
 interface PayPalButtonsProps {
   createOrder: (data: unknown, actions: unknown) => Promise<string>;
-  onApprove: (data: { orderID: string }, actions: { order: { authorize: () => Promise<any> } }) => Promise<void>;
+  onApprove: (data: { orderID: string }, actions: { order: { authorize: () => Promise<{ purchase_units: { payments: { authorizations: { id: string }[] }[] }[] }> } }) => Promise<void>;
   onError: (err: Error) => void;
 }
 
@@ -19,7 +19,7 @@ jest.mock('@paypal/react-paypal-js', () => ({
       const create = jest.fn<() => Promise<string>>().mockResolvedValue('order-id');
       await createOrder({}, { order: { create } });
 
-      const authorize = jest.fn<() => Promise<any>>().mockResolvedValue({
+      const authorize = jest.fn<() => Promise<{ purchase_units: { payments: { authorizations: { id: string }[] }[] }[] }>>().mockResolvedValue({
         purchase_units: [
           { payments: { authorizations: [{ id: 'auth-id' }] } }
         ],
@@ -45,7 +45,7 @@ jest.mock('@paypal/react-paypal-js', () => ({
 
 // Mock the api module
 jest.mock('../api/axios', () => {
-  const post = jest.fn(async (url: string, body?: unknown) => ({}));
+  const post = jest.fn(async (_url: string, _body?: unknown) => ({}));
   return {
     __esModule: true,
     default: { post },
