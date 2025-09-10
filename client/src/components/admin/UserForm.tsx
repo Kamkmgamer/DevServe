@@ -57,8 +57,9 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSave }) => {
       }
       onSave(); // Refresh user list
       onClose(); // Close the form
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred.');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      setError(axiosError.response?.data?.message || 'An error occurred.');
       console.error(err);
     } finally {
       setLoading(false);
