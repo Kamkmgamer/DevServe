@@ -6,7 +6,7 @@ import React, {
   useId,
 } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Settings2, X } from 'lucide-react';
+import { Settings2, X } from 'lucide-react';
 import { TOKENS, useReducedMotionPref, useIsTouch } from '../../utils/tokens';
 import { cn } from '../../utils/cn';
 
@@ -47,7 +47,7 @@ const defaultSettings: Settings = {
   borderGlow: true,
 };
 
-export const HeroPreview: React.FC<{ url?: string; title?: string }> = ({ url, title }) => {
+export const HeroPreview: React.FC<{ title?: string }> = ({ title }) => {
   const reduce = useReducedMotionPref();
   const isTouch = useIsTouch();
 
@@ -89,10 +89,16 @@ export const HeroPreview: React.FC<{ url?: string; title?: string }> = ({ url, t
   const [needsPermission, setNeedsPermission] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
+  interface DeviceOrientationEventWithPermission extends DeviceOrientationEvent {
+  requestPermission?: () => Promise<'granted' | 'denied'>;
+}
+
+// ...
+
   useEffect(() => {
     if (!isTouch) return;
-    const anyDO = (DeviceOrientationEvent as any);
-    if (anyDO && typeof anyDO.requestPermission === 'function') {
+    const anyDO = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
+    if (typeof anyDO.requestPermission === 'function') {
       setNeedsPermission(true);
       setPermissionGranted(false);
     } else {
@@ -103,8 +109,8 @@ export const HeroPreview: React.FC<{ url?: string; title?: string }> = ({ url, t
 
   const requestMotionPermission = useCallback(async () => {
     try {
-      const anyDO = (DeviceOrientationEvent as any);
-      if (anyDO && typeof anyDO.requestPermission === 'function') {
+      const anyDO = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
+      if (typeof anyDO.requestPermission === 'function') {
         const resp = await anyDO.requestPermission();
         setPermissionGranted(resp === 'granted');
       } else {
@@ -150,7 +156,6 @@ export const HeroPreview: React.FC<{ url?: string; title?: string }> = ({ url, t
     } as CSSStyleDeclaration);
     layer.appendChild(el);
     // force reflow
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     el.offsetHeight;
     el.style.transform = 'scale(2.2)';
     el.style.opacity = '0';
@@ -207,7 +212,7 @@ useEffect(() => {
     const clamp = (v: number, m = 30) => Math.max(Math.min(v, m), -m);
 
     const onOrientation = (ev: DeviceOrientationEvent) => {
-      const now = (ev as any).timeStamp || Date.now();
+      const now = (ev as unknown as { timeStamp: number }).timeStamp || Date.now();
       if (now === last) return;
       last = now;
 
