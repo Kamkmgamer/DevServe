@@ -7,7 +7,12 @@ export const QueryClientProvider = ({ children }: { children: React.ReactNode; c
 // Create a mock for the mutate function that can be controlled by tests
 export const mockMutate = jest.fn();
 
-export const useMutation = jest.fn((options?: any) => ({
+interface MockMutationOptions {
+  onSuccess?: (result: unknown) => void;
+  onError?: (error: unknown) => void;
+}
+
+export const useMutation = jest.fn((options?: MockMutationOptions) => ({
   mutate: async (variables: unknown) => {
     try {
       // Simulate an asynchronous operation
