@@ -19,5 +19,5 @@ export function getEnvOrFile(varName: string, fileVarName?: string): string | un
 
 export function normalizeMultiline(value?: string): string | undefined {
   if (!value) return value;
-  return value.includes('\\n') ? value.replace(/\\n/g, '\n') : value;
+  return value.includes('\n') ? value.replace(/\n/g, '\n') : value;
 }

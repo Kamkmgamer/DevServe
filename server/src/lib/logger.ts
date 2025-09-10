@@ -72,7 +72,7 @@ const sanitizeFormat = winston.format((info) => {
   if (typeof info.message === 'string') {
     let msg = info.message;
     for (const k of SENSITIVE_KEYS) {
-      const r = new RegExp(`(\"${k}\"\\s*:\\s*\")[^\"]+(\"\")?`, 'gi');
+      const r = new RegExp(`("${k}"\\s*:\\s*")[^"]+(")?`, 'gi');
       msg = msg.replace(r, `$1***$2`);
     }
     // Mask bare tokens (base64/jwt-ish) in messages
