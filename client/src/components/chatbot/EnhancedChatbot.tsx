@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+
 import { 
-  X, Send, Bot, User, Loader, Edit2, Save, Settings, Palette, Type, 
-  Plus, Minus, RotateCw, Maximize2, Minimize2, Trash2, Move3D, 
-  Square, Circle, MessageSquare 
+  X, Send, Bot, User, Loader, Edit2, Save, Settings, 
+  Plus, Minus, RotateCw, Maximize2, Minimize2, Trash2, Circle 
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -151,17 +151,7 @@ const nowISO = () => new Date().toISOString();
 const uid = () => Math.random().toString(36).slice(2, 9);
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const debounce = (func: Function, wait: number) => {
-  let timeout: NodeJS.Timeout;
-  return function executedFunction(...args: unknown[]) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
+
 
 // Storage helpers
 const loadProfile = (): UserProfile => {
@@ -417,7 +407,6 @@ const EnhancedChatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
         : '#6b7280'; // Dark muted for light mode
     
     return { 
-      isDarkBackground, 
       isGradient, 
       themeAwareTextColor, 
       themeAwareMutedColor 
@@ -827,14 +816,7 @@ const EnhancedChatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
     border: `1px solid ${theme.border}`,
   };
 
-  // Messages container styling
-  const messagesContainerStyles = {
-    ...(isGradient 
-      ? { backgroundImage: settings.backgroundColor, backgroundColor: 'transparent' }
-      : { backgroundColor: settings.backgroundColor, backgroundImage: 'none' }
-    ),
-    maxHeight: `${settings.height - 280}px`,
-  };
+  
 
   return (
     <>
@@ -1348,7 +1330,7 @@ const EnhancedChatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                     <ReactMarkdown 
                       components={{
                         p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
-                        code(rawProps: any) {
+                        code({ inline, className, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
                           const { inline, className, children } = rawProps || {};
                           const match = /language-(\w+)/.exec(className || "");
                           if (!inline) {
