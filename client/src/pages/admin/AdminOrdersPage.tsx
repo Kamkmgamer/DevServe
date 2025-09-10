@@ -14,8 +14,6 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
-  Pencil,
-  Trash2,
 } from "lucide-react";
 
 type Order = {
@@ -56,8 +54,6 @@ const AdminOrdersPage: React.FC = () => {
   const [page, setPage] = useState(1);
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  const nav = useNavigate();
 
   const [isMobile, setIsMobile] = useState(false);
 

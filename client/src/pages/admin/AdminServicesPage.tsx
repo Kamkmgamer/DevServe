@@ -14,8 +14,6 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
-  Pencil,
-  Trash2,
 } from "lucide-react";
 
 type Service = {

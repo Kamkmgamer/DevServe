@@ -4,7 +4,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Container from "../../components/layout/Container";
 import Button from "../../components/ui/Button";
-import TagButton from "../../components/ui/TagButton";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import {
@@ -14,8 +13,6 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
-  Pencil,
-  Trash2,
 } from "lucide-react";
 import { User } from "../../types";
 import UserForm from "../../components/admin/UserForm";

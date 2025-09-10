@@ -4,7 +4,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Container from "../../components/layout/Container";
 import Button from "../../components/ui/Button";
-import TagButton from "../../components/ui/TagButton";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import {
@@ -14,8 +13,6 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
-  Pencil,
-  Trash2,
 } from "lucide-react";
 
 type BlogPost = {
@@ -35,7 +32,6 @@ const AdminBlogPage: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("All");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
 
   const [query, setQuery] = useState("");

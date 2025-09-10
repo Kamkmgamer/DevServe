@@ -131,31 +131,7 @@ const FXControlsHub = memo(function FXControlsHub({
   );
 });
 
-function useSystemTheme() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const applyTheme = (isDark: boolean) => {
-      const newTheme = isDark ? "dark" : "light";
-      setTheme(newTheme);
-      if (newTheme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    };
-
-    applyTheme(mediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => applyTheme(e.matches);
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
-
-  return theme;
-}
 
 
 // Performance controller: tracks visibility and approximated FPS to scale/disable animations
@@ -565,8 +541,6 @@ const NotFoundPage = () => {
     c.style.contain = "paint style size";
   }, [canvasRef]);
 
-  const { containerRef: stageCosmicCursorContainer } = { containerRef: stageRef }; // alias to keep TS happy in JSX below
-
   const stars = useMemo(() => Array.from({ length: Math.max(80, Math.floor(200 * deviceScale)) }, () => ({
     x: Math.random() * 100,
     y: Math.random() * 100,
@@ -597,18 +571,9 @@ const NotFoundPage = () => {
   // Lucide icon ring (replaces emoji ring)
   const iconRing = [Rocket, Stars, Atom, Zap, Flame, Sparkles, ShieldAlert, PartyPopper];
 
-  // Memoized node lists to avoid heavy re-creation on each render
-  const starNodes = useMemo(() => (
-    stars.map((s, i) => (
-      <span key={i} className="gpu absolute rounded-full bg-slate-700/80 shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:bg-slate-300/80 dark:shadow-[0_0_12px_rgba(255,255,255,0.8)]" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: s.o, animation: `twinkle ${s.d}s ease-in-out infinite`, animationDelay: `${(i % 10) * 0.2}s`, transform: `translateZ(${s.parallax * -200}px)`, animationPlayState: shouldAnimate ? 'running' : 'paused' }} />
-    ))
-  ), [stars, shouldAnimate]);
+  
 
-  const shooterNodes = useMemo(() => (
-    shooters.map((s, i) => (
-      <span key={s.key} className="absolute h-0.5 w-48 -translate-x-full bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-0 dark:via-purple-300" style={{ top: `${s.top}%`, left: "-10%", filter: "drop-shadow(0 0 10px rgba(168,85,247,0.7)) drop-shadow(0 0 24px rgba(168,85,247,0.6))", animation: `shoot ${s.dur}s ease-in ${s.delay + i * 0.8}s infinite`, animationPlayState: shouldAnimate ? 'running' : 'paused' }} />
-    ))
-  ), [shooters, shouldAnimate]);
+  
 
   const particleNodes = useMemo(() => (
     particles.map((p, i) => (
@@ -725,12 +690,6 @@ const NotFoundPage = () => {
   
   // --- Keyboard Control Center ---
   const [vortex, setVortex] = useState(false);
-  const [showHelp, setShowHelp] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowHelp(false), 8000);
-    return () => clearTimeout(timer);
-  }, []);
 
   const toggleFeature = useCallback((featureName: keyof typeof features) => {
     setFeatures(current => ({ ...current, [featureName]: !current[featureName] }));
@@ -751,8 +710,6 @@ const NotFoundPage = () => {
       if (featureKeyMap[key]) {
         e.preventDefault();
         toggleFeature(featureKeyMap[key]);
-      } else if (key === "k") {
-        setShowHelp(s => !s);
       } else if (key === "h") {
         navigate("/");
       } else if (key === "b" && features.blackHole) {

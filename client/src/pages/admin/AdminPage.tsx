@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Container from "../../components/layout/Container";
 import api from "../../api/axios";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Loader2,
   RefreshCw,
   Users,
   ShoppingCart,

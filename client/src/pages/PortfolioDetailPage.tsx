@@ -2,7 +2,6 @@ import { useParams, Link } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import api from "../api/axios";
 import Container from "../components/layout/Container";
-import Button from "../components/ui/Button";
 import { ArrowLeft } from "lucide-react";
 import toast from 'react-hot-toast';
 

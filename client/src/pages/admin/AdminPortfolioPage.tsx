@@ -13,8 +13,6 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
-  Pencil,
-  Trash2,
 } from "lucide-react";
 
 type PortfolioItem = {
@@ -33,7 +31,6 @@ const AdminPortfolioPage: React.FC = () => {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("All");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
 
   const [query, setQuery] = useState("");

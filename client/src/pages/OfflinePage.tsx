@@ -596,18 +596,18 @@ const OfflinePage: React.FC = () => {
     function drawTitle(
       ctx: CanvasRenderingContext2D,
       w: number,
-      h: number,
+      _h: number,
       pal: ReturnType<typeof palette>
     ) {
       ctx.fillStyle = pal.text;
       ctx.font = "600 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText("Avoid the falling blocks!", w / 2, h / 2 - 30);
+      ctx.fillText("Avoid the falling blocks!", w / 2, _h / 2 - 30);
     }
 
     function drawHelp(
       ctx: CanvasRenderingContext2D,
       w: number,
-      h: number,
+      _h: number,
       pal: ReturnType<typeof palette>
     ) {
       ctx.fillStyle = pal.text;
@@ -615,10 +615,10 @@ const OfflinePage: React.FC = () => {
       ctx.fillText(
         "Left/Right or A/D to move • Space/Enter to start • Tap to play",
         w / 2,
-        h / 2 + 6
+        _h / 2 + 6
       );
       ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText("P or Esc to pause", w / 2, h / 2 + 26);
+      ctx.fillText("P or Esc to pause", w / 2, _h / 2 + 26);
     }
 
     function drawCenterText(

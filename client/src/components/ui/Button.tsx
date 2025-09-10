@@ -96,7 +96,7 @@ const Button: React.FC<ButtonProps> = (props) => {
   const classes = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`;
 
   if (isLinkProps(props)) {
-    const { as: _as, ...linkProps } = rest as ButtonAsLink;
+    const { as, ...linkProps } = rest as ButtonAsLink;
     const to = (linkProps as any).to;
     // aria-disabled for links when disabled, and prevent click
     if (disabled) {
