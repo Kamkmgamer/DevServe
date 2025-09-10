@@ -2,13 +2,13 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
 // Mock the api instance used by services
-const getMock = jest.fn() as any;
-const postMock = jest.fn() as any;
+const getMock = jest.fn<() => Promise<{ data: any }>>();
+const postMock = jest.fn<() => Promise<{ data: any }>>();
 jest.mock('./axios', () => ({
   __esModule: true,
   default: {
-    get: (...args: any[]) => getMock(...args),
-    post: (...args: any[]) => postMock(...args),
+    get: (...args: unknown[]) => getMock(...args),
+    post: (...args: unknown[]) => postMock(...args),
   },
 }));
 
