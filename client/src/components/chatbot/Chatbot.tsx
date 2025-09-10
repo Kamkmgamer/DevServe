@@ -54,20 +54,7 @@ interface UserProfile {
   lang?: string[];
 }
 
-// New interfaces for enhanced features
-interface ChatbotSettings {
-  backgroundColor: string;
-  fontFamily: string;
-  fontSize: number;
-  width: number;
-  height: number;
-  isMaximized: boolean;
-}
 
-interface Position {
-  x: number;
-  y: number;
-}
 
 
 
