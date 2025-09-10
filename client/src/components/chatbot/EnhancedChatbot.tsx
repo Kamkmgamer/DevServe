@@ -370,7 +370,7 @@ const EnhancedChatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
   }, []);
 
   // Enhanced color detection for gradients and solid colors with theme awareness
-  const { isDarkBackground, isGradient, themeAwareTextColor, themeAwareMutedColor } = useMemo(() => {
+  const { isGradient, themeAwareTextColor, themeAwareMutedColor } = useMemo(() => {
     const bg = settings.backgroundColor;
     
     // Check if it's a gradient
@@ -1330,7 +1330,7 @@ const EnhancedChatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                     <ReactMarkdown 
                       components={{
                         p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
-                        code({ inline, className, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
+                        code({ inline, className, children }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
                           const { inline, className, children } = rawProps || {};
                           const match = /language-(\w+)/.exec(className || "");
                           if (!inline) {
