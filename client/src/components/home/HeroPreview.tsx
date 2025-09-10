@@ -89,11 +89,7 @@ export const HeroPreview: React.FC<{ title?: string }> = ({ title }) => {
   const [needsPermission, setNeedsPermission] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
-  interface DeviceOrientationEventWithPermission extends DeviceOrientationEvent {
-  requestPermission?: () => Promise<'granted' | 'denied'>;
-}
-
-// ...
+  
 
   useEffect(() => {
     if (!isTouch) return;
