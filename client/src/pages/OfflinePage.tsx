@@ -346,7 +346,9 @@ const OfflinePage: React.FC = () => {
       if (!canvas) return;
       try {
         canvas.releasePointerCapture(e.pointerId);
-      } catch {}
+      } catch {
+        // Intentionally ignore errors
+      }
       pointerActive = false;
     }
 

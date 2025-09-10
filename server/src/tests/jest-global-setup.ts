@@ -21,10 +21,14 @@ export default async function globalSetup() {
     const rootDbFile = path.join(serverRoot, 'test.db');
     try {
       if (fs.existsSync(dbFile)) fs.rmSync(dbFile);
-    } catch {}
+    } catch {
+      // Intentionally ignore errors
+    }
     try {
       if (fs.existsSync(rootDbFile)) fs.rmSync(rootDbFile);
-    } catch {}
+    } catch {
+      // Intentionally ignore errors
+    }
   }
 
   // Run migrations against the test DB

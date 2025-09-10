@@ -117,7 +117,9 @@ const ServiceDetailPage = () => {
           text: service?.description?.slice(0, 100),
           url,
         });
-      } catch {}
+      } catch {
+        // Intentionally ignore errors
+      }
     } else {
       try {
         await navigator.clipboard.writeText(url);

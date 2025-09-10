@@ -723,6 +723,7 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         try {
           controllerRef.current.abort();
         } catch {
+          // Intentionally ignore abort errors
         }
       }
       const controller = new AbortController();
@@ -775,6 +776,7 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         }
         return { content, fetchedAt: Date.now() };
       } finally {
+        // Cleanup code can be added here if needed
       }
     },
     [readCache, writeCache]
