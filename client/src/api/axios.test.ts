@@ -23,8 +23,22 @@ jest.mock('axios', () => ({
 }));
 
 // Import module under test AFTER mocks so interceptors are registered on our mock
-import api from './axios';
+
+
+// Import module under test AFTER mocks so interceptors are registered on our mock
 import { toast } from 'react-hot-toast';
+
+interface MockAxiosError {
+  response?: {
+    status: number;
+    data: {
+      code?: string;
+      message: string;
+    };
+  };
+  request?: object;
+  message?: string;
+}
 
 const getRegisteredHandlers = () => {
   const reqHandler = (mockCreatedApi.interceptors.request.use as jest.Mock).mock.calls[0][0];
@@ -58,7 +72,7 @@ describe('api/axios configuration', () => {
     (mockCreatedApi.get as jest.Mock).mockResolvedValueOnce({ data: { csrfToken: 'abc123' } });
     const { reqHandler } = getRegisteredHandlers();
 
-    const cfg: any = { method: 'POST', headers: {} };
+    const cfg: { method: string; headers: { [key: string]: string } } = { method: 'POST', headers: {} };
     const out = await reqHandler(cfg);
 
     expect(out.headers['x-csrf-token']).toBe('abc123');
@@ -66,7 +80,7 @@ describe('api/axios configuration', () => {
 
   it('does not add CSRF header on GET', async () => {
     const { reqHandler } = getRegisteredHandlers();
-    const cfg: any = { method: 'GET', headers: {} };
+    const cfg: { method: string; headers: { [key: string]: string } } = { method: 'GET', headers: {} };
     const out = await reqHandler(cfg);
     expect(out.headers['x-csrf-token']).toBeUndefined();
   });
@@ -76,8 +90,8 @@ describe('api/axios configuration', () => {
     const { resErrorHandler } = getRegisteredHandlers();
     const spyDispatch = jest.spyOn(window, 'dispatchEvent');
 
-    const error = { response: { status: 400, data: { code: 'INVALID_TOKEN', message: 'Bad' } } };
-    await expect(resErrorHandler(error as any)).rejects.toBe(error);
+    const error: MockAxiosError = { response: { status: 400, data: { code: 'INVALID_TOKEN', message: 'Bad' } } };
+    await expect(resErrorHandler(error)).rejects.toBe(error);
 
     expect((toast.error as jest.Mock)).toHaveBeenCalled();
     expect(spyDispatch).toHaveBeenCalledWith(expect.any(Event));
@@ -88,8 +102,8 @@ describe('api/axios configuration', () => {
     const assign = mockLocation();
     const { resErrorHandler } = getRegisteredHandlers();
 
-    const error = { response: { status: 401, data: { message: 'Nope' } } };
-    await expect(resErrorHandler(error as any)).rejects.toBe(error);
+    const error: MockAxiosError = { response: { status: 401, data: { message: 'Nope' } } };
+    await expect(resErrorHandler(error)).rejects.toBe(error);
 
     expect((toast.error as jest.Mock)).toHaveBeenCalled();
     expect(assign).toHaveBeenCalledWith('/login');
@@ -99,8 +113,8 @@ describe('api/axios configuration', () => {
     const { resErrorHandler } = getRegisteredHandlers();
 
     for (const status of [403, 404, 500, 418]) {
-      const error = { response: { status, data: { message: 'x' } } };
-      await expect(resErrorHandler(error as any)).rejects.toBe(error);
+      const error: MockAxiosError = { response: { status, data: { message: 'x' } } };
+      await expect(resErrorHandler(error)).rejects.toBe(error);
     }
     expect((toast.error as jest.Mock)).toHaveBeenCalled();
   });
@@ -108,11 +122,11 @@ describe('api/axios configuration', () => {
   it('handles network/no-response and request errors', async () => {
     const { resErrorHandler } = getRegisteredHandlers();
 
-    const noResp = { request: {} };
-    await expect(resErrorHandler(noResp as any)).rejects.toBe(noResp);
+    const noResp: MockAxiosError = { request: {} };
+    await expect(resErrorHandler(noResp)).rejects.toBe(noResp);
 
-    const reqErr = { message: 'boom' };
-    await expect(resErrorHandler(reqErr as any)).rejects.toBe(reqErr);
+    const reqErr: MockAxiosError = { message: 'boom' };
+    await expect(resErrorHandler(reqErr)).rejects.toBe(reqErr);
 
     expect((toast.error as jest.Mock)).toHaveBeenCalled();
   });
