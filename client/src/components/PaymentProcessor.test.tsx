@@ -6,21 +6,25 @@ import { PaymentProcessor } from './PaymentProcessor';
 import { Toaster } from 'react-hot-toast';
 
 // Mock the @paypal/react-paypal-js library
+interface PayPalButtonsProps {
+  createOrder: (data: unknown, actions: unknown) => Promise<string>;
+  onApprove: (data: { orderID: string }, actions: { order: { authorize: () => Promise<any> } }) => Promise<void>;
+  onError: (err: Error) => void;
+}
+
 jest.mock('@paypal/react-paypal-js', () => ({
-  PayPalButtons: jest.fn(({ createOrder, onApprove, onError }: any) => {
+  PayPalButtons: jest.fn(({ createOrder, onApprove, onError }: PayPalButtonsProps) => {
     // Simulate button click and payment flow
     const handleApprove = async () => {
       const create = jest.fn<() => Promise<string>>().mockResolvedValue('order-id');
-      const createOrderFn = createOrder as unknown as (x: any, y: any) => Promise<any>;
-      await createOrderFn({}, { order: { create } });
+      await createOrder({}, { order: { create } });
 
       const authorize = jest.fn<() => Promise<any>>().mockResolvedValue({
         purchase_units: [
           { payments: { authorizations: [{ id: 'auth-id' }] } }
         ],
       });
-      const onApproveFn = onApprove as unknown as (data: any, actions: any) => Promise<any>;
-      await onApproveFn(
+      await onApprove(
         { orderID: 'test-order-id' },
         { order: { authorize } }
       );
@@ -41,7 +45,7 @@ jest.mock('@paypal/react-paypal-js', () => ({
 
 // Mock the api module
 jest.mock('../api/axios', () => {
-  const post = jest.fn(async (_url: string, _body?: unknown) => ({}));
+  const post = jest.fn(async (url: string, body?: unknown) => ({}));
   return {
     __esModule: true,
     default: { post },
@@ -57,7 +61,7 @@ describe('PaymentProcessor', () => {
       </div>
     );
 
-    (expect(screen.getByText('Complete Your Payment')) as any).toBeInTheDocument();
+    expect(screen.getByText('Complete Your Payment')).toBeInTheDocument();
 
     // Simulate a click on the approve button
     await act(async () => {
@@ -65,7 +69,7 @@ describe('PaymentProcessor', () => {
     });
 
     await waitFor(() => {
-      (expect(screen.getByText("Order placed! We'll begin our technical review shortly.")) as any).toBeInTheDocument();
+      expect(screen.getByText("Order placed! We'll begin our technical review shortly.")).toBeInTheDocument();
     });
   });
 
@@ -81,7 +85,7 @@ describe('PaymentProcessor', () => {
     screen.getByText('Trigger Error').click();
 
     await waitFor(() => {
-      (expect(screen.getByText('Payment failed: Payment failed')) as any).toBeInTheDocument();
+      expect(screen.getByText('Payment failed: Payment failed')).toBeInTheDocument();
     });
   });
 });
