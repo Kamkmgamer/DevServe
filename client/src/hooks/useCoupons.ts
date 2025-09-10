@@ -16,8 +16,8 @@ export const useCoupons = () => {
       const res = await api.get("/coupons");
       // New paginated shape { data, total, page, pageSize }
       setCoupons(res.data.data ?? res.data);
-    } catch (err: any) {
-      const msg = err.response?.data?.message ?? "Failed to fetch coupons";
+    } catch (err: unknown) {
+      const msg = (err as any).response?.data?.message ?? "Failed to fetch coupons";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -30,8 +30,8 @@ export const useCoupons = () => {
       await api.delete(`/coupons/${id}`);
       toast.success("Coupon deleted successfully");
       fetchCoupons();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message ?? "Failed to delete coupon");
+    } catch (err: unknown) {
+      toast.error((err as any).response?.data?.message ?? "Failed to delete coupon");
     }
   };
 

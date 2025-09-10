@@ -70,24 +70,24 @@ export default function CheckoutPage() {
       setDiscount(discountAmount);
       setDiscountType(type);
       toast.success("Coupon applied successfully!");
-    } catch (couponErr: any) {
+    } catch (couponErr: unknown) {
       // If coupon application fails, try as a referral code
-      if (couponErr.response && couponErr.response.status === 404) {
+      if ((couponErr as any).response && (couponErr as any).response.status === 404) {
         try {
           await api.get(`/referral/validate/${code}`);
           // If referral code is valid, but no direct discount is applied
           setDiscount(0);
           setDiscountType(null);
           toast.success("Referral code validated. No direct discount applied.");
-        } catch (referralErr: any) {
+        } catch (referralErr: unknown) {
           setDiscount(0);
           setDiscountType(null);
-          toast.error(referralErr.response?.data?.message || "Invalid code.");
+          toast.error((referralErr as any).response?.data?.message || "Invalid code.");
         }
       } else {
         setDiscount(0);
         setDiscountType(null);
-        toast.error(couponErr.response?.data?.message || "Failed to apply coupon.");
+        toast.error((couponErr as any).response?.data?.message || "Failed to apply coupon.");
       }
     }
   }
@@ -113,9 +113,9 @@ export default function CheckoutPage() {
       setOrderId(order.id);
       setStep(2);
       toast.success("Order created! Proceed to payment.");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to create order:", err);
-      toast.error(err.message || "Failed to proceed with order. Please try again.");
+      toast.error((err as any).message || "Failed to proceed with order. Please try again.");
     }
   }
 
@@ -253,14 +253,14 @@ export default function CheckoutPage() {
                     } else {
                       toast.error("Could not get authorization from PayPal.");
                     }
-                  } catch (err: any) {
+                  } catch (err: unknown) {
                     console.error("Payment error:", err);
-                    toast.error("Payment authorization failed: " + (err.message || "Unknown error"));
+                    toast.error("Payment authorization failed: " + ((err as any).message || "Unknown error"));
                   }
                 }}
-                onError={(err: any) => {
+                onError={(err: unknown) => {
                   console.error("PayPal error:", err);
-                  toast.error("Payment failed: " + (err.message || "Unknown error"));
+                  toast.error("Payment failed: " + ((err as any).message || "Unknown error"));
                 }}
                 style={{ layout: "vertical" }}
               />

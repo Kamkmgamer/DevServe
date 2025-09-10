@@ -10,7 +10,7 @@ describe('Button link behaviors', () => {
   it('renders as Link when "to" provided', () => {
     render(
       <MemoryRouter>
-        <Button as={undefined as any} to="/home">Go Home</Button>
+        <Button as={undefined} to="/home">Go Home</Button>
       </MemoryRouter>
     );
     const link = screen.getByRole('link', { name: /go home/i });
@@ -20,7 +20,7 @@ describe('Button link behaviors', () => {
   it('renders a span with aria-disabled when disabled link', () => {
     render(
       <MemoryRouter>
-        <Button as={undefined as any} to="/home" disabled>
+        <Button as={undefined} to="/home" disabled>
           Disabled Link
         </Button>
       </MemoryRouter>

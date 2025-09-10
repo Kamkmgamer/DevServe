@@ -469,7 +469,7 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
 
   // Pre-split into Unicode code points and strip problematic control chars (e.g., \u0000)
   const codePoints = useMemo(() => {
-    const sanitized = (text || '').replace(/\u0000/g, '');
+        const sanitized = (text || '').replace(/\u0000/g, '');
     // Array.from splits by Unicode code points (handles emojis/combining marks)
     return Array.from(sanitized);
   }, [text]);
@@ -668,7 +668,8 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         SESSION_KEY,
         JSON.stringify({ content, fetchedAt: Date.now() })
       );
-    } catch {
+    } catch (err: unknown) {
+      // Intentionally ignore errors
     }
   }, []);
 
@@ -683,7 +684,8 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         if (controllerRef.current) {
           try {
             controllerRef.current.abort();
-          } catch {
+          } catch (err: unknown) {
+            // Intentionally ignore abort errors
           }
         }
         const controller = new AbortController();
@@ -702,7 +704,7 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
           if (res.status === 200 && content) {
             return { content: String(content), fetchedAt: Date.now(), isFresh: true };
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           if (!signal.aborted) {
             console.warn("Fresh tip fetch failed, falling back to cached", err);
           }
@@ -755,7 +757,7 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
           }
 
           return String(content || DEFAULT_TIP);
-        } catch (err: any) {
+        } catch (err: unknown) {
           if (signal.aborted) throw err;
           if (attempt < attempts) {
             await new Promise((r) => setTimeout(r, delay));
@@ -835,7 +837,7 @@ export const SecretDailyTips: React.FC<Props> = ({
         setTip(res.content);
         setLastFetchedAt(res.fetchedAt);
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn("SecretDailyTips - fetch failed", err);
         setTip(DEFAULT_TIP);
         setError("Could not fetch tip. Offline or server error.");
@@ -876,9 +878,9 @@ export const SecretDailyTips: React.FC<Props> = ({
 
   const shareRaw = useCallback(async (text: string) => {
     if (!text) return false;
-    if ((navigator as any).share) {
+    if (navigator.share) {
       try {
-        await (navigator as any).share({ title: "Daily AI Tip", text });
+        await navigator.share({ title: "Daily AI Tip", text });
         return true;
       } catch {
         return false;
@@ -951,9 +953,9 @@ export const SecretDailyTips: React.FC<Props> = ({
     let startTime = 0;
     let longPressTimer: number | null = null;
 
-    const onTouchStart = (ev: TouchEvent) => {
-      if (!ev.touches || ev.touches.length === 0) return;
-      const t = ev.touches[0];
+    const onTouchStart = (e: TouchEvent) => {
+      if (!e.touches || e.touches.length === 0) return;
+      const t = e.touches[0];
       startX = t.clientX;
       startY = t.clientY;
       startTime = Date.now();
@@ -963,20 +965,20 @@ export const SecretDailyTips: React.FC<Props> = ({
       }, 650) as unknown as number;
     };
 
-    const onTouchMove = (ev: TouchEvent) => {
+    const onTouchMove = (_ev: TouchEvent) => {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;
       }
     };
 
-    const onTouchEnd = (ev: TouchEvent) => {
+    const onTouchEnd = (e: TouchEvent) => {
       if (loading) return;
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;
       }
-      const touch = ev.changedTouches && ev.changedTouches[0];
+      const touch = e.changedTouches && e.changedTouches[0];
       if (!touch) return;
       const dx = touch.clientX - startX;
       const dy = touch.clientY - startY;
