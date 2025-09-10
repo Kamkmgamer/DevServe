@@ -67,7 +67,7 @@ const AdminServicesPage: React.FC = () => {
     if (mq.addEventListener) {
       mq.addEventListener("change", handleChange);
     } else {
-      // @ts-ignore - legacy Safari
+      // @ts-expect-error - legacy Safari
       mq.addListener(handleChange);
     }
 
@@ -75,7 +75,7 @@ const AdminServicesPage: React.FC = () => {
       if (mq.removeEventListener) {
         mq.removeEventListener("change", handleChange);
       } else {
-        // @ts-ignore - legacy Safari
+        // @ts-expect-error - legacy Safari
         mq.removeListener(handleChange);
       }
     };
