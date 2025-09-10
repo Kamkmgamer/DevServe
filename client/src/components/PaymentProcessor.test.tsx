@@ -45,7 +45,7 @@ jest.mock('@paypal/react-paypal-js', () => ({
 
 // Mock the api module
 jest.mock('../api/axios', () => {
-  const post = jest.fn(async (_url: string, _body?: unknown) => ({}));
+  const post = jest.fn(async () => ({}));
   return {
     __esModule: true,
     default: { post },
