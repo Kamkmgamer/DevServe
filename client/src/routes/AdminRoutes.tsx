@@ -3,7 +3,6 @@ import React from "react";
 
 // Admin pages
 const AdminDashboard = React.lazy(() => import("../pages/admin/AdminDashboard"));
-const AdminPage = React.lazy(() => import("../pages/admin/AdminPage"));
 const UserManagementPage = React.lazy(() => import("../pages/admin/UserManagementPage"));
 const AdminServicesPage = React.lazy(() => import("../pages/admin/AdminServicesPage"));
 const ServiceFormPage = React.lazy(() => import("../pages/admin/ServiceFormPage"));
