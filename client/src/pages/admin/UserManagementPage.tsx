@@ -40,8 +40,6 @@ const UserManagementPage: React.FC = () => {
   const [showForm, setShowForm] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const nav = useNavigate();
-
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {

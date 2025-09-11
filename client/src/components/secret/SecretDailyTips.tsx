@@ -967,7 +967,7 @@ export const SecretDailyTips: React.FC<Props> = ({
       }, 650) as unknown as number;
     };
 
-    const onTouchMove = (_e: TouchEvent) => {
+    const onTouchMove = (_event: TouchEvent) => {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;

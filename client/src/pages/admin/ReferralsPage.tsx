@@ -50,8 +50,6 @@ const ReferralsPage: React.FC = () => {
 
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null);
 
-  const nav = useNavigate();
-
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
