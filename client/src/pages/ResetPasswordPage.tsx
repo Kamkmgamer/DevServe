@@ -48,7 +48,7 @@ const ResetPasswordPage: React.FC = () => {
         navigate('/login'); // Redirect to login page after a delay
       }, 3000);
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { error?: string } } }) => {
       setError(err.response?.data?.error || 'An error occurred. Please try again.');
       setSuccess(null);
     },
