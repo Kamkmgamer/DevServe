@@ -13,6 +13,9 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
+  Pencil,
+  Trash2,
+  Copy,
 } from "lucide-react";
 
 type Coupon = {
@@ -123,7 +126,7 @@ const AdminCouponsPage: React.FC = () => {
       const res = await api.get<{ data: Coupon[] } | Coupon[]>("/coupons");
       const list = Array.isArray(res.data) ? res.data : res.data.data;
       setCoupons(list);
-    } catch (error: any) {
+    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
@@ -249,7 +252,7 @@ const AdminCouponsPage: React.FC = () => {
       try {
         await api.delete(`/coupons/${id}`);
         toast.success("Coupon permanently deleted");
-      } catch (error: any) {
+      } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
         const errorMessage =
           error.response?.data?.message ||
           error.response?.data?.error ||
@@ -273,6 +276,23 @@ const AdminCouponsPage: React.FC = () => {
       toast.error("Failed to copy code");
     }
   };
+
+  const TagButton: React.FC<{
+    label: string;
+    isActive: boolean;
+    onClick: () => void;
+  }> = ({ label, isActive, onClick }) => (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+        isActive
+          ? "bg-blue-600 text-white"
+          : "bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <motion.div
