@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
 const PromoterPage = () => {
-    const [referral, setReferral] = useState<any>(null);
+    const [referral, setReferral] = useState<{ code: string; commissionRate: number; referredUsers?: any[]; commissions?: { amount: number }[] } | null>(null);
     const [code, setCode] = useState('');
     const [commissionRate, setCommissionRate] = useState<number | string>(0.1); // Allow string for input
     const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const PromoterPage = () => {
             try {
                 const { data } = await api.get('/referrals/me');
                 setReferral(data);
-            } catch (error: any) {
+            } catch (error: { response?: { status?: number; data?: { message?: string } } }) {
                 if (error.response && error.response.status === 404) {
                     setReferral(null); // No referral found, show creation form
                 } else {
@@ -52,7 +52,7 @@ const PromoterPage = () => {
             const { data } = await api.post('/referrals', { code: code.trim(), commissionRate: rate });
             setReferral(data);
             toast.success('Referral code created successfully!');
-        } catch (error: any) {
+        } catch (error: { response?: { data?: { message?: string } } }) {
             toast.error(error.response?.data?.message || 'Failed to create referral code.');
             console.error(error);
         } finally {
@@ -127,7 +127,7 @@ const PromoterPage = () => {
                             <p>
                                 <strong>Total Earnings:</strong>{' '}
                                 <span className="font-bold text-purple-600 dark:text-purple-400">
-                                    ${(referral.commissions?.reduce((acc: number, commission: any) => acc + commission.amount, 0) / 100 || 0).toFixed(2)}
+                                    ${(referral.commissions?.reduce((acc: number, commission: { amount: number }) => acc + commission.amount, 0) / 100 || 0).toFixed(2)}
                                 </span>
                             </p>
                             {/* You might want to add a list of referred users or commissions here */}
