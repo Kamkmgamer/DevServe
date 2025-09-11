@@ -469,7 +469,7 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
 
   // Pre-split into Unicode code points and strip problematic control chars (e.g., null character)
   const codePoints = useMemo(() => {
-        const sanitized = (text || '').replace(/\x00/g, '');
+        const sanitized = (text || '').replace(/\u0000/g, '');
     // Array.from splits by Unicode code points (handles emojis/combining marks)
     return Array.from(sanitized);
   }, [text]);
@@ -967,7 +967,7 @@ export const SecretDailyTips: React.FC<Props> = ({
       }, 650) as unknown as number;
     };
 
-    const onTouchMove = (ev: TouchEvent) => {
+    const onTouchMove = (_e: TouchEvent) => {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;

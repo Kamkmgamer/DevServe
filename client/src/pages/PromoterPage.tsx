@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
 const PromoterPage = () => {
-    const [referral, setReferral] = useState<{ code: string; commissionRate: number; referredUsers?: any[]; commissions?: { amount: number }[] } | null>(null);
+    const [referral, setReferral] = useState<{ code: string; commissionRate: number; referredUsers?: { id: string }[]; commissions?: { amount: number }[] } | null>(null);
     const [code, setCode] = useState('');
     const [commissionRate, setCommissionRate] = useState<number | string>(0.1); // Allow string for input
     const [loading, setLoading] = useState(true);

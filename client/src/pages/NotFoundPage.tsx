@@ -848,7 +848,7 @@ const NotFoundPage = () => {
           <Link
             to="/"
             onMouseMove={onPointerGlow} 
-            onMouseLeave={_ => {
+            onMouseLeave={() => {
                 const g = glowRef.current;
                 if(g) g.style.opacity = '0';
             }}
