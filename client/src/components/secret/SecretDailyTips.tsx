@@ -467,9 +467,9 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
   const timeoutRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
 
-  // Pre-split into Unicode code points and strip problematic control chars (e.g., \u0000)
+  // Pre-split into Unicode code points and strip problematic control chars (e.g., null character)
   const codePoints = useMemo(() => {
-        const sanitized = (text || '').replace(/\u0000/g, '');
+        const sanitized = (text || '').replace(/\x00/g, '');
     // Array.from splits by Unicode code points (handles emojis/combining marks)
     return Array.from(sanitized);
   }, [text]);
@@ -967,7 +967,7 @@ export const SecretDailyTips: React.FC<Props> = ({
       }, 650) as unknown as number;
     };
 
-    const onTouchMove = (_ev: TouchEvent) => {
+    const onTouchMove = (ev: TouchEvent) => {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         longPressTimer = null;
@@ -1006,7 +1006,7 @@ export const SecretDailyTips: React.FC<Props> = ({
       el.removeEventListener("touchmove", onTouchMove as EventListener);
       el.removeEventListener("touchend", onTouchEnd as EventListener);
     };
-  }, []);
+  }, [copyRaw, load, loading, shareRaw, tip]);
 
   // Copy and share functions (keeping these for functionality)
 

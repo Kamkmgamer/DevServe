@@ -54,9 +54,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(data.user);
   }, []);
 
-  // Regex for strong password: at least one uppercase, one lowercase, one number, one special character, min 8 chars
-const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\[\]{};':"\\|,.<>\/?]).{8,}$/;
-
   const register = useCallback(
     async (email: string, password: string, name?: string) => {
       if (!strongPasswordRegex.test(password)) {

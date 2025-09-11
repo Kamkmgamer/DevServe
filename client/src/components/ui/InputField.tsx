@@ -22,7 +22,7 @@ export const InputField = React.forwardRef<
 
   useEffect(() => {
     if (Component !== "textarea" || !autoResize) return;
-    const el = (ref as any)?.current ?? localRef.current;
+    const el = (ref as React.RefObject<HTMLTextAreaElement>)?.current ?? localRef.current;
     if (!el) return;
     const resize = () => {
       (el as HTMLTextAreaElement).style.height = "auto";
@@ -47,9 +47,9 @@ export const InputField = React.forwardRef<
       <Component
         id={id}
         name={name}
-        ref={(node: any) => {
+        ref={(node: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => {
           if (typeof ref === "function") ref(node);
-          else if (ref) (ref as any).current = node;
+          else if (ref) (ref as React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>).current = node;
           localRef.current = node;
         }}
         aria-invalid={!!error}

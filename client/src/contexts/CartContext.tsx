@@ -55,8 +55,8 @@ export const CartProvider = ({ children }: Props) => {
 
   const handleError = useCallback((err: unknown, fallback: string) => {
     const message =
-      (err as any)?.response?.data?.error ||
-      (err as any)?.response?.data?.message ||
+      (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error ||
+      (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
       (err as Error)?.message ||
       fallback;
     setError(message);

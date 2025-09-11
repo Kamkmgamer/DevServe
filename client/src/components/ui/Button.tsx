@@ -80,7 +80,7 @@ const baseClasses =
 
 function isLinkProps(props: ButtonProps): props is ButtonAsLink {
   // If as is Link or to prop exists, treat as Link
-  return (props as ButtonAsLink).as === Link || "to" in (props as any);
+  return (props as ButtonAsLink).as === Link || "to" in (props as ButtonProps);
 }
 
 const Button: React.FC<ButtonProps> = (props) => {
@@ -96,8 +96,8 @@ const Button: React.FC<ButtonProps> = (props) => {
   const classes = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`;
 
   if (isLinkProps(props)) {
-    const { as, ...linkProps } = rest as ButtonAsLink;
-    const to = (linkProps as any).to;
+    const { ...linkProps } = rest as ButtonAsLink;
+    const to = (linkProps as LinkProps).to;
     // aria-disabled for links when disabled, and prevent click
     if (disabled) {
       return (
@@ -110,7 +110,7 @@ const Button: React.FC<ButtonProps> = (props) => {
       );
     }
     return (
-      <Link className={classes} {...(linkProps as Omit<LinkProps, "className" | "children">)} to={to}>
+      <Link className={classes} {...linkProps} to={to}>
         {children}
       </Link>
     );
