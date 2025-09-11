@@ -1,6 +1,6 @@
 // client/src/pages/admin/UserManagementPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Container from "../../components/layout/Container";
 import Button from "../../components/ui/Button";
@@ -13,6 +13,8 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { User } from "../../types";
 import UserForm from "../../components/admin/UserForm";
@@ -74,7 +76,7 @@ const UserManagementPage: React.FC = () => {
     try {
       const res = await api.get<User[]>("/admin/users");
       setUsers(res.data);
-    } catch (error: any) {
+    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
@@ -156,7 +158,7 @@ const UserManagementPage: React.FC = () => {
         await api.delete(`/admin/users/${userId}`);
         fetchUsers();
         toast.success("User deleted");
-      } catch (err: any) {
+      } catch (err: { response?: { data?: { message?: string } } }) {
         toast.error(err.response?.data?.message || "Failed to delete user.");
       }
     }
