@@ -199,7 +199,6 @@ const OfflinePage: React.FC = () => {
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       const w = rect.width;
-      const h = rect.height;
 
       if (blocks.length >= MAX_BLOCKS) return;
 
