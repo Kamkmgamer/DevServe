@@ -25,7 +25,7 @@ const ForgotPasswordPage: React.FC = () => {
       setSuccess('If an account with that email exists, a password reset link has been sent.');
       setError(null);
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { error?: string } } }) => {
       setError(err.response?.data?.error || 'An error occurred. Please try again.');
       setSuccess(null);
     },

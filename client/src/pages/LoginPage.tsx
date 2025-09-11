@@ -29,7 +29,7 @@ const LoginPage = () => {
       if (remember) localStorage.setItem("lastEmail", email.trim());
       else localStorage.removeItem("lastEmail");
       navigate("/");
-    } catch (err: any) {
+    } catch (err: { response?: { data?: { error?: string } } }) {
       setError(err.response?.data?.error || "Login failed");
     } finally {
       setLoading(false);
