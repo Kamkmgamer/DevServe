@@ -2,7 +2,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ChangePasswordPage from './ChangePasswordPage';
-import { changePassword } from '../api/services'; // Now this import will get the mock
 import { mockMutate } from '../../__mocks__/@tanstack/react-query';
 // import toast from 'react-hot-toast'; // No longer needed as component uses internal state
 

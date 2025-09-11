@@ -17,7 +17,7 @@ export const useCoupons = () => {
       // New paginated shape { data, total, page, pageSize }
       setCoupons(res.data.data ?? res.data);
     } catch (err: unknown) {
-      const msg = (err as any).response?.data?.message ?? "Failed to fetch coupons";
+      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? "Failed to fetch coupons";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -31,7 +31,7 @@ export const useCoupons = () => {
       toast.success("Coupon deleted successfully");
       fetchCoupons();
     } catch (err: unknown) {
-      toast.error((err as any).response?.data?.message ?? "Failed to delete coupon");
+      toast.error((err as { response?: { data?: { message?: string } } }).response?.data?.message ?? "Failed to delete coupon");
     }
   };
 
