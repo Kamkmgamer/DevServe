@@ -29,8 +29,9 @@ describe("CouponFormPage", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    require("react-router-dom").useNavigate.mockReturnValue(mockNavigate);
-    require("react-router-dom").useParams.mockReturnValue({}); // Default to create mode
+    const { useNavigate, useParams } = require("react-router-dom");
+    useNavigate.mockReturnValue(mockNavigate);
+    useParams.mockReturnValue({}); // Default to create mode
   });
 
   test("submits form with expiresAt as null when field is empty", async () => {
