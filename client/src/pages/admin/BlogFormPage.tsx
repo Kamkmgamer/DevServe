@@ -34,7 +34,7 @@ const BlogFormPage = () => {
   const navigate = useNavigate();
   const [error, setError] = useState("");
 
-  const resolver = zodResolver(schema) as Resolver<FormValues, any>;
+  const resolver = zodResolver(schema) as Resolver<FormValues>;
 
   const {
     register,
@@ -87,7 +87,7 @@ const BlogFormPage = () => {
         await api.post("/blog", payload);
       }
       navigate("/admin/blog");
-    } catch (e: any) {
+    } catch (e: { response?: { data?: { error?: string } }; message?: string }) {
       setError(e.response?.data?.error || e.message);
     }
   };
