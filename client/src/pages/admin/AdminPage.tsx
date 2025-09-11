@@ -31,7 +31,7 @@ const AdminPage = () => {
       const res = await api.get<DashboardData>("/admin");
       setData(res.data);
       setUpdatedAt(new Date());
-    } catch (err: any) {
+    } catch (err: { response?: { data?: { error?: string } }; message?: string }) {
       setError(err?.response?.data?.error || err?.message || "Failed to load");
     } finally {
       setLoading(false);
