@@ -13,6 +13,8 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 type BlogPost = {
@@ -33,6 +35,7 @@ const AdminBlogPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [activeCategory, setActiveCategory] = useState("All");
 
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
@@ -78,7 +81,7 @@ const AdminBlogPage: React.FC = () => {
     try {
       const res = await api.get<BlogPost[]>("/blog");
       setPosts(res.data);
-    } catch (error: any) {
+    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
@@ -114,7 +117,7 @@ const AdminBlogPage: React.FC = () => {
         p.id.toLowerCase().includes(q);
       return matchesCat && matchesQuery;
     });
-  }, [posts, query, activeCategory]);
+  }, [posts, query]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -138,7 +141,7 @@ const AdminBlogPage: React.FC = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [activeCategory, query, sortKey, sortDir]);
+  }, [query, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -188,7 +191,7 @@ const AdminBlogPage: React.FC = () => {
       try {
         await api.delete(`/blog/${id}`);
         toast.success("Post permanently deleted");
-      } catch (error: any) {
+      } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
         const errorMessage =
           error.response?.data?.message ||
           error.response?.data?.error ||
@@ -201,6 +204,23 @@ const AdminBlogPage: React.FC = () => {
       }
     }, 5000);
   };
+
+  const TagButton: React.FC<{
+    label: string;
+    isActive: boolean;
+    onClick: () => void;
+  }> = ({ label, isActive, onClick }) => (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+        isActive
+          ? "bg-blue-600 text-white"
+          : "bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <motion.div
