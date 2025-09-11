@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data } = await api.post<{ user: User }>("/auth/refresh");
         if (isMounted) setUser(data.user);
-      } catch {
+      } catch (_error) {
         // Not authenticated; ignore
       }
     })();

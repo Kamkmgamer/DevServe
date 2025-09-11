@@ -1,6 +1,5 @@
 // client/src/pages/admin/ReferralsPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Container from "../../components/layout/Container";
 import Button from "../../components/ui/Button";
@@ -13,6 +12,8 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 type Referral = {
