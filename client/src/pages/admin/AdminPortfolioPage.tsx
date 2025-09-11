@@ -13,6 +13,8 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 type PortfolioItem = {
@@ -32,6 +34,7 @@ const AdminPortfolioPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [activeCategory, setActiveCategory] = useState("All");
 
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("title");
@@ -77,7 +80,7 @@ const AdminPortfolioPage: React.FC = () => {
     try {
       const res = await api.get<PortfolioItem[]>("/portfolio");
       setItems(res.data);
-    } catch (error: any) {
+    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
@@ -113,7 +116,7 @@ const AdminPortfolioPage: React.FC = () => {
         s.id.toLowerCase().includes(q);
       return matchesCat && matchesQuery;
     });
-  }, [items, query, activeCategory]);
+  }, [items, query]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -137,7 +140,7 @@ const AdminPortfolioPage: React.FC = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [activeCategory, query, sortKey, sortDir]);
+  }, [query, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -187,7 +190,7 @@ const AdminPortfolioPage: React.FC = () => {
       try {
         await api.delete(`/portfolio/${id}`);
         toast.success("Item permanently deleted");
-      } catch (error: any) {
+      } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
         const errorMessage =
           error.response?.data?.message ||
           error.response?.data?.error ||
@@ -301,6 +304,22 @@ const AdminPortfolioPage: React.FC = () => {
                 <SortDesc className="h-4 w-4 text-gray-500" />
               )}
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  activeCategory === cat
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
         </div>
 
