@@ -117,7 +117,7 @@ const AdminBlogPage: React.FC = () => {
         p.id.toLowerCase().includes(q);
       return matchesCat && matchesQuery;
     });
-  }, [posts, query]);
+  }, [posts, query, activeCategory]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];

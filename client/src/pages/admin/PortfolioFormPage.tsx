@@ -60,7 +60,7 @@ const PortfolioFormPage = () => {
         setValue("imageUrlsCsv", imageUrls.join(", "));
       })
       .catch((e) => setError(e.response?.data?.error || e.message));
-  }, [id]);
+  }, [id, isEdit, setValue]);
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setError("");

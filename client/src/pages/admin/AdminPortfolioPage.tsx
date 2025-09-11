@@ -116,7 +116,7 @@ const AdminPortfolioPage: React.FC = () => {
         s.id.toLowerCase().includes(q);
       return matchesCat && matchesQuery;
     });
-  }, [items, query]);
+  }, [items, query, activeCategory]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
