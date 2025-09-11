@@ -75,7 +75,6 @@ const CouponFormPage: React.FC = () => {
   });
 
   const couponType = watch("type");
-  const value = watch("value");
 
   useEffect(() => {
     if (!isEdit) return;
@@ -102,7 +101,7 @@ const CouponFormPage: React.FC = () => {
           setValue("expiresAt", local.toISOString().slice(0, 16));
         }
         setValue("active", data.active);
-      } catch (e: any) {
+      } catch (e: { response?: { data?: { message?: string } } }) {
         const msg =
           e.response?.data?.message ?? "Failed to load coupon";
         setError(msg);
@@ -143,7 +142,7 @@ const CouponFormPage: React.FC = () => {
         toast.success("Coupon created");
       }
       navigate("/admin/coupons");
-    } catch (e: any) {
+    } catch (e: { response?: { data?: { message?: string; error?: string } } }) {
       const msg =
         e.response?.data?.message ?? e.response?.data?.error ?? "Save failed";
       setError(msg);
