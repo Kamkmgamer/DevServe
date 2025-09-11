@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { PayPalButtons } from "@paypal/react-paypal-js";
-import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import api from "../api/axios";
@@ -72,7 +71,7 @@ export default function CheckoutPage() {
       toast.success("Coupon applied successfully!");
     } catch (couponErr: unknown) {
       // If coupon application fails, try as a referral code
-      if ((couponErr as any).response && (couponErr as any).response.status === 404) {
+      if ((couponErr as { response?: { status?: number } }).response && (couponErr as { response?: { status?: number } }).response?.status === 404) {
         try {
           await api.get(`/referral/validate/${code}`);
           // If referral code is valid, but no direct discount is applied
@@ -82,12 +81,12 @@ export default function CheckoutPage() {
         } catch (referralErr: unknown) {
           setDiscount(0);
           setDiscountType(null);
-          toast.error((referralErr as any).response?.data?.message || "Invalid code.");
+          toast.error((referralErr as { response?: { data?: { message?: string } } }).response?.data?.message || "Invalid code.");
         }
       } else {
         setDiscount(0);
         setDiscountType(null);
-        toast.error((couponErr as any).response?.data?.message || "Failed to apply coupon.");
+        toast.error((couponErr as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to apply coupon.");
       }
     }
   }
@@ -115,7 +114,7 @@ export default function CheckoutPage() {
       toast.success("Order created! Proceed to payment.");
     } catch (err: unknown) {
       console.error("Failed to create order:", err);
-      toast.error((err as any).message || "Failed to proceed with order. Please try again.");
+      toast.error((err as { message?: string }).message || "Failed to proceed with order. Please try again.");
     }
   }
 
@@ -255,12 +254,12 @@ export default function CheckoutPage() {
                     }
                   } catch (err: unknown) {
                     console.error("Payment error:", err);
-                    toast.error("Payment authorization failed: " + ((err as any).message || "Unknown error"));
+                    toast.error("Payment authorization failed: " + ((err as { message?: string }).message || "Unknown error"));
                   }
                 }}
-                onError={(err: unknown) => {
+                onError={(err: { message?: string }) => {
                   console.error("PayPal error:", err);
-                  toast.error("Payment failed: " + ((err as any).message || "Unknown error"));
+                  toast.error("Payment failed: " + (err.message || "Unknown error"));
                 }}
                 style={{ layout: "vertical" }}
               />

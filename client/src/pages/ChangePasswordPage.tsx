@@ -32,7 +32,7 @@ const ChangePasswordPage: React.FC = () => {
       setSuccess('Password changed successfully');
       setError(null);
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { error?: string } } }) => {
       setError(err.response?.data?.error || 'An error occurred');
       setSuccess(null);
     },
