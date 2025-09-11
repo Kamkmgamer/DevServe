@@ -528,7 +528,7 @@ const NotFoundPage = () => {
   useGPULayer(stageRef, { contain: "paint" });
 
   // Also promote the cosmic cursor container to a GPU layer
-  useGPULayer<HTMLDivElement>(cosmicCursorRef as any, {
+  useGPULayer<HTMLDivElement>(cosmicCursorRef as React.RefObject<HTMLDivElement>, {
     willChange: "transform, opacity",
     contain: "layout paint style",
   });
@@ -543,15 +543,6 @@ const NotFoundPage = () => {
     c.style.contain = "paint style size";
   }, [canvasRef]);
 
-  const stars = useMemo(() => Array.from({ length: Math.max(80, Math.floor(200 * deviceScale)) }, () => ({
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    s: Math.random() * 1.8 + 0.2,
-    d: Math.random() * 6 + 4,
-    o: Math.random() * 0.6 + 0.2,
-    parallax: Math.random() * 0.4 + 0.1,
-  })), [deviceScale]);
-
   const particles = useMemo(() => Array.from({ length: Math.max(12, Math.floor(40 * deviceScale)) }, () => ({
     x: Math.random() * 100,
     y: Math.random() * 100,
@@ -560,15 +551,6 @@ const NotFoundPage = () => {
     delay: Math.random() * 8,
     hue: Math.floor(Math.random() * 360),
   })), [deviceScale]);
-
-  const shooters = useMemo(() =>
-    Array.from({ length: Math.max(3, Math.floor(8 * deviceScale)) }, () => ({
-      key: Math.random().toString(36).slice(2),
-      delay: Math.random() * 8,
-      top: Math.random() * 60 + 5,
-      dur: Math.random() * 2 + 2.5,
-    }))
-  , [deviceScale]);
 
   // Lucide icon ring (replaces emoji ring)
   const iconRing = [Rocket, Stars, Atom, Zap, Flame, Sparkles, ShieldAlert, PartyPopper];
@@ -835,7 +817,7 @@ const NotFoundPage = () => {
                       transform: `translate(-50%,-50%) rotate(${(360 / 24) * i}deg)`,
                       animation: `orbit ${dur}s linear infinite`,
                       animationDelay: `${i * -0.7}s`,
-                      animationDirection: direction as any,
+                      animationDirection: direction,
                       filter:
                         theme === 'dark'
                           ? 'drop-shadow(0 0 10px rgba(255,255,255,0.5)) drop-shadow(0 0 24px rgba(236,72,153,0.6))'
@@ -866,7 +848,7 @@ const NotFoundPage = () => {
           <Link
             to="/"
             onMouseMove={onPointerGlow} 
-            onMouseLeave={e => {
+            onMouseLeave={_ => {
                 const g = glowRef.current;
                 if(g) g.style.opacity = '0';
             }}
