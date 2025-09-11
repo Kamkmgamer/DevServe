@@ -101,7 +101,7 @@ const RegisterPage = () => {
       await signup(email.trim(), password, name.trim());
       localStorage.setItem("lastEmail", email.trim());
       navigate("/");
-    } catch (err: any) {
+    } catch (err: { response?: { data?: { error?: string } } }) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
