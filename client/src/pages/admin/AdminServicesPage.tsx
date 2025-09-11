@@ -14,6 +14,8 @@ import {
   SortAsc,
   SortDesc,
   Loader2,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 type Service = {
@@ -91,7 +93,7 @@ const AdminServicesPage: React.FC = () => {
     try {
       const res = await api.get<Service[]>("/services");
       setServices(res.data);
-    } catch (error: any) {
+    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
@@ -204,7 +206,7 @@ const AdminServicesPage: React.FC = () => {
       try {
         await api.delete(`/services/${id}`);
         toast.success("Service permanently deleted");
-      } catch (error: any) {
+      } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
         // Revert on failure
         const errorMessage =
           error.response?.data?.message ||
