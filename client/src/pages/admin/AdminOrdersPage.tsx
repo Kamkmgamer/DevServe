@@ -1,6 +1,6 @@
 // client/src/pages/admin/AdminOrdersPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Container from "../../components/layout/Container";
 import Button from "../../components/ui/Button";
@@ -89,7 +89,7 @@ const AdminOrdersPage: React.FC = () => {
     try {
       const res = await api.get<Order[]>("/admin/orders");
       setOrders(res.data);
-    } catch (error: any) {
+    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
@@ -170,7 +170,7 @@ const AdminOrdersPage: React.FC = () => {
     try {
       await api.patch(`/admin/orders/${id}/status`, { status });
       toast.success("Status updated");
-    } catch (error: any) {
+    } catch (error: { response?: { data?: { message?: string } }; message?: string }) {
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
