@@ -92,7 +92,6 @@ const PreviewImage: React.FC<{ service: Service }> = ({ service }) => {
   return (
     <div className="relative h-44 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={service.name}
