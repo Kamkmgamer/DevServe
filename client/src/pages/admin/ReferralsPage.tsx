@@ -1,6 +1,6 @@
 // client/src/pages/admin/ReferralsPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Container from "../../components/layout/Container";
 import Button from "../../components/ui/Button";
@@ -86,7 +86,7 @@ const ReferralsPage: React.FC = () => {
     try {
       const { data } = await api.get<Referral[]>("/referrals");
       setReferrals(data);
-    } catch (error: any) {
+    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
@@ -440,7 +440,7 @@ const ReferralsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {(selectedReferral.commissions || []).map((commission: any) => (
+                  {(selectedReferral.commissions || []).map((commission) => (
                     <tr key={commission.id}>
                       <td>{commission.orderId}</td>
                       <td>${commission.amount / 100}</td>
@@ -457,7 +457,7 @@ const ReferralsPage: React.FC = () => {
                       createPayout(
                         selectedReferral.id,
                         selectedReferral.commissions.reduce(
-                          (acc: number, commission: any) =>
+                          (acc: number, commission) =>
                             commission.status === "UNPAID" ? acc + commission.amount : acc,
                           0
                         )
