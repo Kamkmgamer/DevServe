@@ -2,10 +2,6 @@
   "name": "web-services-ecommerce",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "client",
-    "server"
-  ],
   "scripts": {
     "check": "eslint . && npm run lint --prefix server && tsc --noEmit",
     "dev": "concurrently \"npm:dev:client\" \"npm:dev:server\"",
@@ -23,7 +19,7 @@
     "test:watch": "npm run test:watch --prefix server",
     "e2e": "npm run e2e --prefix client",
     "prepare": "husky",
-    "build": "npm run build --prefix client && npm run build --prefix server",
+    "build": "pnpm run build --filter client && pnpm run build --filter server",
     "start": "npm run start --prefix server"
   },
   "lint-staged": {
