@@ -1,16 +1,26 @@
 import { Request, Response } from "express";
-import prisma from "../lib/prisma";
+import { db } from '../lib/db';
+import { portfolios } from '../lib/schema';
+import { eq } from 'drizzle-orm';
+
+type Portfolio = typeof portfolios.$inferSelect;
+
+function hasRows<T>(val: unknown): val is { rows: T[] } {
+  return typeof val === 'object' && val !== null && 'rows' in (val as any);
+}
 
 // GET /api/portfolio
 export const getAllPortfolio = async (_req: Request, res: Response) => {
-  const items = await prisma.portfolioItem.findMany();
-  res.json(items);
+  const allItems = await db.select().from(portfolios);
+  res.json(allItems);
 };
 
 // GET /api/portfolio/:id
 export const getPortfolioById = async (req: Request, res: Response) => {
   const id = req.params.id;
-  const item = await prisma.portfolioItem.findUnique({ where: { id } });
+  const raw = await db.select().from(portfolios).where(eq(portfolios.id, id));
+  const itemResult: Portfolio[] = hasRows<Portfolio>(raw) ? raw.rows : (raw as Portfolio[]);
+  const item = itemResult[0];
   if (!item) return res.status(404).json({ error: "Not found" });
   res.json(item);
 };
@@ -25,9 +35,11 @@ export const createPortfolio = async (req: Request, res: Response) => {
       imageUrls: Array.isArray(imageUrls) ? JSON.stringify(imageUrls) : imageUrls,
     };
     
-    const item = await prisma.portfolioItem.create({ data });
-    res.status(201).json(item);
-  } catch (e) {
+    const raw = await db.insert(portfolios).values(data).returning();
+    const insertResult: Portfolio[] = hasRows<Portfolio>(raw) ? raw.rows : (raw as Portfolio[]);
+    const newItem = insertResult[0];
+    res.status(201).json(newItem);
+  } catch {
     res.status(400).json({ error: "Failed to create" });
   }
 };
@@ -43,11 +55,10 @@ export const updatePortfolio = async (req: Request, res: Response) => {
       ...(imageUrls && { imageUrls: Array.isArray(imageUrls) ? JSON.stringify(imageUrls) : imageUrls }),
     };
     
-    const item = await prisma.portfolioItem.update({
-      where: { id },
-      data,
-    });
-    res.json(item);
+    const raw = await db.update(portfolios).set(data).where(eq(portfolios.id, id)).returning();
+    const updateResult: Portfolio[] = hasRows<Portfolio>(raw) ? raw.rows : (raw as Portfolio[]);
+    const updatedItem = updateResult[0];
+    res.json(updatedItem);
   } catch {
     res.status(400).json({ error: "Failed to update" });
   }
@@ -57,7 +68,7 @@ export const updatePortfolio = async (req: Request, res: Response) => {
 export const deletePortfolio = async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
-    await prisma.portfolioItem.delete({ where: { id } });
+    await db.delete(portfolios).where(eq(portfolios.id, id));
     res.status(204).send();
   } catch {
     res.status(400).json({ error: "Failed to delete" });

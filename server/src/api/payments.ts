@@ -1,19 +1,23 @@
 import { Request, Response } from "express";
-import prisma from "../lib/prisma";
+import { db } from "../lib/db";
+import { services } from "../lib/schema";
+import { eq } from "drizzle-orm";
 import { createPayPalOrder, capturePayPalOrder } from "../lib/paypal";
 
 export const createCheckoutSession = async (req: Request, res: Response) => {
   const { serviceId, clientEmail } = req.body;
 
   // Dynamically require Stripe so tests can mock the constructor before import
-  const Stripe = require("stripe") as typeof import("stripe");
+  const { default: Stripe } = await import("stripe");
 
-  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  const serviceResult = await db.select().from(services).where(eq(services.id, serviceId));
+  const service = serviceResult[0];
+
   if (!service) return res.status(404).json({ error: "Service not found" });
 
   try {
     // Instantiate Stripe inside the handler so tests can mock the constructor without module init side-effects
-    const stripe = new (Stripe as any)(process.env.STRIPE_SECRET_KEY || "test_key");
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "test_key");
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -35,8 +39,9 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
     });
 
     res.json({ url: session.url });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Stripe error";
+    res.status(500).json({ error: message });
   }
 };
 
@@ -45,17 +50,19 @@ export const createPaypalOrder = async (req: Request, res: Response) => {
   try {
     const order = await createPayPalOrder(totalCents);
     res.status(200).json(order);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "PayPal create error";
+    res.status(500).json({ error: message });
   }
 };
 
 export const capturePaypalOrder = async (req: Request, res: Response) => {
-  const { authorizationId } = req.body;
+  const { authorizationId, totalCents } = req.body;
   try {
-    const capture = await (capturePayPalOrder as any)(authorizationId);
+    const capture = await capturePayPalOrder(authorizationId, totalCents);
     res.status(200).json(capture);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "PayPal capture error";
+    res.status(500).json({ error: message });
   }
 };

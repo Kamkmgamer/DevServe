@@ -72,7 +72,7 @@ class DailyTipsCache {
       } else {
         logger.warn('Invalid cache data found, will generate fresh tip');
       }
-    } catch (error) {
+    } catch {
       // File doesn't exist or is corrupted - this is fine for first run
       logger.info('No existing daily tips cache found, will generate fresh tip');
     }
@@ -162,13 +162,14 @@ class DailyTipsCache {
 
       logger.info('Successfully generated fresh daily tip');
       return content.trim();
-    } catch (error: any) {
-      logger.error('Error generating fresh tip:', error.response?.data || error.message || error);
+    } catch (error: unknown) {
+      const err = error as any;
+      logger.error('Error generating fresh tip:', err?.response?.data || err?.message || err);
       
       // Re-throw with more specific error message
-      if (error.response?.status === 401) {
+      if (err?.response?.status === 401) {
         throw new Error('Invalid OpenRouter API key. Please check your configuration.');
-      } else if (error.response?.status === 429) {
+      } else if (err?.response?.status === 429) {
         throw new Error('Rate limit exceeded. Please try again later.');
       } else {
         throw new Error('Failed to generate fresh tip from OpenRouter API');

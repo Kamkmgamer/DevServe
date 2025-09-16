@@ -25,7 +25,6 @@ export async function capturePayPalOrder(authorizationId: string, totalCents: nu
   const request = new paypal.payments.AuthorizationsCaptureRequest(
     authorizationId
   );
-  // @ts-expect-error
   request.requestBody({
     amount: {
       currency_code: "USD",

@@ -1,5 +1,4 @@
-// @ts-nocheck
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 export default async function globalSetup() {
   process.env.NODE_ENV = process.env.NODE_ENV || 'test';

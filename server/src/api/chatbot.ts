@@ -30,18 +30,19 @@ export const getChatCompletion = async (req: Request, res: Response) => {
     });
 
     res.json(completion.choices[0].message);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as any;
     console.error(
       'Error communicating with OpenRouter API:',
-      error.response?.data || error.message || error
+      err?.response?.data || err?.message || err
     );
     
     // Provide more specific error messages
-    if (error.response?.status === 401) {
+    if (err?.response?.status === 401) {
       res.status(500).json({ 
         error: 'Invalid OpenRouter API key. Please check your configuration.' 
       });
-    } else if (error.response?.status === 429) {
+    } else if (err?.response?.status === 429) {
       res.status(429).json({ 
         error: 'Rate limit exceeded. Please try again later.' 
       });
@@ -78,8 +79,9 @@ export const getCachedDailyTip = async (req: Request, res: Response) => {
     });
     
     logger.info('Served cached daily tip');
-  } catch (error: any) {
-    logger.error('Error getting cached daily tip:', error.message || error);
+  } catch (error: unknown) {
+    const err = error as any;
+    logger.error('Error getting cached daily tip:', err?.message || err);
     
     // Try to get the last cached tip as fallback
     const fallbackTip = dailyTipsCache.getLastCachedTip();
@@ -131,8 +133,9 @@ export const getFreshDailyTip = async (req: Request, res: Response) => {
     });
     
     logger.info('Served fresh daily tip');
-  } catch (error: any) {
-    logger.error('Error getting fresh daily tip:', error.message || error);
+  } catch (error: unknown) {
+    const err = error as any;
+    logger.error('Error getting fresh daily tip:', err?.message || err);
     
     // Try to get the cached tip as fallback for fresh requests
     try {
@@ -153,10 +156,10 @@ export const getFreshDailyTip = async (req: Request, res: Response) => {
     let errorMessage = 'Failed to generate fresh AI tip';
     let fallbackContent = '**Fresh AI Tip:** *Embrace failure as a learning opportunity!* When APIs fail, having robust `fallback mechanisms` helps maintain [user experience](https://ux.design).';
     
-    if (error.message.includes('Rate limit')) {
+    if (typeof err?.message === 'string' && err.message.includes('Rate limit')) {
       errorMessage = 'Rate limit exceeded for fresh tips';
       fallbackContent = '**Rate Limited:** *Patience is a virtue in API development!* Implement `exponential backoff` and respect [rate limits](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429) for better reliability.';
-    } else if (error.message.includes('API key')) {
+    } else if (typeof err?.message === 'string' && err.message.includes('API key')) {
       errorMessage = 'API configuration issue';
       fallbackContent = '**Configuration Tip:** *Proper API key management is crucial!* Store credentials securely using `environment variables` and check [API documentation](https://openrouter.ai/docs) for setup.';
     }
@@ -193,11 +196,12 @@ export const getDailyTipStats = async (req: Request, res: Response) => {
     });
     
     logger.info('Served daily tip cache statistics');
-  } catch (error: any) {
-    logger.error('Error getting cache stats:', error.message || error);
+  } catch (error: unknown) {
+    const err = error as any;
+    logger.error('Error getting cache stats:', err?.message || err);
     res.status(500).json({
       error: 'Failed to get cache statistics',
-      message: error.message || 'Unknown error'
+      message: err?.message || 'Unknown error'
     });
   }
 };
@@ -225,11 +229,12 @@ export const forceRefreshDailyTip = async (req: Request, res: Response) => {
     });
     
     logger.info('Daily tip cache forcefully refreshed via API');
-  } catch (error: any) {
-    logger.error('Error force refreshing daily tip cache:', error.message || error);
+  } catch (error: unknown) {
+    const err = error as any;
+    logger.error('Error force refreshing daily tip cache:', err?.message || err);
     res.status(500).json({
       error: 'Failed to force refresh daily tip cache',
-      message: error.message || 'Unknown error'
+      message: err?.message || 'Unknown error'
     });
   }
 };

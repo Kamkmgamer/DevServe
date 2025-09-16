@@ -1,4 +1,5 @@
 import * as client from 'prom-client';
+import type { Request, Response } from 'express';
 
 // Create a Registry which registers the metrics
 export const register = new client.Registry();
@@ -28,7 +29,7 @@ export const prismaQueryDurationSeconds = new client.Histogram({
 
 register.registerMetric(prismaQueryDurationSeconds);
 
-export async function metricsHandler(_: any, res: any) {
+export async function metricsHandler(_: Request, res: Response) {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 }

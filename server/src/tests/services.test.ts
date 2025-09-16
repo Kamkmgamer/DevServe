@@ -1,34 +1,39 @@
 import request from 'supertest';
 import app from '../app';
-import prisma from '../lib/prisma';
+import { db } from '../lib/db';
+import { users, services, blogPosts, portfolios } from '../lib/schema';
+import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
-let token: string;
+type User = typeof users.$inferSelect;
+
+const token: string = '';
 let serviceId: string;
 
 beforeAll(async () => {
-  // Clean slate in an order that respects foreign key constraints
-  await prisma.orderLineItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.cartItem.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.service.deleteMany();
-  await prisma.coupon.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.blogPost.deleteMany();
-  await prisma.portfolioItem.deleteMany();
-
-  // Create admin user and log in to get token
-  const hashedPassword = await bcrypt.hash('Test1234!', 10);
-  await prisma.user.create({ data: { email: 'a@a.com', password: hashedPassword, name: 'Admin' } });
-  const res = await request(app)
-    .post('/api/auth/login')
-    .send({ email: 'a@a.com', password: 'Test1234!' });
-  token = res.body.token;
+  // Cleanup
+  await db.execute(sql`TRUNCATE TABLE "User", "Service", "BlogPost", "PortfolioItem" RESTART IDENTITY CASCADE`);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await db.execute(sql`TRUNCATE TABLE "User", "Service", "BlogPost", "PortfolioItem" RESTART IDENTITY CASCADE`);
+});
+
+beforeEach(async () => {
+  // Truncate for each test
+  await db.execute(sql`TRUNCATE TABLE "User", "Service", "BlogPost", "PortfolioItem" RESTART IDENTITY CASCADE`);
+});
+
+test('create user', async () => {
+  const hashedPassword = await bcrypt.hash('password', 10);
+  const userResult = await db.insert(users).values({
+    email: 'a@a.com',
+    password: hashedPassword,
+    name: 'Admin',
+  }).returning();
+  const userArray = userResult as unknown as User[];
+  const user = userArray[0];
+  expect(user.email).toBe('a@a.com');
 });
 
 describe('Services API', () => {

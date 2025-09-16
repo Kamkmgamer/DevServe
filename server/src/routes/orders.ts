@@ -1,8 +1,11 @@
 // server/src/routes/orders.ts
 import { Router, NextFunction } from "express";
-import prisma from "../lib/prisma";
+import { db } from '../lib/db';
+import { orders, coupons, referrals, commissions, cartItems, services, orderLineItems } from '../lib/schema';
+import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+import type { AuthRequest } from '../middleware/auth';
 import { protect } from "../middleware/auth"; // Changed from authMiddleware
-import { AuthRequest } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { createOrderSchema, idParamSchema, updateOrderStatusSchema } from "../lib/validation";
 import { AppError } from "../lib/errors";
@@ -11,32 +14,26 @@ const router = Router();
 
 router.use(protect); // Changed from authMiddleware
 
-type Req = AuthRequest;
-
 // GET /api/orders
-router.get("/", async (req: Req, res, next: NextFunction) => {
+router.get("/", async (req: AuthRequest, res, next: NextFunction) => {
   try {
-    const orders = await prisma.order.findMany({
-      where: { userId: req.userId },
-      include: {
-        lineItems: {
-          include: {
-            service: true
-          }
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      }
-);
-    res.json(orders);
+    if (!req.user) {
+      return next(AppError.unauthorized("User not authenticated"));
+    }
+    // Get user orders
+    const orderResults = await db.select().from(orders).where(eq(orders.userId, req.user.id));
+    res.json(orderResults);
   } catch (error) {
     next(error);
   }
 });
 
 // POST /api/orders
-router.post("/", validate(createOrderSchema), async (req: Req, res, next: NextFunction) => {
+router.post("/", validate(createOrderSchema), async (req: AuthRequest, res, next: NextFunction) => {
   try {
+    if (!req.user) {
+      return next(AppError.unauthorized("User not authenticated"));
+    }
     const { items, requirements, discount, referralCode } = req.body;
 
     if (!items?.length) {
@@ -56,9 +53,9 @@ router.post("/", validate(createOrderSchema), async (req: Req, res, next: NextFu
         return next(AppError.badRequest("Invalid item data"));
       }
 
-      const service = await prisma.service.findUnique({
-        where: { id: item.serviceId },
-      });
+      // Get service for price
+      const serviceResult = await db.select().from(services).where(eq(services.id, item.serviceId));
+      const service = serviceResult[0];
 
       if (!service) {
         return next(AppError.badRequest(`Service not found: ${item.serviceId}`));
@@ -80,9 +77,9 @@ router.post("/", validate(createOrderSchema), async (req: Req, res, next: NextFu
 
     // Apply coupon if provided
     if (discount?.code) {
-      const coupon = await prisma.coupon.findUnique({
-        where: { code: discount.code.toUpperCase() },
-      });
+      // Get coupon
+      const couponResult = await db.select().from(coupons).where(eq(coupons.code, discount.code.toUpperCase()));
+      const coupon = couponResult[0];
 
       if (coupon && coupon.active) {
         const now = new Date();
@@ -116,10 +113,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res, next: NextFu
         couponId = coupon.id;
 
         // Increment coupon usage
-        await prisma.coupon.update({
-          where: { id: coupon.id },
-          data: { currentUses: { increment: 1 } },
-        });
+        await db.update(coupons).set({ currentUses: sql`${coupons.currentUses} + 1` }).where(eq(coupons.id, coupon.id));
       } else {
         return next(AppError.badRequest("Invalid coupon code"));
       }
@@ -127,9 +121,7 @@ router.post("/", validate(createOrderSchema), async (req: Req, res, next: NextFu
 
     let referralId: string | null = null;
     if (referralCode) {
-        const referral = await prisma.referral.findUnique({
-            where: { code: referralCode },
-        });
+        const [referral] = await db.select().from(referrals).where(eq(referrals.code, referralCode));
 
         if (referral) {
             referralId = referral.id;
@@ -139,37 +131,49 @@ router.post("/", validate(createOrderSchema), async (req: Req, res, next: NextFu
     }
 
     // Create the order
-    const order = await prisma.order.create({
-      data: {
-        userId: req.userId!,
-        totalAmount: totalCents,
-        requirements: typeof requirements === 'string' ? requirements : JSON.stringify(requirements),
-        couponId,
-        referralId,
-        lineItems: { create: lineData },
-      },
-    });
+    const orderData = {
+      userId: req.user.id,
+      totalAmount: totalCents,
+      requirements: typeof requirements === 'string' ? requirements : JSON.stringify(requirements),
+      couponId,
+      referralId,
+    };
+    const orderResult = await db.insert(orders).values(orderData).returning();
+    const newOrder = Array.isArray(orderResult) && orderResult.length > 0 ? orderResult[0] : null;
+    if (!newOrder) {
+      return next(AppError.internal("Failed to create order"));
+    }
+
+    // Create line items separately
+    for (const item of lineData) {
+      await db.insert(orderLineItems).values({
+        orderId: newOrder.id,
+        serviceId: item.serviceId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+      });
+    }
 
     if (referralId) {
-        const referral = await prisma.referral.findUnique({ where: { id: referralId } });
-        if (referral) {
-            const commissionAmount = Math.round(totalCents * referral.commissionRate);
-            await prisma.commission.create({
-                data: {
-                    orderId: order.id,
-                    referralId: referral.id,
-                    amount: commissionAmount,
-                },
-            });
-        }
+      const referralResult = await db.select().from(referrals).where(eq(referrals.id, referralId));
+      const referral = Array.isArray(referralResult) && referralResult.length > 0 ? referralResult[0] : null;
+      if (referral && typeof referral.commissionRate === 'number') {
+        const commissionAmount = Math.round(totalCents * referral.commissionRate);
+        await db.insert(commissions).values({
+          orderId: newOrder.id,
+          referralId: referral.id,
+          amount: commissionAmount,
+        });
+      }
     }
 
     // Clear user's cart
-    await prisma.cartItem.deleteMany({
-      where: { cart: { userId: req.userId } },
-    });
+    if (req.user) {
+      await db.delete(cartItems).where(eq(cartItems.cartId, req.user.id));
+    }
 
-    res.status(201).json(order);
+    res.status(201).json(newOrder);
   } catch (error) {
     next(error);
   }
@@ -184,7 +188,7 @@ function formatCurrency(cents: number): string {
 router.patch(
   "/:id/status",
   validate({ params: idParamSchema, body: updateOrderStatusSchema }),
-  async (req: Req, res, next: NextFunction) => {
+  async (req: AuthRequest, res, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -193,10 +197,7 @@ router.patch(
       return next(AppError.badRequest("Status is required"));
     }
 
-    const order = await prisma.order.update({
-      where: { id },
-      data: { status },
-    });
+    const order = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
 
     res.json(order);
   } catch (error) {

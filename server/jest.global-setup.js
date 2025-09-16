@@ -1,6 +1,7 @@
-const { execSync } = require('child_process');
+/* eslint-env node */
+import { execSync } from 'child_process';
 
-module.exports = async () => {
+export default async () => {
   process.env.NODE_ENV = process.env.NODE_ENV || 'test';
   process.env.DAILY_TIPS_PERSIST = process.env.DAILY_TIPS_PERSIST || 'false';
   // Force Prisma to use a local SQLite DB for tests regardless of .env

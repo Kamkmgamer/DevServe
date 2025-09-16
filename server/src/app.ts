@@ -1,24 +1,17 @@
-// server/src/app.ts
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import apiRoutes from "./routes";
-import { Request, Response, NextFunction } from "express";
-import { errorHandler } from "./middleware/errorHandler";
-import logger from "./lib/logger";
-import { requestId } from "./middleware/requestId";
-import { metricsMiddleware } from "./middleware/metrics";
-import { metricsHandler } from "./lib/metrics";
-import { generalLimiter } from "./middleware/rateLimit";
-import { jsonParseErrorHandler } from "./middleware/jsonError";
-import helmet from "helmet";
-import cookieParser from "cookie-parser";
-import csurf from "csurf";
-import crypto from "crypto";
-
-// Load environment variables
-dotenv.config();
-
+import express, { Request, Response, NextFunction } from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import csurf from 'csurf';
+import crypto from 'crypto';
+import logger from './lib/logger';
+import { metricsMiddleware } from './middleware/metrics';
+import { requestId } from './middleware/requestId';
+import { generalLimiter } from './middleware/rateLimit';
+import { jsonParseErrorHandler } from './middleware/jsonError';
+import apiRoutes from './routes';
+import { metricsHandler } from './lib/metrics';
+import { errorHandler } from './middleware/errorHandler';
 // Create the Express app instance
 const app = express();
 
@@ -34,10 +27,19 @@ app.use(generalLimiter);
 // Generate a per-request CSP nonce and expose it via res.locals
 app.use((req: Request, res: Response, next: NextFunction) => {
   const nonce = crypto.randomBytes(16).toString('base64');
-  (res.locals as any).cspNonce = nonce;
+  res.locals.cspNonce = nonce;
   next();
 });
-// Security headers; we set HSTS below conditionally, so disable here
+// Build CSP connect-src dynamically to support dev tooling (e.g., Vite HMR over localhost)
+const isProd = process.env.NODE_ENV === 'production';
+const devConnectSrc = [
+  "'self'",
+  'ws:',
+  'wss:',
+  'http://localhost:5173',
+  'ws://localhost:5173',
+];
+
 app.use(helmet({
   hsts: false,
   referrerPolicy: { policy: 'no-referrer' },
@@ -48,10 +50,16 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       // Disallow inline scripts/styles; allow only with a per-request nonce
-      scriptSrc: ["'self'", (req: any, res: any) => `'nonce-${(res.locals as any).cspNonce}'`],
-      styleSrc: ["'self'", (req: any, res: any) => `'nonce-${(res.locals as any).cspNonce}'`],
+      scriptSrc: [
+        "'self'",
+        (_req: unknown, res: unknown) => `"nonce-${(res as { locals?: { cspNonce?: string } }).locals?.cspNonce || ''}"`,
+      ],
+      styleSrc: [
+        "'self'",
+        (_req: unknown, res: unknown) => `"nonce-${(res as { locals?: { cspNonce?: string } }).locals?.cspNonce || ''}"`,
+      ],
       imgSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'"],
+      connectSrc: isProd ? ["'self'"] : devConnectSrc,
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"],
@@ -88,7 +96,6 @@ app.use(express.json());
 app.use(jsonParseErrorHandler);
 
 // CSRF protection (cookie-based token). Ignore during tests.
-const isProd = process.env.NODE_ENV === 'production';
 if (process.env.NODE_ENV !== 'test') {
   app.use(
     csurf({
@@ -98,7 +105,7 @@ if (process.env.NODE_ENV !== 'test') {
         secure: isProd,
         // set explicit cookie name for clarity
         key: '_csrf',
-      } as any,
+      },
     })
   );
 }
@@ -150,9 +157,11 @@ app.get("/", (req, res) => {
 app.get('/metrics', metricsHandler);
 
 // CSRF error handler: respond with 403 and code
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  if (err && err.code === 'EBADCSRFTOKEN') {
-    const requestId = (req as any).requestId as string | undefined;
+app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+  const hasCode = (e: unknown): e is { code: string } =>
+    !!e && typeof e === 'object' && 'code' in (e as Record<string, unknown>) && typeof (e as { code?: unknown }).code === 'string';
+  if (hasCode(err) && err.code === 'EBADCSRFTOKEN') {
+    const requestId = (req as any).requestId;
     return res.status(403).json({
       error: {
         code: 'CSRF_TOKEN_INVALID',
@@ -167,7 +176,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // 404 handler
 app.use((req: Request, res: Response) => {
   logger.warn(`[404] ${req.method} ${req.path} - Not Found`);
-  const requestId = (req as any).requestId as string | undefined;
+  const requestId = (req as any).requestId;
   res.status(404).json({
     error: {
       code: 'NOT_FOUND',

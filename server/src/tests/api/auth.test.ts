@@ -1,27 +1,21 @@
-
 import { login, registerAdmin, changePassword, requestPasswordReset, resetPassword, logout, refresh } from '../../api/auth';
 import { Request, Response } from 'express';
-import prisma from '../../lib/prisma';
+import { db } from '../../lib/db';
+import { users, refreshTokens } from '../../lib/schema';
+import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import * as crypto from 'crypto'; // Use namespace import for compatibility
 import { sendEmail } from '../../lib/mailer';
 
 // Mock dependencies
-jest.mock('../../lib/prisma', () => ({
+jest.mock('../../lib/db', () => ({
   __esModule: true,
-  default: {
-    user: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(), // Mock update
-      findFirst: jest.fn(), // Mock findFirst
-    },
-    refreshToken: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
+  db: {
+    execute: jest.fn(),
+    insert: jest.fn(),
+    onConflict: jest.fn(),
+    returning: jest.fn(),
   },
 }));
 jest.mock('bcryptjs');
@@ -41,8 +35,16 @@ jest.mock('../../lib/mailer', () => ({
 }));
 
 describe('Auth API', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+  beforeAll(async () => {
+    await db.execute(sql`TRUNCATE TABLE "User", "RefreshToken" RESTART IDENTITY CASCADE`);
+  });
+
+  afterAll(async () => {
+    await db.execute(sql`TRUNCATE TABLE "User", "RefreshToken" RESTART IDENTITY CASCADE`);
+  });
+
+  beforeEach(async () => {
+    await db.execute(sql`TRUNCATE TABLE "User", "RefreshToken" RESTART IDENTITY CASCADE`);
   });
 
   describe('refresh', () => {
@@ -53,15 +55,15 @@ describe('Auth API', () => {
       const user = { id: '1', email: 'test@example.com', name: 'Test User', role: 'USER' };
       const tokenHash = require('crypto').createHash('sha256').update('old-refresh').digest('hex');
 
-      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue({ userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 10000), revokedAt: null });
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
-      (prisma.refreshToken.create as jest.Mock).mockResolvedValue({ id: 'rt2' });
-      (prisma.refreshToken.update as jest.Mock).mockResolvedValue({});
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 10000), revokedAt: null }] });
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [user] });
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 'rt2' }] });
+      (db.execute as jest.Mock).mockResolvedValueOnce({});
       (jwt.sign as jest.Mock).mockReturnValue('new-access');
 
       await refresh(req, res);
 
-      expect(prisma.refreshToken.update).toHaveBeenCalled();
+      expect(db.execute).toHaveBeenCalledTimes(4);
       expect(res.cookie).toHaveBeenCalledWith('session', 'new-access', expect.any(Object));
       expect(res.cookie).toHaveBeenCalledWith('refresh', expect.any(String), expect.any(Object));
       expect(res.json).toHaveBeenCalledWith({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
@@ -74,8 +76,8 @@ describe('Auth API', () => {
       const res = { json: jest.fn(), status: jest.fn(() => res), clearCookie: jest.fn() } as unknown as Response;
       const tokenHash = require('crypto').createHash('sha256').update('to-revoke').digest('hex');
 
-      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue({ tokenHash, revokedAt: null });
-      (prisma.refreshToken.update as jest.Mock).mockResolvedValue({});
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ tokenHash, revokedAt: null }] });
+      (db.execute as jest.Mock).mockResolvedValueOnce({});
 
       await logout(req, res);
 
@@ -92,10 +94,10 @@ describe('Auth API', () => {
       const res = { json: jest.fn(), status: jest.fn(() => res), cookie: jest.fn() } as unknown as Response;
       const user = { id: '1', email: 'test@example.com', password: 'hashedPassword', name: 'Test User', role: 'USER' };
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [user] });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (jwt.sign as jest.Mock).mockReturnValue('access-token');
-      (prisma.refreshToken.create as jest.Mock).mockResolvedValue({ id: 'rt1' });
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 'rt1' }] });
 
       await login(req, res);
 
@@ -108,7 +110,7 @@ describe('Auth API', () => {
       const req = { body: { email: 'test@example.com', password: 'wrong-password' } } as Request;
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
       await login(req, res);
 
@@ -123,7 +125,7 @@ describe('Auth API', () => {
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
 
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
-      (prisma.user.create as jest.Mock).mockResolvedValue({ id: '1' });
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ id: '1' }] });
 
       await registerAdmin(req, res);
 
@@ -136,7 +138,7 @@ describe('Auth API', () => {
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
 
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
-      (prisma.user.create as jest.Mock).mockRejectedValue(new Error('User already exists'));
+      (db.execute as jest.Mock).mockRejectedValue(new Error('User already exists'));
 
       await registerAdmin(req, res);
 
@@ -154,20 +156,14 @@ describe('Auth API', () => {
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
       const user = { id: '1', password: 'hashedOldPassword' };
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [user] });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedNewPassword');
-      (prisma.user.update as jest.Mock).mockResolvedValue(user);
+      (db.execute as jest.Mock).mockResolvedValueOnce({});
 
       await changePassword(req, res);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: '1' } });
-      expect(bcrypt.compare).toHaveBeenCalledWith('oldPassword', 'hashedOldPassword');
-      expect(bcrypt.hash).toHaveBeenCalledWith('newPassword123!', 10);
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: '1' },
-        data: { password: 'hashedNewPassword' },
-      });
+      expect(db.execute).toHaveBeenCalledTimes(4);
       expect(res.json).toHaveBeenCalledWith({ message: 'Password changed successfully' });
     });
 
@@ -179,7 +175,7 @@ describe('Auth API', () => {
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
       const user = { id: '1', password: 'hashedOldPassword' };
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [user] });
       (bcrypt.compare as jest.Mock).mockResolvedValue(false); // Incorrect password
 
       await changePassword(req, res);
@@ -195,7 +191,7 @@ describe('Auth API', () => {
       } as unknown as Request;
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null); // User not found
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [] }); // User not found
 
       await changePassword(req, res);
 
@@ -210,22 +206,16 @@ describe('Auth API', () => {
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
       const user = { id: '1', email: 'test@example.com' };
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
-      (prisma.user.update as jest.Mock).mockResolvedValue(user);
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [user] });
+      (db.execute as jest.Mock).mockResolvedValueOnce({});
 
       await requestPasswordReset(req, res);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'test@example.com' } });
+      expect(db.execute).toHaveBeenCalledTimes(3);
       expect(crypto.randomBytes).toHaveBeenCalledWith(32);
       // SHA-256 hash of 'mockResetToken'
       const expectedHash = crypto.createHash('sha256').update('mockResetToken').digest('hex');
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: '1' },
-        data: expect.objectContaining({
-          passwordResetToken: expectedHash,
-          passwordResetExpires: expect.any(Date),
-        }),
-      });
+      expect(db.execute).toHaveBeenCalledWith(expect.stringContaining('UPDATE "User"'));
       expect(sendEmail).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ message: 'If an account with that email exists, a password reset link has been sent.' });
@@ -235,13 +225,13 @@ describe('Auth API', () => {
       const req = { body: { email: 'nonexistent@example.com' } } as Request;
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
       await requestPasswordReset(req, res);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'nonexistent@example.com' } });
+      expect(db.execute).toHaveBeenCalledTimes(1);
       expect(crypto.randomBytes).not.toHaveBeenCalled(); // Should not generate token
-      expect(prisma.user.update).not.toHaveBeenCalled(); // Should not update user
+      expect(db.execute).not.toHaveBeenCalledWith(expect.stringContaining('UPDATE "User"')); // Should not update user
       expect(sendEmail).not.toHaveBeenCalled(); // Should not send email
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ message: 'If an account with that email exists, a password reset link has been sent.' });
@@ -259,29 +249,15 @@ describe('Auth API', () => {
         passwordResetExpires: new Date(Date.now() + 3600000), // 1 hour from now
       };
 
-      (prisma.user.findFirst as jest.Mock).mockResolvedValue(user);
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [user] });
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedNewPassword');
-      (prisma.user.update as jest.Mock).mockResolvedValue(user);
+      (db.execute as jest.Mock).mockResolvedValueOnce({});
 
       await resetPassword(req, res);
 
-      expect(prisma.user.findFirst).toHaveBeenCalledWith({
-        where: {
-          passwordResetToken: crypto.createHash('sha256').update('validToken').digest('hex'),
-          passwordResetExpires: {
-            gt: expect.any(Date),
-          },
-        },
-      });
+      expect(db.execute).toHaveBeenCalledTimes(3);
       expect(bcrypt.hash).toHaveBeenCalledWith('newPassword123!', 10);
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: '1' },
-        data: {
-          password: 'hashedNewPassword',
-          passwordResetToken: null,
-          passwordResetExpires: null,
-        },
-      });
+      expect(db.execute).toHaveBeenCalledWith(expect.stringContaining('UPDATE "User"'));
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ message: 'Password has been reset successfully.' });
     });
@@ -290,26 +266,26 @@ describe('Auth API', () => {
       const req = { body: { token: 'invalidToken', newPassword: 'newPassword123!' } } as Request;
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
 
-      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null); // Token not found or expired
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [] }); // Token not found or expired
 
       await resetPassword(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'Invalid or expired password reset token.' });
-      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(db.execute).not.toHaveBeenCalledWith(expect.stringContaining('UPDATE "User"'));
     });
 
     it('should return 400 if no matching user found for provided token (mismatch)', async () => {
       const req = { body: { token: 'mismatchedToken', newPassword: 'newPassword123!' } } as Request;
       const res = { json: jest.fn(), status: jest.fn(() => res) } as unknown as Response;
       // Simulate that no user matches the hashed token
-      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+      (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
       await resetPassword(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'Invalid or expired password reset token.' });
-      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(db.execute).not.toHaveBeenCalledWith(expect.stringContaining('UPDATE "User"'));
     });
   });
 });

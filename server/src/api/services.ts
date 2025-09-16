@@ -1,13 +1,21 @@
 import { Request, Response } from "express";
-import prisma from "../lib/prisma";
+import { db } from '../lib/db';
+import { services } from '../lib/schema';
+import { eq } from 'drizzle-orm';
+
+type Service = typeof services.$inferSelect;
+
+function hasRows<T>(val: unknown): val is { rows: T[] } {
+  return typeof val === 'object' && val !== null && 'rows' in (val as any);
+}
 
 // GET /api/services
 export const getAllServices = async (req: Request, res: Response) => {
   console.log("Attempting to get all services");
   try {
-    const services = await prisma.service.findMany();
+    const servicesList = await db.select().from(services);
     console.log("Successfully fetched services");
-    res.json(services);
+    res.json(servicesList);
   } catch (error) {
     console.error("Error fetching services:", error);
     res.status(500).json({ error: "Failed to fetch services" });
@@ -17,7 +25,9 @@ export const getAllServices = async (req: Request, res: Response) => {
 // GET /api/services/:id
 export const getServiceById = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const service = await prisma.service.findUnique({ where: { id } });
+  const raw = await db.select().from(services).where(eq(services.id, id)).limit(1);
+  const result: Service[] = hasRows<Service>(raw) ? raw.rows : (raw as Service[]);
+  const [service] = result;
   if (!service) return res.status(404).json({ error: "Not found" });
   res.json(service);
 };
@@ -33,8 +43,10 @@ export const createService = async (req: Request, res: Response) => {
       imageUrls: Array.isArray(imageUrls) ? JSON.stringify(imageUrls) : imageUrls,
     };
     
-    const service = await prisma.service.create({ data });
-    res.status(201).json(service);
+    const raw = await db.insert(services).values(data).returning();
+    const inserted: Service[] = hasRows<Service>(raw) ? raw.rows : (raw as Service[]);
+    const [newService] = inserted;
+    res.status(201).json(newService);
   } catch (e) {
     console.error(e); // Added this line
     res.status(400).json({ error: "Failed to create" });
@@ -53,12 +65,10 @@ export const updateService = async (req: Request, res: Response) => {
       ...(imageUrls && { imageUrls: Array.isArray(imageUrls) ? JSON.stringify(imageUrls) : imageUrls }),
     };
     
-    const service = await prisma.service.update({
-      where: { id },
-      data,
-    });
-    res.json(service);
-  } catch (e) {
+    const raw = await db.update(services).set(data).where(eq(services.id, id)).returning();
+    const updated: Service[] = hasRows<Service>(raw) ? raw.rows : (raw as Service[]);
+    res.json(updated);
+  } catch {
     res.status(400).json({ error: "Failed to update" });
   }
 };
@@ -67,9 +77,9 @@ export const updateService = async (req: Request, res: Response) => {
 export const deleteService = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    await prisma.service.delete({ where: { id } });
+    await db.delete(services).where(eq(services.id, id));
     res.status(204).send();
-  } catch (e) {
+  } catch {
     res.status(400).json({ error: "Failed to delete" });
   }
 };

@@ -1,33 +1,32 @@
 import { getAdminDashboard } from '../../api/admin';
 import { Request, Response } from 'express';
-import prisma from '../../lib/prisma';
+import { db } from '../../lib/db';
+import { users } from '../../lib/schema';
+import { eq, sql } from 'drizzle-orm';
 
-// Mock the prisma client
-jest.mock('../../lib/prisma', () => ({
+// Mock the db client
+jest.mock('../../lib/db', () => ({
   __esModule: true,
-  default: {
-    user: {
-      count: jest.fn(),
-    },
-    service: {
-      count: jest.fn(),
-    },
-    order: {
-      count: jest.fn(),
-    },
-    cartItem: {
-      count: jest.fn(),
-    },
+  db: {
+    execute: jest.fn(),
+    insert: jest.fn(),
+    select: jest.fn(),
   },
 }));
 
 describe('Admin API', () => {
+  beforeEach(async () => {
+    await db.execute(sql`TRUNCATE TABLE "User" RESTART IDENTITY CASCADE`);
+  });
+
   it('should return the correct dashboard data', async () => {
-    // Mock the prisma count functions
-    (prisma.user.count as jest.Mock).mockResolvedValue(10);
-    (prisma.service.count as jest.Mock).mockResolvedValue(5);
-    (prisma.order.count as jest.Mock).mockResolvedValue(20);
-    (prisma.cartItem.count as jest.Mock).mockResolvedValue(50);
+    // Mock the db queries
+    (db.select as jest.Mock).mockReturnValueOnce([
+      { count: 10 },
+      { count: 5 },
+      { count: 20 },
+      { count: 50 },
+    ]);
 
     const req = {} as Request;
     const res = {

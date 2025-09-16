@@ -24,7 +24,7 @@ function mask(value: unknown): string {
   return `${'*'.repeat(Math.max(0, str.length - 4))}${str.slice(-4)}`;
 }
 
-function redactValue(key: string, value: any): any {
+function redactValue(key: string, value: unknown): unknown {
   if (SENSITIVE_KEYS.has(key.toLowerCase())) {
     return mask(value);
   }
@@ -36,13 +36,13 @@ function redactValue(key: string, value: any): any {
   return value;
 }
 
-export function redactSensitive(input: any, depth = 0): any {
+export function redactSensitive(input: unknown, depth = 0): unknown {
   if (depth > 3) return '***'; // prevent deep structures
   if (input == null) return input;
   if (Array.isArray(input)) return input.map((v) => redactSensitive(v, depth + 1));
   if (typeof input === 'object') {
-    const out: Record<string, any> = {};
-    for (const [k, v] of Object.entries(input as Record<string, any>)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
       out[k] = redactSensitive(redactValue(k, v), depth + 1);
     }
     return out;
@@ -50,6 +50,9 @@ export function redactSensitive(input: any, depth = 0): any {
   return input;
 }
 
-export function safeErrorMessage(err: any, isDev: boolean) {
-  return isDev ? err?.message : 'Internal server error';
+export function safeErrorMessage(err: unknown, isDev: boolean) {
+  const hasMessage = (e: unknown): e is { message: unknown } =>
+    !!e && typeof e === 'object' && 'message' in (e as Record<string, unknown>);
+  const msg = hasMessage(err) ? String((err as { message: unknown }).message) : undefined;
+  return isDev ? msg : 'Internal server error';
 }

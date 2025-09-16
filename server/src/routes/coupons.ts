@@ -1,6 +1,9 @@
 // server/src/routes/coupons.ts
 import { Router, Request, Response, NextFunction } from "express";
-import prisma from "../lib/prisma";
+import { db } from "../lib/db";
+import { coupons } from "../lib/schema";
+import type { InferSelectModel } from 'drizzle-orm';
+import { eq, sql, ne, and } from "drizzle-orm";
 import { admin, protect, AuthRequest } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { AppError } from "../lib/errors";
@@ -11,6 +14,8 @@ import {
   paginationQuerySchema,
   idParamSchema,
 } from "../lib/validation";
+
+type Coupon = InferSelectModel<typeof coupons>;
 
 const router = Router();
 
@@ -30,7 +35,8 @@ router.get("/code/:code", validate({ params: couponCodeParamSchema }), async (re
   try {
     const code = req.params.code;
     console.log('Coupon code received:', code);
-    const coupon = await prisma.coupon.findUnique({ where: { code } });
+    const couponResult = await db.select().from(coupons).where(eq(coupons.code, code));
+    const coupon = couponResult[0];
 
     if (!coupon) {
       return next(AppError.notFound("Invalid coupon code"));
@@ -77,13 +83,10 @@ router.get("/", validate({ query: paginationQuerySchema }), async (req: AuthRequ
     };
 
     // Run sequentially to avoid potential SQLite locking with concurrent tx
-    const total = await withRetry(() => prisma.coupon.count());
+    const totalResult = await db.select({ count: sql<number>`count(*)` }).from(coupons);
+    const total = totalResult[0].count;
     const data = await withRetry(() =>
-      prisma.coupon.findMany({
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      })
+      db.select().from(coupons).orderBy(coupons.createdAt.desc()).offset((page - 1) * pageSize).limit(pageSize)
     );
     res.json({ data, total, page, pageSize });
   } catch (e) {
@@ -93,9 +96,8 @@ router.get("/", validate({ query: paginationQuerySchema }), async (req: AuthRequ
 
 router.get("/:id", validate({ params: idParamSchema }), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const coupon = await prisma.coupon.findUnique({
-      where: { id: req.params.id },
-    });
+    const couponResult = await db.select().from(coupons).where(eq(coupons.id, req.params.id));
+    const coupon = couponResult[0];
     if (!coupon) return next(AppError.notFound("Coupon not found"));
     res.json(coupon);
   } catch (e) {
@@ -111,11 +113,13 @@ router.use(protect, admin);
 router.post("/", validate(couponSchema), async (req: AuthRequest, res: Response, next: NextFunction) => {
   const data = req.body;
   try {
-    const duplicate = await prisma.coupon.findUnique({ where: { code: data.code } });
-    if (duplicate) return next(AppError.conflict("Coupon code already exists"));
+    const duplicate = await db.select().from(coupons).where(eq(coupons.code, data.code));
+    if (duplicate.length > 0) return next(AppError.conflict("Coupon code already exists"));
 
-    const coupon = await prisma.coupon.create({ data: { ...data, currentUses: 0 } });
-    res.status(201).json(coupon);
+    const insertResult = await db.insert(coupons).values(data).returning();
+    const newCoupon = (insertResult as Coupon[])[0];
+
+    res.status(201).json(newCoupon);
   } catch (e) {
     next(e);
   }
@@ -128,14 +132,15 @@ router.patch(
   const data = req.body;
   try {
     if (data.code) {
-      const dup = await prisma.coupon.findFirst({
-        where: { code: data.code, NOT: { id: req.params.id } },
-      });
-      if (dup) return next(AppError.conflict("Coupon code already exists"));
+      const dup = await db.select().from(coupons)
+        .where(and(eq(coupons.code, data.code), ne(coupons.id, req.params.id)));
+      if (dup.length > 0) return next(AppError.conflict("Coupon code already exists"));
     }
 
-    const coupon = await prisma.coupon.update({ where: { id: req.params.id }, data });
-    res.json(coupon);
+    const updateResult = await db.update(coupons).set(data).where(eq(coupons.id, req.params.id)).returning();
+    const updatedCoupon = (updateResult as Coupon[])[0];
+
+    res.json(updatedCoupon);
   } catch (e: any) {
     if (e.message?.includes("Record to update"))
       return next(AppError.notFound("Coupon not found"));
@@ -148,7 +153,7 @@ router.delete(
   validate({ params: idParamSchema }),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    await prisma.coupon.delete({ where: { id: req.params.id } });
+    await db.delete(coupons).where(eq(coupons.id, req.params.id));
     res.status(204).send();
   } catch (e: any) {
     return next(AppError.notFound("Coupon not found"));

@@ -1,10 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import {
-  PrismaClientKnownRequestError,
-  PrismaClientValidationError,
-  PrismaClientInitializationError,
-  PrismaClientRustPanicError,
-} from '@prisma/client/runtime/library';
 import logger from '../lib/logger';
 import { redactSensitive } from '../lib/redact';
 import { AppError, ErrorResponse } from '../lib/errors';
@@ -25,10 +19,24 @@ export const errorHandler = (
     query: isDev ? req.query : redactSensitive(req.query),
   };
 
+  // Log enriched PG error fields when available
+  const pgInfo = error && typeof error === 'object' ? {
+    pg: {
+      code: (error as any).code,
+      detail: (error as any).detail,
+      schema: (error as any).schema,
+      table: (error as any).table,
+      constraint: (error as any).constraint,
+      column: (error as any).column,
+      routine: (error as any).routine,
+    }
+  } : undefined;
+
   logger.error('=== SERVER ERROR ===', {
     message: error?.message,
     stack: isDev ? error?.stack : undefined,
     ...safePayload,
+    ...pgInfo,
     // Avoid dumping entire error objects in prod
     error: isDev ? error : undefined,
   });
@@ -45,40 +53,50 @@ export const errorHandler = (
         code: i.code,
       })),
     });
-  } else if (error instanceof PrismaClientKnownRequestError) {
-    if (error.code === 'P2002') {
-      appErr = new AppError(
-        'DB_UNIQUE_VIOLATION',
-        'Unique constraint violation',
-        409,
-        { target: (error as any).meta?.target }
-      );
-    } else if (error.code === 'P2025') {
-      appErr = new AppError('DB_NOT_FOUND', 'Record not found', 404);
-    } else if (error.code === 'P2003') {
-      // Foreign key constraint failed
-      appErr = new AppError(
-        'DB_FOREIGN_KEY',
-        'Foreign key constraint violation',
-        409,
-        { field: ((error as any).meta as any)?.field_name || ((error as any).meta as any)?.target }
-      );
-    } else {
-      appErr = new AppError('DB_ERROR', 'Database error', 400);
+  } else if (error.code === 'P2002') {
+    appErr = new AppError(
+      'DB_UNIQUE_VIOLATION',
+      'Unique constraint violation',
+      409,
+      { target: (error as any).meta?.target }
+    );
+  } else if (error.code === 'P2025') {
+    appErr = new AppError('DB_NOT_FOUND', 'Record not found', 404);
+  } else if (error.code === 'P2003') {
+    // Foreign key constraint failed
+    appErr = new AppError(
+      'DB_FOREIGN_KEY',
+      'Foreign key constraint violation',
+      409,
+      { field: ((error as any).meta as any)?.field_name || ((error as any).meta as any)?.target }
+    );
+  } else if (error && typeof error === 'object' && typeof (error as any).code === 'string') {
+    // Map common Postgres SQLSTATE error codes for clearer responses
+    const code = (error as any).code as string;
+    switch (code) {
+      case '42P01': // undefined_table
+        appErr = new AppError('DB_TABLE_NOT_FOUND', 'Database table not found', 500, { table: (error as any).table });
+        break;
+      case '42703': // undefined_column
+        appErr = new AppError('DB_COLUMN_NOT_FOUND', 'Database column not found', 500, { column: (error as any).column, table: (error as any).table });
+        break;
+      case '42501': // insufficient_privilege
+        appErr = new AppError('DB_PERMISSION_DENIED', 'Database permission denied', 403, { schema: (error as any).schema, table: (error as any).table });
+        break;
+      case '23505': // unique_violation
+        appErr = new AppError('DB_UNIQUE_VIOLATION', 'Unique constraint violation', 409, { constraint: (error as any).constraint });
+        break;
+      case '23503': // foreign_key_violation
+        appErr = new AppError('DB_FOREIGN_KEY', 'Foreign key constraint violation', 409, { constraint: (error as any).constraint });
+        break;
+      case '22P02': // invalid_text_representation (e.g., invalid uuid)
+        appErr = new AppError('DB_INVALID_TEXT', 'Invalid value format for database field', 400, { column: (error as any).column });
+        break;
+      default:
+        appErr = new AppError('DB_ERROR', 'Database error', 500, { code });
     }
-  } else if (error instanceof PrismaClientValidationError) {
-    appErr = AppError.badRequest('Invalid request for database operation', {
-      message: error.message,
-    });
-  } else if (
-    error instanceof PrismaClientInitializationError ||
-    error instanceof PrismaClientRustPanicError
-  ) {
-    appErr = AppError.internal('Database initialization error', {
-      message: error.message,
-    });
   } else {
-    appErr = AppError.internal();
+    appErr = new AppError('DB_ERROR', 'Database error', 500);
   }
 
   const requestId = (req as any).requestId as string | undefined;

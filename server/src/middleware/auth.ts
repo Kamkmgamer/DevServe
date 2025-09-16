@@ -1,20 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JsonWebTokenError, TokenExpiredError, VerifyOptions, JwtPayload } from "jsonwebtoken";
-import prisma from "../lib/prisma"; // Import prisma client
+import { db } from '../lib/db';
+import { users } from '../lib/schema';
+import { eq } from 'drizzle-orm';
 import { getEnvOrFile, normalizeMultiline } from "../lib/secrets";
 import logger from "../lib/logger";
+import type { User } from '../lib/db';
 
 export interface AuthRequest extends Request {
-  userId?: string;
-  user?: {
-    id: string;
-    email: string;
-    password?: string;
-    name?: string | null;
-    role: string;
-    createdAt: Date;
-    updatedAt: Date;
-  };
+  user?: User;
 }
 
 // Key loading and rotation support
@@ -96,20 +90,16 @@ export const protect = async (
     if (!decoded?.id) {
       return res.status(400).json({ error: 'Invalid token payload', code: 'INVALID_TOKEN_PAYLOAD' });
     }
-    req.userId = decoded.id;
     logger.debug('Protect middleware: decoded.userId', { userId: decoded.id });
 
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId },
-    });
-    logger.debug('Protect middleware: fetched user', { userId: req.userId, found: !!user });
+    const userResult = await db.select().from(users).where(eq(users.id, decoded.id));
+    const user = userResult[0];
 
     if (!user) {
       return res.status(401).json({ message: "User not found." });
     }
 
-    req.user = user; // Attach the full user object to the request
-    logger.debug('Protect middleware: req.user set', { userId: req.user?.id });
+    (req as AuthRequest).user = user;
     next();
   } catch (error) {
     if (error instanceof TokenExpiredError) {
@@ -137,25 +127,11 @@ export const admin = async (
   res: Response,
   next: NextFunction
 ) => {
-  if (!req.userId) {
-    return res.status(401).json({ message: "Not authenticated." });
+  if (!req.user || (req.user.role !== "ADMIN" && req.user.role !== "SUPERADMIN")) {
+    res.status(403).json({ message: "Access denied. Admin role required." });
+    return;
   }
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId },
-    });
-
-    if (user && (user.role === "ADMIN" || user.role === "SUPERADMIN")) {
-      req.user = user; // Attach the full user object to the request
-      next();
-    } else {
-      res.status(403).json({ message: "Access denied. Admin role required." });
-    }
-  } catch (error) {
-    logger.error("Error in admin middleware:", { error });
-    res.status(500).json({ message: "Internal server error." });
-  }
+  next();
 };
 
 export const superadmin = async (
@@ -163,23 +139,9 @@ export const superadmin = async (
   res: Response,
   next: NextFunction
 ) => {
-  if (!req.userId) {
-    return res.status(401).json({ message: "Not authenticated." });
+  if (!req.user || req.user.role !== "SUPERADMIN") {
+    res.status(403).json({ message: "Access denied. Superadmin role required." });
+    return;
   }
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId },
-    });
-
-    if (user && user.role === "SUPERADMIN") {
-      req.user = user; // Attach the full user object to the request
-      next();
-    } else {
-      res.status(403).json({ message: "Access denied. Superadmin role required." });
-    }
-  } catch (error) {
-    logger.error("Error in superadmin middleware:", { error });
-    res.status(500).json({ message: "Internal server error." });
-  }
+  next();
 };
