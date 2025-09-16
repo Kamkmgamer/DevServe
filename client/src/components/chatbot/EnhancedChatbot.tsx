@@ -8,26 +8,9 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import api from "../../api/axios";
+// Cast SyntaxHighlighter to a React component type to satisfy TSX JSX typing
+const CodeBlock = SyntaxHighlighter as unknown as React.ComponentType<any>;
 
-/**
- * Enhanced Chatbot.tsx
- * A powerful, resizable chatbot component with advanced customization features
- * 
- * 🚀 NEW FEATURES:
- * ✅ Resizable window with drag handles for desktop and touch support for mobile
- * ✅ Customizable appearance (background color, font family, font size)
- * ✅ Fixed spacebar input issue with proper event handling
- * ✅ Smooth animations for messages and interactions
- * ✅ Mobile-friendly responsive design with touch optimization
- * ✅ Keyboard accessibility and ARIA support
- * ✅ Persistent settings with localStorage
- * ✅ Clear input and enhanced send functionality
- * ✅ Modern, clean UI with gradient themes
- * ✅ Draggable window positioning
- * ✅ Maximize/minimize functionality
- * ✅ Message send animations
- * ✅ Improved error handling and user feedback
- */
 
 type Role = "user" | "assistant";
 
@@ -1330,12 +1313,11 @@ const EnhancedChatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                     <ReactMarkdown 
                       components={{
                         p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
-                        code({ inline, className, children }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
-                          const { inline, className, children } = rawProps || {};
+                        code({ inline: isInline, className, children }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
                           const match = /language-(\w+)/.exec(className || "");
-                          if (!inline) {
+                          if (!isInline) {
                             return (
-                              <SyntaxHighlighter
+                              <CodeBlock
                                 style={isDarkMode ? oneDark : oneLight}
                                 language={match?.[1] || "plaintext"}
                                 PreTag="div"
@@ -1348,7 +1330,7 @@ const EnhancedChatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                                 }}
                               >
                                 {String(children).replace(/\n$/, "")}
-                              </SyntaxHighlighter>
+                              </CodeBlock>
                             );
                           }
                           return (

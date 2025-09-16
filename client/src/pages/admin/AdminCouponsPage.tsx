@@ -125,12 +125,14 @@ const AdminCouponsPage: React.FC = () => {
     try {
       const res = await api.get<{ data: Coupon[] } | Coupon[]>("/coupons");
       const list = Array.isArray(res.data) ? res.data : res.data.data;
-      setCoupons(list);
-    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
+      const sanitized = (Array.isArray(list) ? list.filter(Boolean) : []) as Coupon[];
+      setCoupons(sanitized);
+    } catch (error: any) {
+      const serverErr = error?.response?.data?.error;
       const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
+        (typeof serverErr === "string" ? serverErr : serverErr?.message) ||
+        error?.response?.data?.message ||
+        error?.message ||
         "Failed to load coupons";
       setError(errorMessage);
       toast.error(errorMessage);
@@ -146,6 +148,7 @@ const AdminCouponsPage: React.FC = () => {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return coupons.filter((c) => {
+      if (!c) return false;
       const matchesQuery =
         !q ||
         c.code.toLowerCase().includes(q) ||
@@ -217,7 +220,7 @@ const AdminCouponsPage: React.FC = () => {
     const coup = coupons.find((c) => c.id === id);
     if (!coup) return;
 
-    setCoupons((prev) => prev.filter((c) => c.id !== id));
+    setCoupons((prev) => prev.filter((c) => c && c.id !== id) as Coupon[]);
     lastDeletedRef.current = coup;
 
     toast(
@@ -252,11 +255,12 @@ const AdminCouponsPage: React.FC = () => {
       try {
         await api.delete(`/coupons/${id}`);
         toast.success("Coupon permanently deleted");
-      } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
+      } catch (error: any) {
+        const serverErr = error?.response?.data?.error;
         const errorMessage =
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          error.message ||
+          (typeof serverErr === "string" ? serverErr : serverErr?.message) ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Delete failed";
         if (toDelete) setCoupons((prev) => [toDelete, ...prev]);
         toast.error(errorMessage);
