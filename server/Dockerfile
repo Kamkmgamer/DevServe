@@ -18,10 +18,9 @@ RUN apk add --no-cache openssl python3 make g++
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY tsconfig.json ./
-COPY prisma ./prisma
 COPY src ./src
 # Generate Prisma client and build
-RUN npx prisma generate
+RUN npx drizzle-kit generate:pg
 RUN npm run build
 
 # ---- Production Image ----
@@ -37,7 +36,6 @@ ENV NODE_ENV=production
 COPY --chown=nodeuser:nodejs --from=deps /app/node_modules ./node_modules
 COPY --chown=nodeuser:nodejs --from=builder /app/dist ./dist
 COPY --chown=nodeuser:nodejs package.json ./package.json
-COPY --chown=nodeuser:nodejs prisma ./prisma
 COPY --chown=nodeuser:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Ensure entrypoint is executable
