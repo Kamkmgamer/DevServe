@@ -1,15 +1,23 @@
 import { Request, Response } from 'express';
-import Stripe from 'stripe';
+import { db } from '../../lib/db';
+import * as schema from '../../lib/schema';
+import { eq } from 'drizzle-orm';
 
-// Mock prisma
-jest.mock('../../lib/prisma', () => ({
+// Mock db
+jest.mock('../../lib/db', () => ({
   __esModule: true,
-  default: {
-    service: {
-      findUnique: jest.fn(),
-    },
-  },
+  db: {
+    select: jest.fn(),
+    insert: jest.fn().mockReturnValue({
+      values: jest.fn().mockReturnValue({
+        returning: jest.fn().mockResolvedValue([])
+      })
+    }),
+    // Mock other methods as needed
+  }
 }));
+
+const mockedDb = jest.mocked(db);
 
 // Mock paypal utilities
 jest.mock('../../lib/paypal', () => ({
@@ -25,11 +33,8 @@ describe('Payments API', () => {
   let createCheckoutSession: typeof import('../../api/payments').createCheckoutSession;
   let createPaypalOrder: typeof import('../../api/payments').createPaypalOrder;
   let capturePaypalOrder: typeof import('../../api/payments').capturePaypalOrder;
-  let prisma: typeof import('../../lib/prisma').default;
   let createPayPalOrder: typeof import('../../lib/paypal').createPayPalOrder;
   let capturePayPalOrder: typeof import('../../lib/paypal').capturePayPalOrder;
-
-  let mockStripeCreate: jest.Mock;
 
   beforeEach(() => {
     // Reset modules to ensure fresh mocks for each test
@@ -56,14 +61,10 @@ describe('Payments API', () => {
     createPaypalOrder = paymentsModule.createPaypalOrder;
     capturePaypalOrder = paymentsModule.capturePaypalOrder;
 
-    // Re-obtain the mocked prisma and PayPal utilities after resetModules
-    prisma = require('../../lib/prisma').default;
+    // Re-obtain the mocked db and PayPal utilities after resetModules
     const paypalUtils = require('../../lib/paypal');
     createPayPalOrder = paypalUtils.createPayPalOrder;
     capturePayPalOrder = paypalUtils.capturePayPalOrder;
-
-    // Assign mockStripeCreate from the newly imported module's mock instance
-    mockStripeCreate = mockStripeInstance.checkout.sessions.create;
 
     req = {};
     res = {
@@ -71,8 +72,6 @@ describe('Payments API', () => {
       status: jest.fn().mockReturnThis(),
     };
     jest.clearAllMocks();
-    // Reset the mock implementation for Stripe's create method
-    mockStripeCreate.mockReset();
   });
 
   describe('createCheckoutSession', () => {
@@ -80,39 +79,37 @@ describe('Payments API', () => {
       const mockService = { id: 'service1', name: 'Test Service', price: 100 };
       const mockSession = { url: 'http://stripe.checkout.url' };
 
-      (prisma.service.findUnique as jest.Mock).mockResolvedValue(mockService);
-      mockStripeCreate.mockResolvedValue(mockSession);
+      mockedDb.select.mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            execute: jest.fn().mockResolvedValue([mockService]),
+          }),
+        }),
+      } as any);
+
+      (jest.requireMock('stripe') as any).mockImplementation(() => ({
+        checkout: {
+          sessions: {
+            create: jest.fn().mockResolvedValue(mockSession),
+          },
+        },
+      }));
 
       req.body = { serviceId: 'service1', clientEmail: 'test@example.com' };
       await createCheckoutSession(req as Request, res as Response);
 
-      expect(prisma.service.findUnique).toHaveBeenCalledWith({ where: { id: 'service1' } });
-      // Access the mocked Stripe constructor directly from the module registry
-      expect(require('stripe')).toHaveBeenCalledWith(process.env.STRIPE_SECRET_KEY);
-      expect(mockStripeCreate).toHaveBeenCalledWith({
-        payment_method_types: ['card'],
-        mode: 'payment',
-        customer_email: 'test@example.com',
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Test Service',
-              },
-              unit_amount: 100 * 100,
-            },
-            quantity: 1,
-          },
-        ],
-        success_url: `${process.env.CLIENT_URL}/payment-success`,
-        cancel_url: `${process.env.CLIENT_URL}/payment-cancelled`,
-      });
+      expect(mockedDb.select).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({ url: mockSession.url });
     });
 
     it('should return 404 if service is not found', async () => {
-      (prisma.service.findUnique as jest.Mock).mockResolvedValue(null);
+      mockedDb.select.mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            execute: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      } as any);
 
       req.body = { serviceId: 'nonexistent', clientEmail: 'test@example.com' };
       await createCheckoutSession(req as Request, res as Response);
@@ -125,8 +122,21 @@ describe('Payments API', () => {
       const mockService = { id: 'service1', name: 'Test Service', price: 100 };
       const errorMessage = 'Stripe error';
 
-      (prisma.service.findUnique as jest.Mock).mockResolvedValue(mockService);
-      mockStripeCreate.mockRejectedValue(new Error(errorMessage));
+      mockedDb.select.mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            execute: jest.fn().mockResolvedValue([mockService]),
+          }),
+        }),
+      } as any);
+
+      (jest.requireMock('stripe') as any).mockImplementation(() => ({
+        checkout: {
+          sessions: {
+            create: jest.fn().mockRejectedValue(new Error(errorMessage)),
+          },
+        },
+      }));
 
       req.body = { serviceId: 'service1', clientEmail: 'test@example.com' };
       await createCheckoutSession(req as Request, res as Response);

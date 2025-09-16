@@ -1,31 +1,32 @@
 import request from 'supertest';
 import app from '../../app';
-import prisma from '../../lib/prisma';
+import { db } from '../../lib/db';
+import * as schema from '../../lib/schema';
 import bcrypt from 'bcryptjs';
 
 let token: string;
 let couponId: string;
 
 beforeAll(async () => {
-  // Clean tables in dependency order
-  await prisma.orderLineItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.cartItem.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.coupon.deleteMany();
-  await prisma.user.deleteMany();
+  await db.delete(schema.orderLineItems);
+  await db.delete(schema.orders);
+  await db.delete(schema.cartItems);
+  await db.delete(schema.carts);
+  await db.delete(schema.coupons);
+  await db.delete(schema.users);
 
   const hashedPassword = await bcrypt.hash('Test1234!', 10);
-  await prisma.user.create({ data: { email: 'coupon_admin@example.com', password: hashedPassword, name: 'Admin', role: 'ADMIN' } });
+  await db.insert(schema.users).values({
+    email: 'coupon_admin@example.com',
+    password: hashedPassword,
+    name: 'Admin',
+    role: 'ADMIN'
+  });
 
   const res = await request(app)
     .post('/api/auth/login')
     .send({ email: 'coupon_admin@example.com', password: 'Test1234!' });
   token = res.body.token;
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
 });
 
 describe('Coupons API', () => {

@@ -1,37 +1,38 @@
 import request from 'supertest';
 import app from '../../app';
-import prisma from '../../lib/prisma';
+import { db } from '../../lib/db';
+import * as schema from '../../lib/schema';
 import bcrypt from 'bcryptjs';
 
 let adminToken: string;
 let createdUserId: string;
 
 beforeAll(async () => {
-  // Clean tables in dependency order to avoid FK violations
-  await prisma.orderLineItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.cartItem.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.commission.deleteMany();
-  await prisma.payout.deleteMany();
-  await prisma.blogPost.deleteMany();
-  await prisma.referral.deleteMany();
-  await prisma.user.deleteMany();
+  await db.delete(schema.orderLineItems);
+  await db.delete(schema.orders);
+  await db.delete(schema.cartItems);
+  await db.delete(schema.carts);
+  await db.delete(schema.commissions);
+  await db.delete(schema.payouts);
+  await db.delete(schema.blogPosts);
+  await db.delete(schema.referrals);
+  await db.delete(schema.users);
+  await db.delete(schema.portfolios);
 
   // Seed an admin user and login
   const hashedPassword = await bcrypt.hash('Admin1234!', 10);
-  const admin = await prisma.user.create({
-    data: { email: 'admin@example.com', password: hashedPassword, name: 'Admin', role: 'ADMIN' as any },
+  await db.insert(schema.users).values({
+    id: 'test-admin-id',
+    email: 'admin@example.com',
+    password: hashedPassword, // assume hashed
+    name: 'Admin User',
+    role: 'ADMIN',
   });
 
   const loginRes = await request(app)
     .post('/api/auth/login')
     .send({ email: 'admin@example.com', password: 'Admin1234!' });
   adminToken = loginRes.body.token;
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
 });
 
 describe('Admin Users API', () => {

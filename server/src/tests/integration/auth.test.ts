@@ -1,21 +1,22 @@
 import request from 'supertest';
 import app from '../../app';
-import prisma from '../../lib/prisma';
+import { db } from '../../lib/db';
+import * as schema from '../../lib/schema';
+import { eq } from 'drizzle-orm';
 
 describe('Auth integration', () => {
   beforeAll(async () => {
-    // Ensure DB is clean (delete in dependency order to avoid FK issues)
-    await prisma.orderLineItem.deleteMany();
-    await prisma.order.deleteMany();
-    await prisma.cartItem.deleteMany();
-    await prisma.cart.deleteMany();
-    await prisma.blogPost.deleteMany();
-    await prisma.service.deleteMany();
-    await prisma.coupon.deleteMany();
-    await prisma.commission.deleteMany();
-    await prisma.payout.deleteMany();
-    await prisma.referral.deleteMany();
-    await prisma.user.deleteMany();
+    await db.delete(schema.orderLineItems);
+    await db.delete(schema.orders);
+    await db.delete(schema.cartItems);
+    await db.delete(schema.carts);
+    await db.delete(schema.blogPosts);
+    await db.delete(schema.services);
+    await db.delete(schema.coupons);
+    await db.delete(schema.commissions);
+    await db.delete(schema.payouts);
+    await db.delete(schema.referrals);
+    await db.delete(schema.users);
   });
 
   it('POST /api/auth/register should create a user and set cookies', async () => {

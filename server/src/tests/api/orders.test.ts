@@ -1,50 +1,51 @@
 import request from 'supertest';
 import app from '../../app';
-import prisma from '../../lib/prisma';
-import bcrypt from 'bcryptjs';
-
-let token: string;
-let userId: string;
-let serviceId: string;
-let orderId: string;
-
-beforeAll(async () => {
-  // Clean DB
-  await prisma.orderLineItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.cartItem.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.service.deleteMany();
-  await prisma.coupon.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.referral.deleteMany();
-
-  // Create user and login
-  const hashedPassword = await bcrypt.hash('Test1234!', 10);
-  const user = await prisma.user.create({ data: { email: 'order_user@example.com', password: hashedPassword, name: 'Buyer' } });
-  userId = user.id;
-  const loginRes = await request(app).post('/api/auth/login').send({ email: 'order_user@example.com', password: 'Test1234!' });
-  token = loginRes.body.token;
-
-  // Create a service
-  const svc = await prisma.service.create({
-    data: {
-      name: 'Landing Page',
-      description: 'Single-page site',
-      price: 199,
-      features: JSON.stringify(['design', 'dev']),
-      category: 'Web',
-      imageUrls: JSON.stringify(['a.jpg']),
-    },
-  });
-  serviceId = svc.id;
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
-});
+import { db } from '../../lib/db';
+import * as schema from '../../lib/schema';
+import jwt from 'jsonwebtoken';
 
 describe('Orders API', () => {
+  let userId: string;
+  let serviceId: string;
+  let token: string;
+  let orderId: string;
+
+  beforeAll(async () => {
+    // Cleanup
+    await db.delete(schema.orderLineItems);
+    await db.delete(schema.orders);
+    await db.delete(schema.cartItems);
+    await db.delete(schema.carts);
+    await db.delete(schema.services);
+    await db.delete(schema.coupons);
+    await db.delete(schema.users);
+    await db.delete(schema.referrals);
+
+    // Create user
+    const userResult = await db.insert(schema.users).values({
+      email: 'order_user@example.com',
+      password: 'hashedPassword', // assume hashed
+      name: 'Buyer',
+    }).returning({ id: schema.users.id });
+
+    userId = userResult[0].id;
+
+    // Create token
+    token = jwt.sign({ userId }, 'secret'); // assume secret
+
+    // Create service
+    const svcResult = await db.insert(schema.services).values({
+      name: 'Test Service',
+      description: 'Test',
+      price: 100,
+      features: JSON.stringify([]),
+      category: 'Test',
+      imageUrls: JSON.stringify([]),
+    }).returning({ id: schema.services.id });
+
+    serviceId = svcResult[0].id;
+  });
+
   it('GET /api/orders requires auth', async () => {
     const res = await request(app).get('/api/orders');
     expect(res.status).toBe(401);
