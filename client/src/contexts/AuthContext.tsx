@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
   // Regex for strong password: at least one uppercase, one lowercase, one number, one special character, min 8 chars
-  const strongPasswordRegex = useMemo(() => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':\"\|,.<>\/?]).{8,}$/, []);
+  const strongPasswordRegex = useMemo(() => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':"|,.<>/?]).{8,}$/, []);
 
   // Initialize session from refresh endpoint (cookies)
   useEffect(() => {
@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data } = await api.post<{ user: User }>("/auth/refresh");
         if (isMounted) setUser(data.user);
-      } catch (_error) {
+      } catch {
         // Not authenticated; ignore
       }
     })();
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const logout = useCallback(async () => {
-    try { await api.post("/auth/logout"); } catch (_error) {}
+    try { await api.post("/auth/logout"); } catch { /* Silently handle logout errors */ }
     setUser(null);
   }, []);
 

@@ -53,9 +53,9 @@ async function ensureCsrfToken(): Promise<string> {
       csrfToken = t;
       csrfFetchInFlight = null;
       return t;
-    }).catch((e) => {
+    }).catch((_e) => {
       csrfFetchInFlight = null;
-      throw e;
+      throw _e;
     });
   }
   return csrfFetchInFlight;
@@ -71,7 +71,7 @@ api.interceptors.request.use(async (config) => {
       const headers = (config.headers ?? {}) as AxiosRequestHeaders;
       headers["x-csrf-token"] = token;
       config.headers = headers;
-    } catch (e) {
+    } catch (_e) {
       // If we can't fetch CSRF, allow request to proceed; server will reject and UI will show errors
       // TODO: Log or handle error
     }
@@ -85,7 +85,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { status, data } = error.response;
-      const errorMessage = data.error || data.message || "An unexpected error occurred.";
+      // Normalize server error payloads: server returns { error: { code, message, ... } }
+      const serverErr = data?.error;
+      const errorMessage = typeof serverErr === 'string'
+        ? serverErr
+        : (serverErr?.message || data?.message || 'An unexpected error occurred.');
 
       switch (status) {
         case 400:

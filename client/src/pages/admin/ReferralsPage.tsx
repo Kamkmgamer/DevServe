@@ -83,11 +83,12 @@ const ReferralsPage: React.FC = () => {
     try {
       const { data } = await api.get<Referral[]>("/referrals");
       setReferrals(data);
-    } catch (error: { response?: { data?: { message?: string; error?: string } }; message?: string }) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string; error?: string } }; message?: string };
       const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
         "Failed to load referrals";
       setError(errorMessage);
       toast.error(errorMessage);
@@ -155,7 +156,7 @@ const ReferralsPage: React.FC = () => {
       await api.post("/payouts", { referralId, amount });
       fetchReferrals();
       toast.success("Payout created");
-    } catch (error) {
+    } catch {
       toast.error("Failed to create payout");
     }
   };

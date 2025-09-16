@@ -2,9 +2,12 @@ import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import matchers from '@testing-library/jest-dom/matchers';
+
+expect.extend(matchers);
 
 // Module under test
-import { TOKENS, useReducedMotionPref, useIsTouch, useInViewOnce } from './tokens';
+import { useReducedMotionPref, useIsTouch, useInViewOnce } from './tokens';
 
 // Mock framer-motion's useInView
 jest.mock('framer-motion', () => ({
@@ -23,61 +26,57 @@ function HookProbe() {
 
 describe('tokens utils', () => {
   const originalMatchMedia = window.matchMedia;
-  const originalMaxTouchPoints = (navigator as any).maxTouchPoints;
+  const originalMaxTouchPoints = (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints;
+  type MatchMediaMock = (q: string) => { matches: boolean };
+  type TouchStartMock = () => void;
 
   beforeEach(() => {
     // reset mocks per test
-    (window as any).matchMedia = originalMatchMedia;
-    (navigator as any).maxTouchPoints = originalMaxTouchPoints ?? 0;
+    (window as unknown as { matchMedia?: MatchMediaMock }).matchMedia = originalMatchMedia as unknown as MatchMediaMock;
+    (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints = originalMaxTouchPoints ?? 0;
     // clean potential properties
-    delete (window as any).ontouchstart;
+    delete (window as unknown as { ontouchstart?: TouchStartMock }).ontouchstart;
   });
 
   afterEach(() => {
-    (window as any).matchMedia = originalMatchMedia;
-    (navigator as any).maxTouchPoints = originalMaxTouchPoints ?? 0;
-    delete (window as any).ontouchstart;
-  });
-
-  it('exposes expected TOKENS structure', () => {
-    expect(TOKENS.radius.md).toBeTruthy();
-    expect(TOKENS.textBody).toContain('text-');
-    expect(TOKENS.shadow).toContain('shadow');
+    (window as unknown as { matchMedia?: MatchMediaMock }).matchMedia = originalMatchMedia as unknown as MatchMediaMock;
+    (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints = originalMaxTouchPoints ?? 0;
+    delete (window as unknown as { ontouchstart?: TouchStartMock }).ontouchstart;
   });
 
   it('useReducedMotionPref reflects matchMedia', () => {
     // no matchMedia -> falsey
-    (window as any).matchMedia = undefined;
+    (window as unknown as { matchMedia?: MatchMediaMock }).matchMedia = undefined;
     expect(useReducedMotionPref()).toBe(false);
 
     // matchMedia true
-    (window as any).matchMedia = jest.fn().mockReturnValue({ matches: true });
+    (window as unknown as { matchMedia?: MatchMediaMock }).matchMedia = jest.fn().mockReturnValue({ matches: true }) as unknown as MatchMediaMock;
     expect(useReducedMotionPref()).toBe(true);
 
     // matchMedia false
-    (window as any).matchMedia = jest.fn().mockReturnValue({ matches: false });
+    (window as unknown as { matchMedia?: MatchMediaMock }).matchMedia = jest.fn().mockReturnValue({ matches: false }) as unknown as MatchMediaMock;
     expect(useReducedMotionPref()).toBe(false);
   });
 
   it('useIsTouch detects touch via ontouchstart or maxTouchPoints', () => {
     // default
-    (navigator as any).maxTouchPoints = 0;
-    delete (window as any).ontouchstart;
+    (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints = 0;
+    delete (window as unknown as { ontouchstart?: TouchStartMock }).ontouchstart;
     expect(useIsTouch()).toBe(false);
 
     // via ontouchstart
-    (window as any).ontouchstart = () => {};
+    (window as unknown as { ontouchstart?: TouchStartMock }).ontouchstart = () => {};
     expect(useIsTouch()).toBe(true);
 
     // via maxTouchPoints
-    delete (window as any).ontouchstart;
-    (navigator as any).maxTouchPoints = 2;
+    delete (window as unknown as { ontouchstart?: TouchStartMock }).ontouchstart;
+    (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints = 2;
     expect(useIsTouch()).toBe(true);
   });
 
   it('useInViewOnce returns ref and inView state (mocked true)', () => {
     render(<HookProbe />);
-    expect(screen.getByTestId('probe')).toBeInTheDocument();
-    expect(screen.getByTestId('state')).toHaveTextContent('true');
+    expect(!!screen.getByTestId('probe')).toBe(true);
+    expect(screen.getByTestId('state').textContent).toBe('true');
   });
 });

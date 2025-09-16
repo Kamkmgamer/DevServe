@@ -27,6 +27,7 @@ export const ContactForm = () => {
     formState: { errors, isSubmitting, isSubmitSuccessful },
     reset,
   } = useForm<ContactFormInputs>({
+    // @ts-expect-error Zod v4 compatibility with @hookform/resolvers v3
     resolver: zodResolver(contactSchema),
     mode: "onBlur",
   });
@@ -39,7 +40,7 @@ export const ContactForm = () => {
         message: "Thank you! Your message has been sent.",
       });
       reset();
-    } catch (error) {
+    } catch {
       setFormStatus({
         submitted: false,
         message: "An error occurred. Please try again later.",

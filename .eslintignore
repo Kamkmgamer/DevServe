@@ -1,0 +1,5 @@
+server/public/assets
+client/dist
+coverage
+node_modules
+*.js.map

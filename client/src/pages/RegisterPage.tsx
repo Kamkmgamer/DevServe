@@ -101,12 +101,10 @@ const RegisterPage = () => {
       await signup(email.trim(), password, name.trim());
       localStorage.setItem("lastEmail", email.trim());
       navigate("/");
-    } catch (err: { response?: { data?: { error?: string } } }) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError(err?.response?.data?.error || "Registration failed");
-      }
+    } catch (err: any) {
+      const serverErr = err?.response?.data?.error;
+      const msg = typeof serverErr === 'string' ? serverErr : (serverErr?.message || (err instanceof Error ? err.message : 'Registration failed'));
+      setError(msg);
     } finally {
       setLoading(false);
     }

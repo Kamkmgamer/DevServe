@@ -1,9 +1,11 @@
+import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import CouponFormPage from "./CouponFormPage";
 import { BrowserRouter } from "react-router-dom";
 import api from "../../api/axios";
 import { toast } from "react-hot-toast";
+import * as router from "react-router-dom";
 
 // Mock react-router-dom
 jest.mock("react-router-dom", () => ({
@@ -29,9 +31,12 @@ describe("CouponFormPage", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    const router = require("react-router-dom");
-    router.useNavigate.mockReturnValue(mockNavigate);
-    router.useParams.mockReturnValue({}); // Default to create mode
+    const rtr = router as unknown as {
+      useNavigate: jest.Mock<ReturnType<typeof router.useNavigate>, Parameters<typeof router.useNavigate>>;
+      useParams: jest.Mock<ReturnType<typeof router.useParams>, Parameters<typeof router.useParams>>;
+    };
+    rtr.useNavigate.mockReturnValue(mockNavigate);
+    rtr.useParams.mockReturnValue({}); // Default to create mode
   });
 
   test("submits form with expiresAt as null when field is empty", async () => {
@@ -60,7 +65,7 @@ describe("CouponFormPage", () => {
 
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledTimes(1);
-      const payload = mockedApi.post.mock.calls[0][1];
+      const payload = mockedApi.post.mock.calls[0][1] as any;
       expect(payload.expiresAt).toBeNull();
       expect(toast.success).toHaveBeenCalledWith("Coupon created");
       expect(mockNavigate).toHaveBeenCalledWith("/admin/coupons");
@@ -97,7 +102,7 @@ describe("CouponFormPage", () => {
 
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledTimes(1);
-      const payload = mockedApi.post.mock.calls[0][1];
+      const payload = mockedApi.post.mock.calls[0][1] as any;
       expect(payload.expiresAt).toBe(new Date(testDate).toISOString());
       expect(toast.success).toHaveBeenCalledWith("Coupon created");
       expect(mockNavigate).toHaveBeenCalledWith("/admin/coupons");

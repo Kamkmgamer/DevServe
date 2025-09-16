@@ -24,11 +24,11 @@ const BlogPage = () => {
     api
       .get("/blog")
       .then((res) => setPosts(res.data))
-      .catch((err) =>
-        setError(
-          err?.response?.data?.error || err.message || "Failed to load posts."
-        )
-      )
+      .catch((err) => {
+        const serverErr = err?.response?.data?.error;
+        const msg = typeof serverErr === 'string' ? serverErr : (serverErr?.message || err.message || 'Failed to load posts.');
+        setError(msg);
+      })
       .finally(() => setLoading(false));
   }, []);
 

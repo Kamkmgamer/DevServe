@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Quick test script to verify chatbot API is responding
 // Run with: node test-chatbot-quick.js
 

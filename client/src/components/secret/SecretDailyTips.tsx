@@ -469,9 +469,10 @@ const TypingTextComponent: React.FC<{ text: string; speed?: number; active?: boo
 
   // Pre-split into Unicode code points and strip problematic control chars (e.g., null character)
   const codePoints = useMemo(() => {
-        const sanitized = (text || '').replace(/\x00/g, '');
-    // Array.from splits by Unicode code points (handles emojis/combining marks)
-    return Array.from(sanitized);
+        // Pre-split into Unicode code points and strip problematic control chars (e.g., null character)
+  const sanitized = (text || '').replace(new RegExp(String.fromCharCode(0), 'g'), '');
+  // Array.from splits by Unicode code points (handles emojis/combining marks)
+  return Array.from(sanitized);
   }, [text]);
 
   useEffect(() => {
@@ -668,7 +669,7 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         SESSION_KEY,
         JSON.stringify({ content, fetchedAt: Date.now() })
       );
-    } catch (err: unknown) {
+    } catch {
       // Intentionally ignore errors
     }
   }, []);
@@ -684,7 +685,7 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         if (controllerRef.current) {
           try {
             controllerRef.current.abort();
-          } catch (err: unknown) {
+          } catch {
             // Intentionally ignore abort errors
           }
         }
@@ -704,11 +705,14 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
           if (res.status === 200 && content) {
             return { content: String(content), fetchedAt: Date.now(), isFresh: true };
           }
-        } catch (err: unknown) {
+        } catch (_err: unknown) {
           if (!signal.aborted) {
-            console.warn("Fresh tip fetch failed, falling back to cached", err);
+            console.warn("Fresh tip fetch failed, falling back to cached", _err);
           }
+        } finally {
+          controllerRef.current = null;
         }
+        return null; // or handle fallback
       }
 
       // Regular cached tip logic
@@ -758,14 +762,14 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
           }
 
           return String(content || DEFAULT_TIP);
-        } catch (err: unknown) {
-          if (signal.aborted) throw err;
+        } catch (_err: unknown) {
+          if (signal.aborted) throw _err;
           if (attempt < attempts) {
             await new Promise((r) => setTimeout(r, delay));
             delay *= 2;
             return doRequest();
           }
-          throw err;
+          throw _err;
         }
       };
 
@@ -776,7 +780,7 @@ function useTipFetcher(cacheTTL = 1000 * 60 * 30) {
         }
         return { content, fetchedAt: Date.now() };
       } finally {
-        // Cleanup code can be added here if needed
+        controllerRef.current = null;
       }
     },
     [readCache, writeCache]
@@ -836,8 +840,13 @@ export const SecretDailyTips: React.FC<Props> = ({
       setError(null);
       try {
         const res = await fetchTip(opts);
-        setTip(res.content);
-        setLastFetchedAt(res.fetchedAt);
+        if (res) {
+          setTip(res.content);
+          setLastFetchedAt(res.fetchedAt);
+        } else {
+          setTip(DEFAULT_TIP);
+          setError("Failed to fetch tip, using default.");
+        }
         setError(null);
       } catch (err: unknown) {
         console.warn("SecretDailyTips - fetch failed", err);

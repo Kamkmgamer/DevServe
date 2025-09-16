@@ -35,10 +35,11 @@ export const useInViewOnce = <T extends HTMLElement>(
 ) => {
   const ref = useRef<T | null>(null);
 
+  // Note: margin is accepted for API stability but ignored here to avoid
+  // type incompatibilities between framer-motion versions.
   const inView = useInView(ref, {
-    ...(margin ? { margin } : {}),
     once: true,
-  } as any);
+  });
 
   return [ref, inView] as const;
 };

@@ -173,7 +173,9 @@ const ServicesPage: React.FC = () => {
       .catch((err) => {
         if (cancelled) return;
         if (err?.name === "CanceledError" || err?.message === "canceled") return;
-        setError(err?.response?.data?.error || err.message || "Failed to load services.");
+        const serverErr = err?.response?.data?.error;
+        const msg = typeof serverErr === 'string' ? serverErr : (serverErr?.message || err.message || 'Failed to load services.');
+        setError(msg);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

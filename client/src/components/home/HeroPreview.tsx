@@ -152,7 +152,7 @@ export const HeroPreview: React.FC<{ title?: string }> = ({ title }) => {
     } as CSSStyleDeclaration);
     layer.appendChild(el);
     // force reflow
-    el.offsetHeight;
+    void el.offsetHeight;
     el.style.transform = 'scale(2.2)';
     el.style.opacity = '0';
     setTimeout(() => el.remove(), 600);

@@ -10,7 +10,7 @@ interface Testimonial {
   role: string;
 }
 
-interface TestimonialCardProps extends Testimonial {}
+type TestimonialCardProps = Testimonial;
 
 const cardVariants: Variants = {
   enter: {
