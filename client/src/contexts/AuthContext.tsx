@@ -13,6 +13,7 @@ import { User } from "../types"; // Import User type
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
+  initializing: boolean;
   login: (email: string, password: string) => Promise<void>;
   register?: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -22,6 +23,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [initializing, setInitializing] = useState(true);
 
   // Regex for strong password: at least one uppercase, one lowercase, one number, one special character, min 8 chars
   const strongPasswordRegex = useMemo(() => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':"|,.<>/?]).{8,}$/, []);
@@ -35,6 +37,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMounted) setUser(data.user);
       } catch {
         // Not authenticated; ignore
+      } finally {
+        if (isMounted) setInitializing(false);
       }
     })();
     return () => { isMounted = false; };
@@ -73,10 +77,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value: AuthContextType = useMemo(() => ({
     isAuthenticated: !!user,
     user,
+    initializing,
     login,
     register,
     logout,
-  }), [user, login, register, logout]);
+  }), [user, initializing, login, register, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
