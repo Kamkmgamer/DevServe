@@ -3,7 +3,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { db } from "../lib/db";
 import { coupons } from "../lib/schema";
 import type { InferSelectModel } from 'drizzle-orm';
-import { eq, sql, ne, and } from "drizzle-orm";
+import { eq, sql, ne, and, desc } from "drizzle-orm";
 import { admin, protect, AuthRequest } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { AppError } from "../lib/errors";
@@ -60,7 +60,8 @@ router.get("/code/:code", validate({ params: couponCodeParamSchema }), async (re
 });
 
 router.get("/", validate({ query: paginationQuerySchema }), async (req: AuthRequest, res: Response, next: NextFunction) => {
-  const { page = 1, pageSize = 100 } = (req.query as any) || {};
+  const q = (req as any).validatedQuery ?? (req.query as any) ?? {};
+  const { page = 1, pageSize = 100 } = q;
   try {
     // Small retry wrapper for transient SQLite lock errors during tests
     const withRetry = async <T>(fn: () => Promise<T>, retries = 3, delayMs = 50): Promise<T> => {
@@ -85,9 +86,10 @@ router.get("/", validate({ query: paginationQuerySchema }), async (req: AuthRequ
     // Run sequentially to avoid potential SQLite locking with concurrent tx
     const totalResult = await db.select({ count: sql<number>`count(*)` }).from(coupons);
     const total = totalResult[0].count;
-    const data = await withRetry(() =>
-      db.select().from(coupons).orderBy(coupons.createdAt.desc()).offset((page - 1) * pageSize).limit(pageSize)
+    const dataRaw = await withRetry(() =>
+      db.select().from(coupons).orderBy(desc(coupons.createdAt)).offset((page - 1) * pageSize).limit(pageSize)
     );
+    const data = Array.isArray(dataRaw) ? dataRaw.filter(Boolean) : [];
     res.json({ data, total, page, pageSize });
   } catch (e) {
     next(e);

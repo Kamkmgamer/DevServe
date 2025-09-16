@@ -70,7 +70,8 @@ export const validate = (
           }))
         );
       } else {
-        (req as any).query = result.data;
+        // Do not assign to req.query (getter-only in some setups)
+        (req as any).validatedQuery = result.data;
       }
     }
 
