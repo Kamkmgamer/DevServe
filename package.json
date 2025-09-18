@@ -19,8 +19,8 @@
     "test:watch": "npm run test:watch --prefix server",
     "e2e": "npm run e2e --prefix client",
     "prepare": "husky",
-    "build": "pnpm run build --filter client && pnpm run build --filter server",
-    "start": "npm run start --prefix server"
+    "build": "pnpm --filter client run build && pnpm --filter server run build",
+    "start": "concurrently \"npm run start --prefix server\" \"npm run preview --prefix client\""
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

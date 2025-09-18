@@ -12,6 +12,8 @@ import { jsonParseErrorHandler } from './middleware/jsonError';
 import apiRoutes from './routes';
 import { metricsHandler } from './lib/metrics';
 import { errorHandler } from './middleware/errorHandler';
+import path from 'path';
+
 // Create the Express app instance
 const app = express();
 
@@ -106,7 +108,7 @@ if (process.env.NODE_ENV !== 'test') {
         // set explicit cookie name for clarity
         key: '_csrf',
       },
-    })
+    }) as unknown as express.RequestHandler
   );
 }
 
@@ -145,8 +147,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// API routes
-app.use("/api", apiRoutes);
+// Serve static files from the client dist directory in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../../client/dist')));
+  
+  // Catch-all handler for SPA routing
+  app.get('*', (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
+  });
+}
+
+// Apply API routes before the catch-all
+app.use('/api', apiRoutes);
 
 // Health Check endpoint
 app.get("/", (req, res) => {

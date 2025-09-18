@@ -18,17 +18,6 @@ export const httpRequestDurationSeconds = new client.Histogram({
 
 register.registerMetric(httpRequestDurationSeconds);
 
-// Histogram to measure Prisma (database) query durations
-export const prismaQueryDurationSeconds = new client.Histogram({
-  name: 'prisma_query_duration_seconds',
-  help: 'Prisma query duration in seconds',
-  labelNames: ['model', 'action', 'success'] as const,
-  // DB queries are usually faster; include lower buckets
-  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
-});
-
-register.registerMetric(prismaQueryDurationSeconds);
-
 export async function metricsHandler(_: Request, res: Response) {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());

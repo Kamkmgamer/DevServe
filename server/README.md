@@ -16,7 +16,7 @@ This directory contains the backend services for the DevServe e-commerce platfor
     *   **Referral System:** Logic for managing user referrals and calculating commissions.
     *   **Admin Panel:** Dedicated endpoints for administrative tasks.
     *   **AI Chatbot:** GPT OSS 20B powered chatbot API endpoints for intelligent conversational AI.
-*   **Database Management:** Utilizes Prisma ORM for efficient, type-safe, and robust interactions with the database. Supports migrations and seeding.
+*   **Database Management:** Utilizes Drizzle ORM for efficient, type-safe, and robust interactions with the database. Supports migrations via SQL files.
 *   **Email Notifications:** Integration with Nodemailer for sending transactional emails (e.g., order confirmations, password resets).
 *   **Logging & Error Handling:** Centralized logging with Winston and a global error handling middleware for robust API responses.
 *   **Rate Limiting:** Implements rate limiting to protect against abuse and ensure API stability.
@@ -27,7 +27,7 @@ This directory contains the backend services for the DevServe e-commerce platfor
 *   **Node.js:** Server-side JavaScript runtime.
 *   **Express.js:** Fast, unopinionated, minimalist web framework for Node.js.
 *   **TypeScript:** A typed superset of JavaScript that compiles to plain JavaScript, enhancing code quality and maintainability.
-*   **Prisma ORM:** Next-generation ORM for Node.js and TypeScript, providing type-safe database access.
+*   **Drizzle ORM:** Lightweight TypeScript ORM for SQL databases, providing type-safe queries.
 *   **PostgreSQL (Recommended for Production):** A powerful, open-source object-relational database system.
 *   **SQLite (Default for Development):** A file-based, self-contained, high-reliability, full-featured, public-domain, SQL database engine.
 *   **JSON Web Tokens (JWT):** For secure, stateless authentication.
@@ -46,7 +46,7 @@ To get the backend application up and running, follow these steps:
 ### Prerequisites
 
 *   Node.js (LTS version recommended)
-*   npm (comes with Node.js)
+*   pnpm (recommended package manager)
 *   A running database instance (SQLite for development, PostgreSQL for production).
 
 ### Steps
@@ -58,7 +58,7 @@ To get the backend application up and running, follow these steps:
 
 2.  **Install dependencies:**
     ```bash
-    npm install
+    pnpm install
     ```
 
 3.  **Environment Configuration:**
@@ -69,20 +69,16 @@ To get the backend application up and running, follow these steps:
     OPENROUTER_API_KEY=your_actual_api_key_here  # Get from https://openrouter.ai/keys
     ```
 
-4.  **Database Setup (Prisma):**
-    *   **Generate Prisma Client:**
+4.  **Database Setup (Drizzle):**
+    *   **Run Migrations:** Apply database migrations using the SQL files in the `migrations/` directory.
         ```bash
-        npx prisma generate
+        pnpm db:migrate
         ```
-    *   **Run Migrations:** Apply any pending database migrations.
+    *   **Generate Types (Optional):** If using type generation, run:
         ```bash
-        npx prisma migrate dev --name init
+        pnpm db:generate
         ```
-        (Replace `init` with a meaningful name if you have existing migrations).
-    *   **Seed the Database (Optional):** Populate your database with initial data (e.g., admin user, sample services).
-        ```bash
-        npm run seed
-        ```
+    *   **Seed the Database (Optional):** Populate your database with initial data (e.g., admin user, sample services). Create a seed script if needed.
 
 ## Running the Application
 
@@ -91,7 +87,7 @@ To get the backend application up and running, follow these steps:
 To run the backend in development mode with hot-reloading:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 The backend API will typically be available at `http://localhost:8000`.
@@ -101,7 +97,7 @@ The backend API will typically be available at `http://localhost:8000`.
 To compile the TypeScript code to JavaScript:
 
 ```bash
-npm run build
+pnpm build
 ```
 
 This command outputs the compiled JavaScript files to the `dist` directory.
@@ -111,24 +107,26 @@ This command outputs the compiled JavaScript files to the `dist` directory.
 After building, you can start the production server:
 
 ```bash
-npm run start
+pnpm start
 ```
 
 ## Special Configurations and Dependencies
 
 *   **Environment Variables:** All sensitive information and configuration parameters (database URLs, API keys, secrets) are loaded from the `.env` file.
 *   **CORS:** Configured in `src/app.ts` to allow requests from the frontend application's origin (`http://localhost:5173`, `http://192.168.0.100:5173`, and ngrok domains).
-*   **Database:** The `prisma/schema.prisma` defines the database schema. Ensure your `DATABASE_URL` in `.env` points to the correct database.
+*   **Database:** The schema is defined using Drizzle in `src/lib/schema.ts`. Ensure your `DATABASE_URL` in `.env` points to the correct database. Migrations are in `migrations/`.
 
 ## Available Scripts
 
 In the `server` directory, you can run:
 
-*   `npm run dev`: Starts the server in development mode with `nodemon` for hot-reloading.
-*   `npm run build`: Compiles the TypeScript source code to JavaScript.
-*   `npm run start`: Starts the compiled JavaScript application (for production).
-*   `npm run test`: Runs the Jest tests for the backend.
-*   `npm run seed`: Executes the Prisma seed script to populate the database.
+*   `pnpm dev`: Starts the server in development mode with `nodemon` for hot-reloading.
+*   `pnpm build`: Compiles the TypeScript source code to JavaScript.
+*   `pnpm start`: Starts the compiled JavaScript application (for production).
+*   `pnpm test`: Runs the Jest tests for the backend.
+*   `pnpm db:generate`: Generates Drizzle types from the schema.
+*   `pnpm db:push`: Pushes schema changes to the database (development only).
+*   `pnpm db:migrate`: Runs database migrations.
 
 ## Contribution
 
@@ -138,5 +136,9 @@ For contribution guidelines, please refer to the main `README.md` in the project
 
 *   **"Port 8000 already in use"**: Another process is using the port. Find and terminate it, or change the port in `src/index.ts` (and update frontend proxy).
 *   **Database connection issues**: Double-check your `DATABASE_URL` in the `.env` file and ensure your database server is running and accessible.
-*   **Prisma errors**: Ensure you have run `npx prisma generate` and `npx prisma migrate dev` after any schema changes.
+*   **Drizzle errors**: Ensure migrations are applied with `pnpm db:migrate` after schema changes.
 *   **Authentication errors**: Verify `JWT_SECRET` is set and consistent if running multiple instances.
+
+## License
+
+This project is licensed under the ISC License - see the LICENSE file for details.
